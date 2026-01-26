@@ -4,7 +4,6 @@ import { dirname, join } from 'path';
 import pg from 'pg';
 import dotenv from 'dotenv';
 
-// Load environment variables
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);

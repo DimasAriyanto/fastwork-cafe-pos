@@ -1,0 +1,2674 @@
+{
+	"info": {
+		"_postman_id": "d129f0ed-0a71-4b5d-a52b-06eac8cae984",
+		"name": "Cafe POS",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "22351148",
+		"_collection_link": "https://speeding-desert-303822.postman.co/workspace/Fastwork~94e62b18-10d5-48fc-9ccd-6e8912f1b477/collection/22351148-d129f0ed-0a71-4b5d-a52b-06eac8cae984?action=share&source=collection_link&creator=22351148"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/auth/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/auth/login",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"auth",
+										"login"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "599"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 15:55:42 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": 1,\n        \"username\": \"admin\",\n        \"name\": \"Administrator\",\n        \"email\": \"admin@local.test\",\n        \"roleId\": 1,\n        \"role\": \"owner\",\n        \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNTY1NDIsImV4cCI6MTc2OTM1NzQ0Mn0.3_PuKGCWbF4IgdW1NuE1Oap26S0TvXLnufta8_M5N0o\",\n        \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBsb2NhbC50ZXN0IiwiaWF0IjoxNzY5MzU2NTQyLCJleHAiOjE3Njk5NjEzNDJ9.FJOROuRMQGBca5jNEHGzInrOx63O2rrmxHjK4O0JDvU\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Me",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoyLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NjkzOTIxODgsImV4cCI6MTc2OTM5NTc4OH0.70y_xve1PfWjcR0ov-l8vhprjWWsd_iTfm59NA7e8_o",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/auth/me",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/auth/me",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"auth",
+										"me"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "112"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 16:16:04 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": 1,\n        \"username\": \"admin\",\n        \"name\": \"Administrator\",\n        \"email\": \"admin@local.test\",\n        \"roleId\": 1\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBsb2NhbC50ZXN0IiwiaWF0IjoxNzY5Mzc4MDYzLCJleHAiOjE3Njk5ODI4NjN9.jRPpjKJVVfSPOXoo5F3nBxLrQlT3bxKsm95Yn4-mBDU\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/auth/refresh",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"auth",
+								"refresh"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBsb2NhbC50ZXN0IiwiaWF0IjoxNzY5MzU5NTI5LCJleHAiOjE3Njk5NjQzMjl9.s5WIDmu1y3GMnUGCiUH4RZRiJ960nv1pkoW8snKTzEA\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/auth/refresh",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"auth",
+										"refresh"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "357"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 16:46:21 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBsb2NhbC50ZXN0IiwibmFtZSI6IkFkbWluaXN0cmF0b3IiLCJyb2xlSWQiOjEsImlhdCI6MTc2OTM1OTU4MSwiZXhwIjoxNzY5MzYzMTgxfQ.CTm_8fyJBqAdup4uTbbabFHohxN3_m3FeFMEw3q5X7A\",\n        \"user\": {\n            \"id\": 1,\n            \"username\": \"admin\",\n            \"name\": \"Administrator\",\n            \"email\": \"admin@local.test\",\n            \"roleId\": 1\n        }\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNTkyMjEsImV4cCI6MTc2OTM2MjgyMX0.cp4nbAEJz1xbaUuxS59uZ9yi1dtdGLyr4H5pB8tQT90",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBsb2NhbC50ZXN0IiwiaWF0IjoxNzY5MzU5MjIxLCJleHAiOjE3Njk5NjQwMjF9.r05uvfZ4PInG2rB-RCHJ7quqH-766y6srDD0PVm0ywc\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/auth/logout",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBsb2NhbC50ZXN0IiwiaWF0IjoxNzY5MzU5MjIxLCJleHAiOjE3Njk5NjQwMjF9.r05uvfZ4PInG2rB-RCHJ7quqH-766y6srDD0PVm0ywc\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/auth/logout",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"auth",
+										"logout"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "52"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 16:43:33 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Logged out successfully\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Role",
+			"item": [
+				{
+					"name": "Get All",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/roles",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"roles"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/roles",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"roles"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "573"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 15:17:45 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": 1,\n            \"name\": \"owner\",\n            \"description\": \"System owner with full access\",\n            \"createdAt\": \"2026-01-25T20:03:16.696Z\",\n            \"updatedAt\": \"2026-01-25T20:03:16.696Z\"\n        },\n        {\n            \"id\": 2,\n            \"name\": \"admin\",\n            \"description\": \"Administrator\",\n            \"createdAt\": \"2026-01-25T20:03:16.696Z\",\n            \"updatedAt\": \"2026-01-25T20:03:16.696Z\"\n        },\n        {\n            \"id\": 3,\n            \"name\": \"cashier\",\n            \"description\": \"Cashier staff\",\n            \"createdAt\": \"2026-01-25T20:03:16.696Z\",\n            \"updatedAt\": \"2026-01-25T20:03:16.696Z\"\n        },\n        {\n            \"id\": 4,\n            \"name\": \"kitchen\",\n            \"description\": \"Kitchen staff\",\n            \"createdAt\": \"2026-01-25T20:03:16.696Z\",\n            \"updatedAt\": \"2026-01-25T20:03:16.696Z\"\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "List with pagination",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/roles/list?page=1&limit=3",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"roles",
+								"list"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "3"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/roles/list?page=1&limit=3",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"roles",
+										"list"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "3"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "467"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 16:50:06 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": 1,\n            \"name\": \"owner\",\n            \"description\": \"System owner with full access\",\n            \"createdAt\": \"2026-01-25T20:03:16.696Z\",\n            \"updatedAt\": \"2026-01-25T20:03:16.696Z\"\n        },\n        {\n            \"id\": 2,\n            \"name\": \"admin\",\n            \"description\": \"Administrator\",\n            \"createdAt\": \"2026-01-25T20:03:16.696Z\",\n            \"updatedAt\": \"2026-01-25T20:03:16.696Z\"\n        },\n        {\n            \"id\": 3,\n            \"name\": \"cashier\",\n            \"description\": \"Cashier staff\",\n            \"createdAt\": \"2026-01-25T20:03:16.696Z\",\n            \"updatedAt\": \"2026-01-25T20:03:16.696Z\"\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 3\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get By Id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/roles/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"roles",
+								"1"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/roles/1",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"roles",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "171"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 16:52:32 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"role\": {\n        \"id\": 1,\n        \"name\": \"owner\",\n        \"description\": \"System owner with full access\",\n        \"createdAt\": \"2026-01-25T20:03:16.696Z\",\n        \"updatedAt\": \"2026-01-25T20:03:16.696Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Create",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"manager\",\n  \"description\": \"Manager role\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/roles",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"roles"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"manager\",\n  \"description\": \"Manager role\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/roles",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"roles"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "156"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:03:30 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"role\": {\n        \"id\": 9,\n        \"name\": \"manager\",\n        \"description\": \"Manager role\",\n        \"createdAt\": \"2026-01-26T05:03:30.196Z\",\n        \"updatedAt\": \"2026-01-26T05:03:30.196Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Update",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNzg0MjEsImV4cCI6MTc2OTM4MjAyMX0.h0iRZC_tQL9eFQMgHjQ-55MQ3FDF0Q-A8LBKpDtKdJg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"description\": \"Updated manager description\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/roles/9",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"roles",
+								"9"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"description\": \"Updated manager description\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/roles/9",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"roles",
+										"9"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "171"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:05:24 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"role\": {\n        \"id\": 9,\n        \"name\": \"manager\",\n        \"description\": \"Updated manager description\",\n        \"createdAt\": \"2026-01-26T05:03:30.196Z\",\n        \"updatedAt\": \"2026-01-26T05:05:24.140Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNzg0MjEsImV4cCI6MTc2OTM4MjAyMX0.h0iRZC_tQL9eFQMgHjQ-55MQ3FDF0Q-A8LBKpDtKdJg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/roles/9",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"roles",
+								"9"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/roles/9",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"roles",
+										"9"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "16"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:11:54 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Get All",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/users",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"users"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/users",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"users"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "297"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 17:00:21 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": 1,\n            \"roleId\": 1,\n            \"username\": \"admin\",\n            \"name\": \"Administrator\",\n            \"email\": \"admin@local.test\",\n            \"password\": \"$2b$10$kq7liDpEG8DvFKTaidtdHeLiplQF15zBraYmoSQOEUdKGOpCpKQRS\",\n            \"photo\": null,\n            \"status\": \"active\",\n            \"createdAt\": \"2026-01-25T20:05:36.778Z\",\n            \"updatedAt\": \"2026-01-25T20:05:36.778Z\"\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "List with pagination",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/users/list?page=1&limit=10&search=admin&sortBy=name&sortOrder=asc",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"users",
+								"list"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": "admin"
+								},
+								{
+									"key": "sortBy",
+									"value": "name"
+								},
+								{
+									"key": "sortOrder",
+									"value": "asc"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/users/list?page=1&limit=10&search=admin&sortBy=name&sortOrder=asc",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"users",
+										"list"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "search",
+											"value": "admin"
+										},
+										{
+											"key": "sortBy",
+											"value": "name"
+										},
+										{
+											"key": "sortOrder",
+											"value": "asc"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "326"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 17:01:10 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": 1,\n            \"roleId\": 1,\n            \"username\": \"admin\",\n            \"name\": \"Administrator\",\n            \"email\": \"admin@local.test\",\n            \"password\": \"$2b$10$kq7liDpEG8DvFKTaidtdHeLiplQF15zBraYmoSQOEUdKGOpCpKQRS\",\n            \"photo\": null,\n            \"status\": \"active\",\n            \"createdAt\": \"2026-01-25T20:05:36.778Z\",\n            \"updatedAt\": \"2026-01-25T20:05:36.778Z\"\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 10\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get By Id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/users/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"users",
+								"1"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/users/1",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"users",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "295"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 17:02:08 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"user\": {\n        \"id\": 1,\n        \"roleId\": 1,\n        \"username\": \"admin\",\n        \"name\": \"Administrator\",\n        \"email\": \"admin@local.test\",\n        \"password\": \"$2b$10$kq7liDpEG8DvFKTaidtdHeLiplQF15zBraYmoSQOEUdKGOpCpKQRS\",\n        \"photo\": null,\n        \"status\": \"active\",\n        \"createdAt\": \"2026-01-25T20:05:36.778Z\",\n        \"updatedAt\": \"2026-01-25T20:05:36.778Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Create",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNzgwNjMsImV4cCI6MTc2OTM4MTY2M30.Wroatu3CQULmPrnU0vsT2g-LEM0LXLjoyQeETvyYQeg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"cashier1\",\n  \"name\": \"Cashier One\",\n  \"email\": \"cashier1@example.com\",\n  \"password\": \"password123\",\n  \"roleId\": 3,\n  \"status\": \"active\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/users",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"users"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"username\": \"cashier1\",\n  \"name\": \"Cashier One\",\n  \"email\": \"cashier1@example.com\",\n  \"password\": \"password123\",\n  \"roleId\": 3,\n  \"status\": \"active\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/users",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"users"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "251"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 21:55:00 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"user\": {\n        \"id\": 2,\n        \"roleId\": 3,\n        \"username\": \"cashier1\",\n        \"name\": \"Cashier One\",\n        \"email\": \"cashier1@example.com\",\n        \"password\": \"password123\",\n        \"photo\": null,\n        \"status\": \"active\",\n        \"createdAt\": \"2026-01-26T04:55:00.544Z\",\n        \"updatedAt\": \"2026-01-26T04:55:00.544Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Edit",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNzg0MjEsImV4cCI6MTc2OTM4MjAyMX0.h0iRZC_tQL9eFQMgHjQ-55MQ3FDF0Q-A8LBKpDtKdJg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Cashier One Updated\",\n  \"email\": \"cashier1_new@example.com\",\n  \"status\": \"inactive\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/users/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"users",
+								"2"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Cashier One Updated\",\n  \"email\": \"cashier1_new@example.com\",\n  \"status\": \"inactive\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/users/2",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"users",
+										"2"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "265"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:01:40 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"user\": {\n        \"id\": 2,\n        \"roleId\": 3,\n        \"username\": \"cashier1\",\n        \"name\": \"Cashier One Updated\",\n        \"email\": \"cashier1_new@example.com\",\n        \"password\": \"password123\",\n        \"photo\": null,\n        \"status\": \"inactive\",\n        \"createdAt\": \"2026-01-26T04:55:00.544Z\",\n        \"updatedAt\": \"2026-01-26T05:01:40.940Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNzg0MjEsImV4cCI6MTc2OTM4MjAyMX0.h0iRZC_tQL9eFQMgHjQ-55MQ3FDF0Q-A8LBKpDtKdJg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Cashier One Updated\",\n  \"email\": \"cashier1_new@example.com\",\n  \"status\": \"inactive\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/users/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"users",
+								"2"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Cashier One Updated\",\n  \"email\": \"cashier1_new@example.com\",\n  \"status\": \"inactive\"\n}"
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/users/2",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"users",
+										"2"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "16"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:02:32 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Outlet",
+			"item": [
+				{
+					"name": "Get All",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/outlets",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"outlets"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/outlets",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"outlets"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "244"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:14:03 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": 1,\n            \"name\": \"Cafe Main\",\n            \"address\": \"Jl. Utama No. 123\",\n            \"city\": \"Jakarta\",\n            \"province\": \"DKI Jakarta\",\n            \"phoneNumber\": \"021-123456\",\n            \"createdBy\": 1,\n            \"createdAt\": \"2026-01-25T20:05:36.794Z\",\n            \"updatedAt\": \"2026-01-25T20:05:36.794Z\"\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "List with pagination",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/outlets/list?page=1&limit=10&search=cafe",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"outlets",
+								"list"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": "cafe"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/outlets/list?page=1&limit=10&search=cafe",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"outlets",
+										"list"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "search",
+											"value": "cafe"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "273"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:16:01 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": 1,\n            \"name\": \"Cafe Main\",\n            \"address\": \"Jl. Utama No. 123\",\n            \"city\": \"Jakarta\",\n            \"province\": \"DKI Jakarta\",\n            \"phoneNumber\": \"021-123456\",\n            \"createdBy\": 1,\n            \"createdAt\": \"2026-01-25T20:05:36.794Z\",\n            \"updatedAt\": \"2026-01-25T20:05:36.794Z\"\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 10\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get By Id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/outlets/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"outlets",
+								"1"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/outlets/1",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"outlets",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "244"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:17:28 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"outlet\": {\n        \"id\": 1,\n        \"name\": \"Cafe Main\",\n        \"address\": \"Jl. Utama No. 123\",\n        \"city\": \"Jakarta\",\n        \"province\": \"DKI Jakarta\",\n        \"phoneNumber\": \"021-123456\",\n        \"createdBy\": 1,\n        \"createdAt\": \"2026-01-25T20:05:36.794Z\",\n        \"updatedAt\": \"2026-01-25T20:05:36.794Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Create",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNzg0MjEsImV4cCI6MTc2OTM4MjAyMX0.h0iRZC_tQL9eFQMgHjQ-55MQ3FDF0Q-A8LBKpDtKdJg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Cafe Branch 2\",\n  \"address\": \"Jl. Cabang No. 456\",\n  \"city\": \"Bandung\",\n  \"province\": \"Jawa Barat\",\n  \"phoneNumber\": \"022-987654\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/outlets",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"outlets"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Cafe Branch 2\",\n  \"address\": \"Jl. Cabang No. 456\",\n  \"city\": \"Bandung\",\n  \"province\": \"Jawa Barat\",\n  \"phoneNumber\": \"022-987654\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/outlets",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"outlets"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "248"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:18:43 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"outlet\": {\n        \"id\": 2,\n        \"name\": \"Cafe Branch 2\",\n        \"address\": \"Jl. Cabang No. 456\",\n        \"city\": \"Bandung\",\n        \"province\": \"Jawa Barat\",\n        \"phoneNumber\": \"022-987654\",\n        \"createdBy\": 1,\n        \"createdAt\": \"2026-01-26T05:18:43.658Z\",\n        \"updatedAt\": \"2026-01-26T05:18:43.658Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Update",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNzg0MjEsImV4cCI6MTc2OTM4MjAyMX0.h0iRZC_tQL9eFQMgHjQ-55MQ3FDF0Q-A8LBKpDtKdJg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Cafe Main Updated\",\n  \"phoneNumber\": \"021-999999\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/outlets/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"outlets",
+								"2"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Cafe Main Updated\",\n  \"phoneNumber\": \"021-999999\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/outlets/2",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"outlets",
+										"2"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "252"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:19:55 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"outlet\": {\n        \"id\": 2,\n        \"name\": \"Cafe Main Updated\",\n        \"address\": \"Jl. Cabang No. 456\",\n        \"city\": \"Bandung\",\n        \"province\": \"Jawa Barat\",\n        \"phoneNumber\": \"021-999999\",\n        \"createdBy\": 1,\n        \"createdAt\": \"2026-01-26T05:18:43.658Z\",\n        \"updatedAt\": \"2026-01-26T05:19:55.845Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNzg0MjEsImV4cCI6MTc2OTM4MjAyMX0.h0iRZC_tQL9eFQMgHjQ-55MQ3FDF0Q-A8LBKpDtKdJg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/outlets/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"outlets",
+								"2"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/outlets/2",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"outlets",
+										"2"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "16"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:20:50 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Employee",
+			"item": [
+				{
+					"name": "Get All",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/employees",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"employees"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/employees",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"employees"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "280"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:22:11 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": 1,\n            \"userId\": 1,\n            \"outletId\": 1,\n            \"biographyData\": \"System administrator\",\n            \"name\": \"Admin\",\n            \"position\": \"Admin\",\n            \"email\": \"admin@local.test\",\n            \"salary\": \"0\",\n            \"imagePath\": null,\n            \"createdBy\": 1,\n            \"createdAt\": \"2026-01-25T20:05:36.855Z\",\n            \"updatedAt\": \"2026-01-25T20:05:36.855Z\"\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "List with pagination",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/employees/list?page=1&limit=10&search=admin&sortBy=position",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"employees",
+								"list"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": "admin"
+								},
+								{
+									"key": "sortBy",
+									"value": "position"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/employees/list?page=1&limit=10&search=admin&sortBy=position",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"employees",
+										"list"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "search",
+											"value": "admin"
+										},
+										{
+											"key": "sortBy",
+											"value": "position"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "309"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:23:05 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": 1,\n            \"userId\": 1,\n            \"outletId\": 1,\n            \"biographyData\": \"System administrator\",\n            \"name\": \"Admin\",\n            \"position\": \"Admin\",\n            \"email\": \"admin@local.test\",\n            \"salary\": \"0\",\n            \"imagePath\": null,\n            \"createdBy\": 1,\n            \"createdAt\": \"2026-01-25T20:05:36.855Z\",\n            \"updatedAt\": \"2026-01-25T20:05:36.855Z\"\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 10\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Get By Id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/employees/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"employees",
+								"1"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/employees/1",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"employees",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "282"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:23:59 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"employee\": {\n        \"id\": 1,\n        \"userId\": 1,\n        \"outletId\": 1,\n        \"biographyData\": \"System administrator\",\n        \"name\": \"Admin\",\n        \"position\": \"Admin\",\n        \"email\": \"admin@local.test\",\n        \"salary\": \"0\",\n        \"imagePath\": null,\n        \"createdBy\": 1,\n        \"createdAt\": \"2026-01-25T20:05:36.855Z\",\n        \"updatedAt\": \"2026-01-25T20:05:36.855Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Create",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNzg0MjEsImV4cCI6MTc2OTM4MjAyMX0.h0iRZC_tQL9eFQMgHjQ-55MQ3FDF0Q-A8LBKpDtKdJg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 3,\n  \"outletId\": 1,\n  \"name\": \"Cashier One\",\n  \"position\": \"Cashier\",\n  \"email\": \"cashier1@example.com\",\n  \"salary\": \"3000000\",\n  \"biographyData\": \"Experienced cashier\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/employees",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"employees"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"userId\": 3,\n  \"outletId\": 1,\n  \"name\": \"Cashier One\",\n  \"position\": \"Cashier\",\n  \"email\": \"cashier1@example.com\",\n  \"salary\": \"3000000\",\n  \"biographyData\": \"Experienced cashier\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/employees",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"employees"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "299"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:25:36 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"employee\": {\n        \"id\": 2,\n        \"userId\": 3,\n        \"outletId\": 1,\n        \"biographyData\": \"Experienced cashier\",\n        \"name\": \"Cashier One\",\n        \"position\": \"Cashier\",\n        \"email\": \"cashier1@example.com\",\n        \"salary\": \"3000000\",\n        \"imagePath\": null,\n        \"createdBy\": 1,\n        \"createdAt\": \"2026-01-26T05:25:36.985Z\",\n        \"updatedAt\": \"2026-01-26T05:25:36.985Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Update",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNzg0MjEsImV4cCI6MTc2OTM4MjAyMX0.h0iRZC_tQL9eFQMgHjQ-55MQ3FDF0Q-A8LBKpDtKdJg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"position\": \"Senior Cashier\",\n  \"salary\": \"3500000\",\n  \"imagePath\": \"/images/cashier1.jpg\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/employees/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"employees",
+								"2"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"position\": \"Senior Cashier\",\n  \"salary\": \"3500000\",\n  \"imagePath\": \"/images/cashier1.jpg\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/employees/2",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"employees",
+										"2"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "324"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:27:27 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"employee\": {\n        \"id\": 2,\n        \"userId\": 3,\n        \"outletId\": 1,\n        \"biographyData\": \"Experienced cashier\",\n        \"name\": \"Cashier One\",\n        \"position\": \"Senior Cashier\",\n        \"email\": \"cashier1@example.com\",\n        \"salary\": \"3500000\",\n        \"imagePath\": \"/images/cashier1.jpg\",\n        \"createdBy\": 1,\n        \"createdAt\": \"2026-01-26T05:25:36.985Z\",\n        \"updatedAt\": \"2026-01-26T05:27:27.992Z\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AbG9jYWwudGVzdCIsIm5hbWUiOiJBZG1pbmlzdHJhdG9yIiwicm9sZUlkIjoxLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjkzNzg0MjEsImV4cCI6MTc2OTM4MjAyMX0.h0iRZC_tQL9eFQMgHjQ-55MQ3FDF0Q-A8LBKpDtKdJg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/employees/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"employees",
+								"2"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "success",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/employees/2",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"employees",
+										"2"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "content-type",
+									"value": "application/json"
+								},
+								{
+									"key": "vary",
+									"value": "Origin"
+								},
+								{
+									"key": "content-length",
+									"value": "16"
+								},
+								{
+									"key": "Date",
+									"value": "Sun, 25 Jan 2026 22:28:30 GMT"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=5"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "healt",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"health"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

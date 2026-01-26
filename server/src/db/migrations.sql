@@ -40,40 +40,40 @@ CREATE TRIGGER update_transactions_updated_at BEFORE UPDATE ON transactions FOR 
 -- =====================================================
 
 -- Index untuk Open Bill (pesanan belum dibayar) - HIGH PRIORITY
-CREATE INDEX idx_transactions_open_bill ON transactions(status, payment_status, created_at DESC) 
+CREATE INDEX IF NOT EXISTS idx_transactions_open_bill ON transactions(status, payment_status, created_at DESC) 
 WHERE status = 'pending' OR payment_status = 'unpaid';
 
 -- Index untuk transaksi hari ini - HIGH PRIORITY
-CREATE INDEX idx_transactions_created_at_desc ON transactions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_created_at_desc ON transactions(created_at DESC);
 
 -- Index untuk filter transaksi by date range
-CREATE INDEX idx_transactions_date_range_status ON transactions(DATE(created_at), status);
+CREATE INDEX IF NOT EXISTS idx_transactions_date_range_status ON transactions(DATE(created_at), status);
 
 -- Index untuk transaksi by status dan payment
-CREATE INDEX idx_transactions_status_date ON transactions(status, created_at DESC);
-CREATE INDEX idx_transactions_payment_status ON transactions(payment_status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_status_date ON transactions(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_payment_status ON transactions(payment_status, created_at DESC);
 
 -- Index untuk transaksi by kasir
-CREATE INDEX idx_transactions_cashier_date ON transactions(cashier_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_cashier_date ON transactions(cashier_id, created_at DESC);
 
 -- Index untuk transaksi by outlet
-CREATE INDEX idx_transactions_outlet_date ON transactions(outlet_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_outlet_date ON transactions(outlet_id, created_at DESC);
 
 -- Index untuk menu yang tersedia (kasir input order)
-CREATE INDEX idx_menus_available_category ON menus(is_available, category_id);
+CREATE INDEX IF NOT EXISTS idx_menus_available_category ON menus(is_available, category_id);
 
 -- Index untuk pencarian menu by name (full text search)
-CREATE INDEX idx_menus_name_search ON menus USING gin(to_tsvector('indonesian', name));
+CREATE INDEX IF NOT EXISTS idx_menus_name_search ON menus USING gin(to_tsvector('indonesian', name));
 
 -- Index untuk payment method dan date (laporan)
-CREATE INDEX idx_payments_method_date ON payments(payment_method, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_payments_method_date ON payments(payment_method, created_at DESC);
 
 -- Index untuk transaction items with included columns (faster struk generation)
-CREATE INDEX idx_transaction_items_detail ON transaction_items(transaction_id) 
+CREATE INDEX IF NOT EXISTS idx_transaction_items_detail ON transaction_items(transaction_id) 
 INCLUDE (menu_id, qty, sub_total, final_price);
 
 -- Index untuk discount active period
-CREATE INDEX idx_discounts_active ON discounts(start_date, end_date, is_active) 
+CREATE INDEX IF NOT EXISTS idx_discounts_active ON discounts(start_date, end_date, is_active) 
 WHERE is_active = true;
 
 -- =====================================================
