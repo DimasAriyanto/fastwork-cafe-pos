@@ -3,7 +3,7 @@ import { useFetch } from '../../hooks/useAuth';
 import { apiClient } from '../../api/client';
 import { Trash2, Plus, Edit2 } from 'lucide-react';
 
-export default function Pegawai() {
+export default function PegawaiExample() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({

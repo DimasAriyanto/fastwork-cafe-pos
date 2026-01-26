@@ -16,12 +16,15 @@ import CashierLayout from './layouts/CashierLayout';
 import CashierDashboard from './pages/cashier/Dashboard';
 import UnpaidOrders from './pages/cashier/UnpaidOrders';
 import Riwayat from './pages/cashier/Riwayat';
+import PegawaiExample from './pages/owner/PegawaiExample';
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
+
+      <Route path="/employee" element={<PegawaiExample />} />
 
       {/* Owner Routes */}
       <Route element={<ProtectedRoute allowedRoles={['OWNER']} />}>
