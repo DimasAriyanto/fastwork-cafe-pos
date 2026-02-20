@@ -64,20 +64,24 @@ export const useCart = () => {
     const tax = totalAfterDiscount * 0.10;
     const total = totalAfterDiscount + tax;
 
-    // Mock discount validation (in real app, this would be an API call)
-    const applyDiscountCode = (code: string) => {
-        const mockDiscounts = [
-            { code: "DISKON10", percentage: 10, minSpend: 50000 },
-            { code: "HEMAT5", percentage: 5, minSpend: 20000 },
-            { code: "SPECIAL", percentage: 20, minSpend: 100000 }
-        ];
-
-        const found = mockDiscounts.find(d => d.code.toUpperCase() === code.toUpperCase());
-        if (found) {
-            setAppliedDiscount(found);
-            return { success: true, message: "Diskon berhasil digunakan!" };
+    // Real discount validation using API
+    const applyDiscountCode = async (code: string) => {
+        try {
+            const { apiClient } = await import("../api/client");
+            const discount = await apiClient.verifyDiscount(code);
+            
+            if (discount && discount.isActive) {
+                setAppliedDiscount({
+                    code: discount.code,
+                    percentage: parseFloat(discount.percentage),
+                    minSpend: discount.minSpend
+                });
+                return { success: true, message: "Diskon berhasil digunakan!" };
+            }
+            return { success: false, message: "Diskon tidak aktif atau tidak ditemukan." };
+        } catch (error: any) {
+            return { success: false, message: error.message || "Kode diskon tidak valid." };
         }
-        return { success: false, message: "Kode diskon tidak valid." };
     };
 
     const removeDiscount = () => setAppliedDiscount(null);

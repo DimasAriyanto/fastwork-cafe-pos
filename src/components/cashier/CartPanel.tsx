@@ -17,7 +17,7 @@ type CartPanelProps = {
     tax: number;
     total: number;
     appliedDiscount: { code: string; percentage: number; minSpend: number } | null;
-    applyDiscountCode: (code: string) => { success: boolean; message: string };
+    applyDiscountCode: (code: string) => Promise<{ success: boolean; message: string }>;
     removeDiscount: () => void;
 };
 
@@ -43,8 +43,8 @@ export default function CartPanel({
     const [isDiscountFocused, setIsDiscountFocused] = useState(false);
     const [discountCode, setDiscountCode] = useState("");
 
-    const handleApplyDiscount = () => {
-        const result = applyDiscountCode(discountCode);
+    const handleApplyDiscount = async () => {
+        const result = await applyDiscountCode(discountCode);
         if (!result.success) {
             alert(result.message);
         }

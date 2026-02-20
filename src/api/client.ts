@@ -534,6 +534,21 @@ class ApiClient {
 
     throw new Error(response.error || 'Failed to delete discount');
   }
+
+  /**
+   * Verify discount code
+   */
+  async verifyDiscount(code: string) {
+    const response = await this.request<ApiResponse>(`/discounts/verify/${code}`, {
+      method: 'GET',
+    });
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.error || 'Invalid discount code');
+  }
 }
 
 export const apiClient = new ApiClient();

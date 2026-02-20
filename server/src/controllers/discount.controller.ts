@@ -57,4 +57,14 @@ export class DiscountController {
       return c.json({ success: false, error: (error as Error).message }, 404);
     }
   }
+
+  async getByCode(c: Context) {
+    try {
+      const code = c.req.param('code');
+      const result = await this.discountService.getDiscountByCode(code);
+      return c.json({ success: true, data: result });
+    } catch (error) {
+      return c.json({ success: false, error: (error as Error).message }, 404);
+    }
+  }
 }
