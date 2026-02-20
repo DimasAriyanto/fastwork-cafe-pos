@@ -5,6 +5,7 @@ export type Product = {
     category: string;
     price: number;
     image: string;
+    isAvailable?: boolean;
     variants?: string[];
     toppings?: { name: string; price: number }[];
 };

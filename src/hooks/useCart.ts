@@ -36,7 +36,11 @@ export const useCart = () => {
 
     const clearCart = () => setCart([]);
 
-    const [discount, setDiscount] = useState<number>(0);
+    const [appliedDiscount, setAppliedDiscount] = useState<{
+        code: string;
+        percentage: number;
+        minSpend: number;
+    } | null>(null);
 
     const subtotal = useMemo(() => {
         return cart.reduce((acc, item) => {
@@ -51,12 +55,32 @@ export const useCart = () => {
         }, 0);
     }, [cart]);
 
-    const totalAfterDiscount = useMemo(() => {
-        return subtotal * (1 - discount / 100);
-    }, [subtotal, discount]);
+    const discountAmount = useMemo(() => {
+        if (!appliedDiscount || subtotal < appliedDiscount.minSpend) return 0;
+        return subtotal * (appliedDiscount.percentage / 100);
+    }, [subtotal, appliedDiscount]);
 
+    const totalAfterDiscount = subtotal - discountAmount;
     const tax = totalAfterDiscount * 0.10;
     const total = totalAfterDiscount + tax;
+
+    // Mock discount validation (in real app, this would be an API call)
+    const applyDiscountCode = (code: string) => {
+        const mockDiscounts = [
+            { code: "DISKON10", percentage: 10, minSpend: 50000 },
+            { code: "HEMAT5", percentage: 5, minSpend: 20000 },
+            { code: "SPECIAL", percentage: 20, minSpend: 100000 }
+        ];
+
+        const found = mockDiscounts.find(d => d.code.toUpperCase() === code.toUpperCase());
+        if (found) {
+            setAppliedDiscount(found);
+            return { success: true, message: "Diskon berhasil digunakan!" };
+        }
+        return { success: false, message: "Kode diskon tidak valid." };
+    };
+
+    const removeDiscount = () => setAppliedDiscount(null);
 
     return {
         cart,
@@ -68,8 +92,10 @@ export const useCart = () => {
         subtotal,
         tax,
         total,
-        discount,
-        setDiscount,
+        appliedDiscount,
+        applyDiscountCode,
+        removeDiscount,
+        discountAmount,
         totalAfterDiscount
     };
 };

@@ -14,7 +14,9 @@ import { menus } from './menu';
 export const discounts = mysqlTable('discounts', {
   id: int('id').autoincrement().primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
+  code: varchar('code', { length: 50 }).unique(),
   percentage: decimal('percentage', { precision: 5, scale: 2 }).notNull(),
+  minSpend: int('min_spend').default(0),
   startDate: datetime('start_date'),
   endDate: datetime('end_date'),
   isActive: boolean('is_active').default(true),

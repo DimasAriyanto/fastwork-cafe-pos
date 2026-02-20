@@ -7,19 +7,27 @@ type ProductCardProps = {
 };
 
 export default function ProductCard({ product, onClick }: ProductCardProps) {
+    const isAvailable = product.isAvailable !== false;
+
     return (
         <div
-            onClick={() => onClick(product)}
-            className="bg-white rounded-xl p-4 cursor-pointer
-        border border-gray-200
-        hover:shadow-lg hover:border-orange-200
-        transition-all duration-200
-        group transform hover:-translate-y-1
-        h-full flex flex-col"
+            onClick={() => isAvailable && onClick(product)}
+            className={`bg-white rounded-xl p-4 border border-gray-200 transition-all duration-200 group transform h-full flex flex-col ${isAvailable
+                ? "cursor-pointer hover:shadow-lg hover:border-orange-200 hover:-translate-y-1"
+                : "cursor-not-allowed opacity-75"
+                }`}
         >
-            <div className="flex items-start gap-4 h-full">
+            <div className="flex items-start gap-4 h-full relative">
+                {!isAvailable && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 rounded-lg">
+                        <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm">
+                            OUT OF STOCK
+                        </span>
+                    </div>
+                )}
+
                 {/* Product Image */}
-                <div className="w-20 h-20 flex-shrink-0 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden">
+                <div className={`w-20 h-20 flex-shrink-0 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden ${!isAvailable && "grayscale"}`}>
                     <img
                         src={product.image}
                         alt={product.name}
@@ -46,7 +54,7 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
                 </div>
 
                 {/* Product Info */}
-                <div className="flex-1 flex flex-col">
+                <div className={`flex-1 flex flex-col ${!isAvailable && "grayscale"}`}>
                     <p className="font-semibold text-gray-800 text-lg line-clamp-2">
                         {product.name}
                     </p>
@@ -60,10 +68,10 @@ export default function ProductCard({ product, onClick }: ProductCardProps) {
                             Rp{product.price.toLocaleString()}
                         </p>
 
-                        <div className="w-8 h-8 flex items-center justify-center
-              bg-gray-100 text-gray-600 rounded-full
-              hover:bg-orange-500 hover:text-white
-              transition transform hover:scale-110">
+                        <div className={`w-8 h-8 flex items-center justify-center rounded-full transition transform ${isAvailable
+                            ? "bg-gray-100 text-gray-600 group-hover:bg-orange-500 group-hover:text-white group-hover:scale-110"
+                            : "bg-gray-200 text-gray-400"
+                            }`}>
                             <Plus size={18} />
                         </div>
                     </div>

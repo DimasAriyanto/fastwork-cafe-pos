@@ -35,7 +35,7 @@ export default function Dashboard() {
   const {
     cart, addToCart, updateCartItem, removeFromCart, updateQuantity, clearCart,
     subtotal, tax, total,
-    discount, setDiscount, totalAfterDiscount
+    appliedDiscount, applyDiscountCode, removeDiscount, totalAfterDiscount
   } = useCart();
   const {
     isPaymentModalOpen, openPaymentModal, closePaymentModal,
@@ -105,7 +105,7 @@ export default function Dashboard() {
       })),
       subtotal: subtotal,
       tax: tax,
-      discount: discount,
+      discount: appliedDiscount?.percentage || 0,
       paidAmount: paidAmount,
       change: method === "QRIS" ? 0 : change
     };
@@ -113,7 +113,7 @@ export default function Dashboard() {
     addTransaction(newTransaction);
     openSuccessModal(newTransaction);
     clearCart();
-    setDiscount(0); // Clear discount
+    removeDiscount(); // Clear discount
     setCustomer("");
     closePaymentModal();
     closeQRISModal();
@@ -143,7 +143,7 @@ export default function Dashboard() {
       })),
       subtotal: subtotal,
       tax: tax,
-      discount: discount,
+      discount: appliedDiscount?.percentage || 0,
       paidAmount: 0,
       change: 0,
       status: "unpaid"
@@ -152,7 +152,7 @@ export default function Dashboard() {
     addUnpaidOrder(newUnpaidOrder);
     alert(`Pesanan ${customer || "tanpa nama"} disimpan sebagai Bayar Nanti!`);
     clearCart();
-    setDiscount(0); // Clear discount
+    removeDiscount(); // Clear discount
     setCustomer("");
     setIsRightPanelOpen(false); // Close drawer on mobile
   };
@@ -191,9 +191,10 @@ export default function Dashboard() {
             }}
             tax={tax}
             total={total}
-            discount={discount}
+            appliedDiscount={appliedDiscount}
+            applyDiscountCode={applyDiscountCode}
+            removeDiscount={removeDiscount}
             subtotal={subtotal}
-            setDiscount={setDiscount}
             onCheckout={handleCheckout}
           />
         </div>,

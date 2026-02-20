@@ -16,8 +16,9 @@ type CartPanelProps = {
     subtotal: number;
     tax: number;
     total: number;
-    discount: number;
-    setDiscount: (val: number) => void;
+    appliedDiscount: { code: string; percentage: number; minSpend: number } | null;
+    applyDiscountCode: (code: string) => { success: boolean; message: string };
+    removeDiscount: () => void;
 };
 
 export default function CartPanel({
@@ -32,13 +33,22 @@ export default function CartPanel({
     subtotal,
     tax,
     total,
-    discount,
-    setDiscount,
+    appliedDiscount,
+    applyDiscountCode,
+    removeDiscount,
     onCheckout,
 }: CartPanelProps) {
     const [payType, setPayType] = useState<"payNow" | "payLater">("payNow");
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
     const [isDiscountFocused, setIsDiscountFocused] = useState(false);
+    const [discountCode, setDiscountCode] = useState("");
+
+    const handleApplyDiscount = () => {
+        const result = applyDiscountCode(discountCode);
+        if (!result.success) {
+            alert(result.message);
+        }
+    };
 
     const handleCheckout = () => {
         if (cart.length === 0) {
@@ -105,11 +115,11 @@ export default function CartPanel({
                                         Rp{subtotal.toLocaleString("id-ID")}
                                     </span>
                                 </div>
-                                {discount > 0 && (
+                                {appliedDiscount && appliedDiscount.percentage > 0 && subtotal >= appliedDiscount.minSpend && (
                                     <div className="flex justify-between items-center text-orange-500 italic">
-                                        <span className="text-base">Potongan ({discount}%)</span>
+                                        <span className="text-base">Potongan ({appliedDiscount.percentage}%)</span>
                                         <span className="text-base">
-                                            - Rp{(subtotal * discount / 100).toLocaleString("id-ID")}
+                                            - Rp{((subtotal * appliedDiscount.percentage) / 100).toLocaleString("id-ID")}
                                         </span>
                                     </div>
                                 )}
@@ -129,24 +139,52 @@ export default function CartPanel({
 
                             <hr className="border-gray-200 mb-6" />
 
-                            {/* Discount Section */}
-                            <div className="flex items-center justify-between mb-8">
-                                <span className="text-lg font-bold text-gray-800">Diskon</span>
-                                <div className="flex items-center gap-2 flex-1 ml-10">
+                            <div className="flex flex-col gap-2 mb-8">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-lg font-bold text-gray-800">Diskon</span>
+                                    {appliedDiscount && (
+                                        <button 
+                                            onClick={removeDiscount}
+                                            className="text-sm text-red-500 hover:underline"
+                                        >
+                                            Hapus
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
                                     <input
-                                        type="number"
-                                        placeholder="10"
-                                        value={discount || ""}
-                                        onChange={(e) => setDiscount(Number(e.target.value))}
+                                        type="text"
+                                        placeholder="Masukkan kode diskon"
+                                        value={discountCode}
+                                        onChange={(e) => setDiscountCode(e.target.value)}
                                         onFocus={() => setIsDiscountFocused(true)}
                                         onBlur={() => setIsDiscountFocused(false)}
-                                        className={`flex-1 p-3 border rounded-xl focus:outline-none transition-colors duration-200 ${isDiscountFocused || discount > 0 ? "border-[#FE4E10]" : "border-gray-300"
+                                        disabled={!!appliedDiscount}
+                                        className={`flex-1 p-3 border rounded-xl focus:outline-none transition-colors duration-200 ${isDiscountFocused || appliedDiscount ? "border-[#FE4E10]" : "border-gray-300"
                                             } bg-white text-gray-700 h-[56px]`}
                                     />
-                                    <div className="bg-[#FE4E10] text-white w-14 h-14 flex items-center justify-center rounded-xl font-bold text-xl">
-                                        %
-                                    </div>
+                                    <button 
+                                        onClick={handleApplyDiscount}
+                                        disabled={!!appliedDiscount || !discountCode}
+                                        className={`h-14 px-6 rounded-xl font-bold transition-all ${
+                                            !!appliedDiscount || !discountCode 
+                                            ? "bg-gray-200 text-gray-400 cursor-not-allowed" 
+                                            : "bg-[#FE4E10] text-white hover:bg-[#e0440e]"
+                                        }`}
+                                    >
+                                        Pakai
+                                    </button>
                                 </div>
+                                {appliedDiscount && subtotal < appliedDiscount.minSpend && (
+                                    <p className="text-xs text-red-500 italic mt-1">
+                                        * Minimal belanja Rp{appliedDiscount.minSpend.toLocaleString("id-ID")} untuk kode ini
+                                    </p>
+                                )}
+                                {appliedDiscount && subtotal >= appliedDiscount.minSpend && (
+                                    <p className="text-xs text-green-600 italic mt-1">
+                                        * Kode {appliedDiscount.code} berhasil dipasang ({appliedDiscount.percentage}%)
+                                    </p>
+                                )}
                             </div>
 
                             {/* Payment Options */}
