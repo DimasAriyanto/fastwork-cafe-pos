@@ -17,6 +17,7 @@ import { transactionRoutes } from './routes/transactions.ts';
 import { checkDatabaseHealth } from './db/index.ts';
 import { categoryRoutes } from './routes/category.ts';
 import { toppingRoutes } from './routes/topping.ts';
+import { discountRoutes } from './routes/discount.ts';
 
 const app = new Hono();
 
@@ -45,6 +46,7 @@ app.route('/api/employees', employeeRoutes); // 👈 Ini yang support Form-Data
 app.route('/api/menus', menuRoutes);
 app.route('/api/categories', categoryRoutes);
 app.route('/api/toppings', toppingRoutes);
+app.route('/api/discounts', discountRoutes);
 
 // ⚠️ FIX: Tambahkan '/' di depan
 app.route('/api/transactions', transactionRoutes); 

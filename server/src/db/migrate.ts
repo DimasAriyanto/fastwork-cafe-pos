@@ -3,6 +3,9 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { drizzle } from 'drizzle-orm/mysql2';
+import { migrate as drizzleMigrate } from 'drizzle-orm/mysql2/migrator';
+import { resolve } from 'path';
 
 dotenv.config();
 
@@ -33,6 +36,14 @@ async function migrate() {
     });
 
     console.log(`✅ Connected to ${process.env.DB_NAME}`);
+
+    // 2.5 Run Drizzle Native Migrations
+    console.log('📦 Running Drizzle migrations...');
+    const drizzleDb = drizzle(connection);
+    await drizzleMigrate(drizzleDb, { 
+        migrationsFolder: resolve(__dirname, '../../drizzle') 
+    });
+    console.log('✅ Drizzle migrations completed!');
 
     // 3. Baca File SQL
     const migrationPath = join(__dirname, 'migrations.sql');

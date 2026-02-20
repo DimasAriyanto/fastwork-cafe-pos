@@ -470,6 +470,70 @@ class ApiClient {
 
     throw new Error(response.error || 'Failed to delete employee');
   }
+
+  // ============= DISCOUNT ENDPOINTS =============
+
+  /**
+   * Get semua discounts
+   */
+  async getDiscounts() {
+    const response = await this.request<ApiResponse>('/discounts', {
+      method: 'GET',
+    });
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.error || 'Failed to fetch discounts');
+  }
+
+  /**
+   * Create discount baru
+   */
+  async createDiscount(discountData: any) {
+    const response = await this.request<ApiResponse>('/discounts', {
+      method: 'POST',
+      body: JSON.stringify(discountData),
+    });
+
+    if (response.success) {
+      return response.data;
+    }
+
+    throw new Error(response.error || 'Failed to create discount');
+  }
+
+  /**
+   * Update discount
+   */
+  async updateDiscount(id: number, discountData: any) {
+    const response = await this.request<ApiResponse>(`/discounts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(discountData),
+    });
+
+    if (response.success) {
+      return response.data;
+    }
+
+    throw new Error(response.error || 'Failed to update discount');
+  }
+
+  /**
+   * Delete discount
+   */
+  async deleteDiscount(id: number) {
+    const response = await this.request<ApiResponse>(`/discounts/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (response.success) {
+      return response.data;
+    }
+
+    throw new Error(response.error || 'Failed to delete discount');
+  }
 }
 
 export const apiClient = new ApiClient();
