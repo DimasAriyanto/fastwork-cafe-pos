@@ -13,7 +13,11 @@ export default defineConfig({
   
   // PENTING: Gunakan credentials terpisah biar aman & sesuai env sebelumnya
   dbCredentials: {
-    url: process.env.DATABASE_URL as string,
+    host: process.env.DB_HOST as string,
+    user: process.env.DB_USER as string,
+    password: process.env.DB_PASSWORD as string,
+    database: process.env.DB_NAME as string,
+    port: Number(process.env.DB_PORT) || 3306,
   },
   
   // Opsional: Biar log-nya lebih detail pas generate
