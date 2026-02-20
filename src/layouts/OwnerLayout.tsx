@@ -23,9 +23,13 @@ const OwnerLayout = () => {
     };
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
+  const handleLogout = async () => {
+    try {
+        const { apiClient } = await import("../api/client");
+        await apiClient.logout();
+    } catch (error) {
+        console.error("Logout error:", error);
+    }
     navigate('/login');
   };
 

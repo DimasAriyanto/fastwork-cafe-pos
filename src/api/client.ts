@@ -536,6 +536,38 @@ class ApiClient {
   }
 
   /**
+   * Get all menus
+   */
+  async getMenus(params: any = {}) {
+    const query = new URLSearchParams(params).toString();
+    const endpoint = `/menus${query ? `?${query}` : ''}`;
+    const response = await this.request<ApiResponse>(endpoint, {
+      method: 'GET',
+    });
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.error || 'Failed to fetch menus');
+  }
+
+  /**
+   * Get all categories
+   */
+  async getCategories() {
+    const response = await this.request<ApiResponse>('/categories', {
+      method: 'GET',
+    });
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.error || 'Failed to fetch categories');
+  }
+
+  /**
    * Verify discount code
    */
   async verifyDiscount(code: string) {

@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useOutletContext } from "react-router-dom";
+import { apiClient } from "../../api/client";
 import type { CashierContextType } from "../../layouts/CashierLayout";
-import { PRODUCTS_BY_CATEGORY } from "../../constants/products";
 import type { Product, CartItem, PaymentMethod, Transaction, UnpaidOrder } from "../../types/cashier";
 
 // Hooks
@@ -25,11 +25,57 @@ export default function Dashboard() {
   const { search, addTransaction, addUnpaidOrder, setIsRightPanelOpen, setCartCount } = useOutletContext<CashierContextType>();
 
   // Local State
+  const [categories, setCategories] = useState<{ name: string; icon: string; count: number }[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("Semua Menu");
+  const [isLoading, setIsLoading] = useState(true);
   const [customer, setCustomer] = useState("");
   const [dineType, setDineType] = useState<"dinein" | "takeaway">("dinein");
   const [selectedProductForModal, setSelectedProductForModal] = useState<CartItem | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | undefined>();
+
+  // Fetch Data
+  useEffect(() => {
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const [productsDataArr, categoriesDataArr] = await Promise.all([
+                apiClient.getMenus({ limit: 100 }),
+                apiClient.getCategories()
+            ]);
+
+            const productsData = productsDataArr.map((m: any) => ({
+                id: m.id,
+                name: m.name,
+                category: m.categoryName,
+                price: m.price,
+                image: m.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random`,
+                isAvailable: m.isAvailable,
+                variants: m.variants?.map((v: any) => v.name) || [],
+                toppings: [] 
+            }));
+
+            setAllProducts(productsData);
+
+            // Group categories with counts
+            const cats = categoriesDataArr.map((c: any) => ({
+                name: c.name,
+                icon: c.name.includes("Minuman") ? "🥤" : c.name.includes("Kopi") ? "☕" : "🍽️",
+                count: productsData.filter((p: any) => p.category === c.name).length
+            }));
+
+            setCategories([
+                { name: "Semua Menu", icon: "📋", count: productsData.length },
+                ...cats
+            ]);
+        } catch (error) {
+            console.error("Failed to fetch dashboard data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchData();
+  }, []);
 
   // Hooks
   const {
@@ -50,14 +96,19 @@ export default function Dashboard() {
   }, [cart, setCartCount]);
 
   // Derived Data
-  const currentProducts = useMemo(() => {
-    return PRODUCTS_BY_CATEGORY[selectedCategory] || [];
-  }, [selectedCategory]);
-
   const filteredProducts = useMemo(() => {
-    if (!search) return currentProducts;
-    return currentProducts.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
-  }, [currentProducts, search]);
+    let result = allProducts;
+    
+    if (selectedCategory !== "Semua Menu") {
+        result = result.filter(p => p.category === selectedCategory);
+    }
+
+    if (search) {
+        result = result.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+    }
+    
+    return result;
+  }, [allProducts, selectedCategory, search]);
 
   // Handlers
   const handleProductClick = (product: Product) => {
@@ -164,14 +215,23 @@ export default function Dashboard() {
     <div className="flex h-full w-full overflow-hidden">
       {/* Left Content Area */}
       <div className="flex-1 p-4 sm:p-6 overflow-y-auto hide-scrollbar pb-24">
-        <CategoryTabs
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-        />
-        <ProductList
-          products={filteredProducts}
-          onProductClick={handleProductClick}
-        />
+        {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            </div>
+        ) : (
+            <>
+                <CategoryTabs
+                    categories={categories}
+                    selectedCategory={selectedCategory}
+                    onSelectCategory={setSelectedCategory}
+                />
+                <ProductList
+                    products={filteredProducts}
+                    onProductClick={handleProductClick}
+                />
+            </>
+        )}
       </div>
 
       {/* Right Cart Panel via Portal */}

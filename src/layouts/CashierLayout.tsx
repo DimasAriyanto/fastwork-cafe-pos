@@ -80,10 +80,13 @@ export default function CashierLayout() {
     }
   };
 
-  const handleLogout = () => {
-    // Logic from Close Cashier and Sidebar Logout
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
+  const handleLogout = async () => {
+    try {
+        const { apiClient } = await import("../api/client");
+        await apiClient.logout();
+    } catch (error) {
+        console.error("Logout error:", error);
+    }
     navigate('/login');
   };
 

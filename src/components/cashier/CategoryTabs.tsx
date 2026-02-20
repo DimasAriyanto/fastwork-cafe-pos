@@ -1,11 +1,10 @@
-import { CATEGORIES } from "../../constants/products";
-
 type CategoryTabsProps = {
+    categories: { name: string; icon: string; count: number }[];
     selectedCategory: string;
     onSelectCategory: (category: string) => void;
 };
 
-export default function CategoryTabs({ selectedCategory, onSelectCategory }: CategoryTabsProps) {
+export default function CategoryTabs({ categories, selectedCategory, onSelectCategory }: CategoryTabsProps) {
     return (
         <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
@@ -13,7 +12,7 @@ export default function CategoryTabs({ selectedCategory, onSelectCategory }: Cat
             </div>
 
             <div className="flex gap-2 overflow-x-auto hide-scrollbar">
-                {CATEGORIES.map((category) => (
+                {categories.map((category) => (
                     <button
                         key={category.name}
                         onClick={() => onSelectCategory(category.name)}

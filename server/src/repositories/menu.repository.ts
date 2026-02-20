@@ -142,7 +142,7 @@ export class MenuRepository {
       ...row.menu,
       categoryName: row.categoryName || 'Uncategorized', // Handle jika kategori terhapus
       // Pastikan price jadi string sesuai Interface Frontend
-      price: row.menu.price.toString(), 
+      price: row.menu.price, 
     }));
 
     // Return format standard { data, meta }

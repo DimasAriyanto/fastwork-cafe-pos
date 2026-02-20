@@ -234,7 +234,7 @@ async function seed() {
             name: 'Americano',
             price: 22000, // Integer
             description: 'Espresso with hot water',
-            isAvailable: true,
+            isAvailable: false,
             currentStock: 100,
             hasVariant: false,
             createdBy: ownerUserId,
