@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
+import { apiClient } from '../../api/client';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -10,30 +11,28 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Simulate network delay
-    setTimeout(() => {
-      // Hardcoded credentials for Owner
-      // In a real app, this would be an API call
-      if (username === 'owner' && password === 'owner') {
-        localStorage.setItem('token', 'dummy-token-owner');
-        localStorage.setItem('role', 'OWNER');
-        // Redirect to Owner Dashboard
+    try {
+      const response = await apiClient.login(username, password);
+      
+      // Redirect based on role
+      if (response.user.role === 'OWNER') {
         navigate('/owner/dashboard');
-      } else if (username === 'cashier' && password === 'cashier') {
-        localStorage.setItem('token', 'dummy-token-cashier');
-        localStorage.setItem('role', 'CASHIER');
-        // Redirect to Cashier Dashboard
+      } else if (response.user.role === 'CASHIER') {
         navigate('/cashier/dashboard');
       } else {
-        setError('Username atau password salah');
+        // Fallback or specific handling for other roles
+        setError('Akses tidak diberikan untuk role ini');
         setIsLoading(false);
       }
-    }, 800);
+    } catch (err: any) {
+      setError(err.message || 'Username atau password salah');
+      setIsLoading(false);
+    }
   };
 
   return (

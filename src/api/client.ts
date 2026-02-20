@@ -121,8 +121,8 @@ class ApiClient {
         headers,
       });
 
-      // Jika 401 Unauthorized dan masih belum retry, coba refresh token
-      if (response.status === 401 && retryCount === 0) {
+      // Jika 401 Unauthorized dan bukan di endpoint login, coba refresh token
+      if (response.status === 401 && endpoint !== '/auth/login' && retryCount === 0) {
         const refreshed = await this.refreshAccessToken();
         if (refreshed) {
           return this.request<T>(endpoint, options, retryCount + 1);

@@ -8,6 +8,13 @@
       "when": 1771576469088,
       "tag": "0000_careful_firebrand",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1771625107451,
+      "tag": "0001_panoramic_warpath",
+      "breakpoints": true
     }
   ]
 }
