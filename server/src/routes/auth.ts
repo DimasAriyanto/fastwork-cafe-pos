@@ -7,8 +7,9 @@ const authController = new AuthController();
 
 // Public routes (no auth required)
 authRoutes.post('/login', (c) => authController.login(c));
-// authRoutes.post('/register', (c) => authController.register(c));
+authRoutes.post('/register', (c) => authController.register(c));
 authRoutes.post('/refresh', (c) => authController.refresh(c));
+authRoutes.post('/seed', (c) => authController.seedUsers(c));
 
 // Protected routes (requires authentication)
 authRoutes.use('/logout', authenticateToken);

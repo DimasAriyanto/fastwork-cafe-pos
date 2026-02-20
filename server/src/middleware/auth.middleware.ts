@@ -1,9 +1,9 @@
 import { Context, Next } from 'hono';
 import { verifyAccessToken } from '../utils/jwt.ts';
+import type { UserContext } from '../types/index.ts'; // 👈 Import Type UserContext
 
 /**
  * Middleware untuk memverifikasi JWT token
- * Menambahkan user info ke context
  */
 export const authenticateToken = async (c: Context, next: Next) => {
   try {
@@ -12,38 +12,38 @@ export const authenticateToken = async (c: Context, next: Next) => {
       return c.json({ error: 'Unauthorized: Missing or invalid token' }, 401);
     }
 
-    const token = authHeader.slice(7); // Remove 'Bearer '
+    const token = authHeader.slice(7); 
     const decoded = verifyAccessToken(token);
 
-    // Attach user info ke context
+    // Kita set user, TypeScript di Hono akan menyimpannya
     c.set('user', decoded);
     await next();
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Auth middleware error:', errorMessage);
     return c.json({ error: 'Unauthorized: ' + errorMessage }, 401);
   }
 };
 
 /**
  * Middleware untuk mengecek role tertentu
- * @param {string|string[]} allowedRoles - Role yang diizinkan
  */
 export const authorizeRole = (allowedRoles: string | string[]) => {
   const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
 
   return async (c: Context, next: Next) => {
     try {
-      const user = c.get('user');
+      // 👇 TYPE CASTING: Kita kasih tau TS kalau ini adalah UserContext
+      const user = c.get('user') as UserContext;
 
       if (!user) {
         return c.json({ error: 'Unauthorized: User not authenticated' }, 401);
       }
 
+      // Sekarang user.role aman dibaca, gak bakal error merah
       if (!roles.includes(user.role)) {
         return c.json(
           {
-            error: `Forbidden: You do not have permission to access this resource. Required role: ${roles.join(', ')}`,
+            error: `Forbidden: You do not have permission. Required: ${roles.join(', ')}`,
           },
           403,
         );
@@ -51,8 +51,7 @@ export const authorizeRole = (allowedRoles: string | string[]) => {
 
       await next();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Authorization middleware error:', errorMessage);
+      console.error('Authorization middleware error:', error);
       return c.json({ error: 'Forbidden' }, 403);
     }
   };

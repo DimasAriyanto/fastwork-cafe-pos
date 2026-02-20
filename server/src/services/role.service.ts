@@ -16,23 +16,24 @@ export class RoleService {
     return await this.roleRepo.findAllWithPagination(options);
   }
 
+  // ⚠️ FIX: Hapus [0]
   async get(id: number) {
-    const r = await this.roleRepo.findById(id);
-    return r[0] || null;
+    const result = await this.roleRepo.findById(id);
+    return result || null;
   }
 
   async create(data: CreateRoleInput) {
     const created = await this.roleRepo.create(data);
-    return created[0];
+    return created; // ⚠️ Hapus [0]
   }
 
   async update(id: number, data: UpdateRoleInput) {
     const updated = await this.roleRepo.update(id, data);
-    return updated[0];
+    return updated; // ⚠️ Hapus [0]
   }
 
   async delete(id: number) {
     const deleted = await this.roleRepo.delete(id);
-    return deleted[0];
+    return deleted; // ⚠️ Hapus [0]
   }
 }

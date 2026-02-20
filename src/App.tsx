@@ -5,10 +5,12 @@ import OwnerLayout from './layouts/OwnerLayout';
 import Dashboard from './pages/owner/Dashboard';
 import Menu from './pages/owner/Menu';
 import DataTransaksi from './pages/owner/DataTransaksi';
-import Laporan from './pages/owner/Laporan';
+import LaporanKeuanganToko from './pages/owner/LaporanKeuanganToko';
+import LaporanPenjualanToko from './pages/owner/LaporanPenjualanToko';
 import Pegawai from './pages/owner/Pegawai';
 import Kategori from './pages/owner/Kategori';
 import TambahanMenu from './pages/owner/TambahanMenu';
+import Diskon from './pages/owner/Diskon';
 import Unauthorized from './pages/auth/Unauthorized';
 
 // Cashier Pages
@@ -16,15 +18,12 @@ import CashierLayout from './layouts/CashierLayout';
 import CashierDashboard from './pages/cashier/Dashboard';
 import UnpaidOrders from './pages/cashier/UnpaidOrders';
 import Riwayat from './pages/cashier/Riwayat';
-import PegawaiExample from './pages/owner/PegawaiExample';
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
-
-      <Route path="/employee" element={<PegawaiExample />} />
 
       {/* Owner Routes */}
       <Route element={<ProtectedRoute allowedRoles={['OWNER']} />}>
@@ -35,7 +34,9 @@ function App() {
           <Route path="kategori" element={<Kategori />} />
           <Route path="tambahan-menu" element={<TambahanMenu />} />
           <Route path="data-transaksi" element={<DataTransaksi />} />
-          <Route path="laporan" element={<Laporan />} />
+          <Route path="laporan-keuangan" element={<LaporanKeuanganToko />} />
+          <Route path="laporan-penjualan" element={<LaporanPenjualanToko />} />
+          <Route path="diskon" element={<Diskon />} />
           <Route path="pegawai" element={<Pegawai />} />
         </Route>
       </Route>

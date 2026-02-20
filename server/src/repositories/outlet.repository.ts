@@ -1,6 +1,6 @@
 import { db } from '../db/index.ts';
 import { outlets } from '../db/schemas/index.ts';
-import { eq, sql, and, desc, asc, or } from 'drizzle-orm';
+import { eq, and, desc, asc, or, like } from 'drizzle-orm'; // Pake 'like'
 import type { CreateOutletInput, UpdateOutletInput, PaginationOptions } from '../types/index.ts';
 
 export class OutletRepository {
@@ -21,13 +21,14 @@ export class OutletRepository {
     const offset = (Math.max(page, 1) - 1) * limit;
     const conditions = [];
 
+    // 1. MySQL Search (Case Insensitive by default)
     if (search) {
       const pattern = `%${search}%`;
       conditions.push(
         or(
-          sql`${outlets.name} ILIKE ${pattern}`,
-          sql`${outlets.city} ILIKE ${pattern}`,
-          sql`${outlets.province} ILIKE ${pattern}`
+          like(outlets.name, pattern),
+          like(outlets.city, pattern),
+          like(outlets.province, pattern)
         )
       );
     }
@@ -61,41 +62,47 @@ export class OutletRepository {
       ? desc(orderByColumn) 
       : asc(orderByColumn);
 
+    const baseQuery = db
+        .select()
+        .from(outlets)
+        .limit(limit)
+        .offset(offset)
+        .orderBy(orderByClause);
+
     if (conditions.length > 0) {
-      return await db
-        .select()
-        .from(outlets)
-        .where(and(...conditions))
-        .orderBy(orderByClause)
-        .limit(limit)
-        .offset(offset);
+      return await baseQuery.where(and(...conditions));
     } else {
-      return await db
-        .select()
-        .from(outlets)
-        .orderBy(orderByClause)
-        .limit(limit)
-        .offset(offset);
+      return await baseQuery;
     }
   }
 
   async findById(id: number) {
-    return await db.select().from(outlets).where(eq(outlets.id, id)).limit(1);
+    const [outlet] = await db.select().from(outlets).where(eq(outlets.id, id)).limit(1);
+    return outlet;
   }
 
+  // MySQL Create Pattern
   async create(data: CreateOutletInput) {
-    return await db.insert(outlets).values(data).returning();
+    const [result] = await db.insert(outlets).values(data);
+    return await this.findById(result.insertId);
   }
 
+  // MySQL Update Pattern
   async update(id: number, data: UpdateOutletInput) {
-    return await db
+    await db
       .update(outlets)
-      .set({ ...data })
-      .where(eq(outlets.id, id))
-      .returning();
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(outlets.id, id));
+    
+    return await this.findById(id);
   }
 
+  // MySQL Delete Pattern
   async delete(id: number) {
-    return await db.delete(outlets).where(eq(outlets.id, id)).returning();
+    const dataToDelete = await this.findById(id);
+    if (dataToDelete) {
+        await db.delete(outlets).where(eq(outlets.id, id));
+    }
+    return dataToDelete;
   }
 }

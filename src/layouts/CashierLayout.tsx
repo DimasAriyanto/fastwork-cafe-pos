@@ -1,33 +1,9 @@
 import { useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Search, LogOut, ClipboardList, History } from "lucide-react";
+import { Search, LogOut, History, ShoppingBag } from "lucide-react";
+import { useResponsive } from "../hooks/useResponsive";
 
-export type TransactionItem = {
-  name: string;
-  qty: number;
-  price: number;
-  variant?: string;
-  note?: string;
-};
-
-export type Transaction = {
-  id: string;
-  date: string;
-  customerName: string;
-  serviceType: "Dine In" | "Take Away";
-  items: TransactionItem[];
-  totalItems: number;
-  subtotal: number;
-  tax: number;
-  totalPrice: number;
-  paymentMethod?: "Cash" | "QRIS" | string;
-  paidAmount?: number;
-  change?: number;
-};
-
-export type UnpaidOrder = Transaction & {
-  status: "unpaid";
-};
+import type { Transaction, UnpaidOrder, PaymentMethod } from "../types/cashier";
 
 export type CashierContextType = {
   search: string;
@@ -37,12 +13,20 @@ export type CashierContextType = {
   unpaidOrders: UnpaidOrder[];
   addUnpaidOrder: (u: UnpaidOrder) => void;
   updateUnpaidOrder: (u: UnpaidOrder) => void;
-  payUnpaidOrder: (id: string, paymentMethod: "Cash" | "QRIS") => void;
+  payUnpaidOrder: (id: string, paymentMethod: PaymentMethod, paidAmount?: number, change?: number) => void;
+  isRightPanelOpen: boolean;
+  setIsRightPanelOpen: (open: boolean) => void;
+  cartCount: number;
+  setCartCount: (count: number) => void;
 };
+
 
 export default function CashierLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
   const [search, setSearch] = useState("");
+  const { isDesktop, isMobile } = useResponsive();
 
   // Initialize from localStorage if available
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
@@ -78,17 +62,18 @@ export default function CashierLayout() {
     setUnpaidOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
   };
 
-  const payUnpaidOrder = (id: string, paymentMethod: "Cash" | "QRIS") => {
+  const payUnpaidOrder = (id: string, paymentMethod: PaymentMethod, paidAmount?: number, change?: number) => {
     const order = unpaidOrders.find(o => o.id === id);
     if (order) {
       const { status, ...transactionData } = order;
       const completedTransaction: Transaction = {
         ...transactionData,
         paymentMethod: paymentMethod,
-        date: new Date().toISOString(), // Update date to payment time
-        paidAmount: transactionData.totalPrice, // Assume full payment
-        change: 0
+        date: new Date().toISOString(),
+        paidAmount: paidAmount ?? transactionData.totalPrice,
+        change: paymentMethod === "QRIS" ? 0 : (change ?? 0)
       };
+
 
       setTransactions(prev => [completedTransaction, ...prev]);
       setUnpaidOrders(prev => prev.filter(o => o.id !== id));
@@ -116,136 +101,251 @@ export default function CashierLayout() {
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Header Trigger Logic
+  const isDashboard = location.pathname.includes("/dashboard");
+
   return (
     <div className="h-screen w-full bg-gray-50 flex overflow-hidden">
-      {/* Custom scrollbar styling */}
+      {/* Custom scrollbar and animations */}
       <style>{`
-        .scroll-area {
-            overflow-y: auto;
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
-        .scroll-area::-webkit-scrollbar {
-            width: 6px;
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
         }
-        .scroll-area::-webkit-scrollbar-track {
-            background: transparent;
+        @keyframes slideInRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
         }
-        .scroll-area::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 3px;
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
         }
-        .scroll-area::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.2);
+        .animate-slideInRight {
+          animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .animate-slideUp {
+          animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
       `}</style>
 
       {/* Sidebar Overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-black/20 z-40 backdrop-blur-[2px]" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed z-50 top-0 left-0 h-full w-64 bg-white transition-transform scroll-area ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed z-50 top-0 left-0 h-full w-[340px] bg-white transition-transform scroll-area shadow-2xl ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
       >
-        <div className="p-4 border-b">
-          <h1 className="font-bold text-lg">Lorem Ipsum</h1>
-          <p className="text-sm text-gray-500">Kasir • Shift Pagi</p>
+        {/* SECTION 1: Top Row */}
+        <div className="px-6 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-200 rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-5 h-5 bg-gray-400/30 rounded-md" />
+            </div>
+            <span className="font-bold text-lg text-gray-900 tracking-tight leading-none">Lorem Ipsum</span>
+          </div>
+
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="shrink-0 p-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+            title="Close Sidebar"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1.6665 10C1.6665 6.92572 1.6665 5.38858 2.34468 4.29897C2.59559 3.89585 2.90726 3.54522 3.26559 3.26295C4.23413 2.5 5.60048 2.5 8.33317 2.5H11.6665C14.3992 2.5 15.7655 2.5 16.7341 3.26295C17.0924 3.54522 17.4041 3.89585 17.655 4.29897C18.3332 5.38858 18.3332 6.92572 18.3332 10C18.3332 13.0743 18.3332 14.6114 17.655 15.701C17.4041 16.1041 17.0924 16.4548 16.7341 16.737C15.7655 17.5 14.3992 17.5 11.6665 17.5H8.33317C5.60048 17.5 4.23413 17.5 3.26559 16.737C2.90726 16.4548 2.59559 16.1041 2.34468 15.701C1.6665 14.6114 1.6665 13.0743 1.6665 10Z" stroke="#888888" strokeWidth="1.25" />
+              <path d="M7.9165 2.5L7.9165 17.5" stroke="#888888" strokeWidth="1.25" strokeLinejoin="round" />
+              <path d="M4.1665 5.8335H4.99984M4.1665 8.3335H4.99984" stroke="#888888" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
 
-        <nav className="p-3 space-y-2">
+        {/* SECTION 2: Profile */}
+        <div className="px-6 mb-2">
+          <div className="border border-gray-100 bg-gray-50/50 rounded-2xl p-4">
+            <div className="text-xs text-gray-400 mb-3">Kasir</div>
+            <div className="flex items-center gap-3">
+              <img
+                src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80"
+                alt="Profile"
+                className="w-10 h-10 rounded-xl object-cover"
+              />
+              <div>
+                <div className="font-bold text-gray-900 text-sm">Broicad</div>
+                <div className="text-[10px] text-gray-400 font-medium">10:00 Am - 22:00 Pm</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 3: Navigation */}
+        <nav className="px-6 space-y-2 mt-4">
           <Link
             to="/cashier/dashboard"
             onClick={() => setSidebarOpen(false)}
-            className={`w-full flex items-center gap-3 p-3 rounded-lg transition ${isActive("/cashier/dashboard")
-              ? "bg-orange-500 text-white"
-              : "hover:bg-orange-500 hover:text-white"
+            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 ease-in-out font-medium text-sm group ${isActive("/cashier/dashboard")
+              ? "bg-[#FF5400] text-white shadow-lg shadow-orange-500/20"
+              : "text-gray-500 hover:bg-orange-50 hover:text-orange-600"
               }`}
           >
             <CashierIcon />
-            Cashier
+            Kasir
           </Link>
           <Link
             to="/cashier/unpaid-orders"
             onClick={() => setSidebarOpen(false)}
-            className={`w-full flex items-center gap-3 p-3 rounded-lg transition ${isActive("/cashier/unpaid-orders")
-              ? "bg-orange-500 text-white"
-              : "hover:bg-orange-500 hover:text-white"
+            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 ease-in-out font-medium text-sm group ${isActive("/cashier/unpaid-orders")
+              ? "bg-[#FF5400] text-white shadow-lg shadow-orange-500/20"
+              : "text-gray-500 hover:bg-orange-50 hover:text-orange-600"
               }`}
           >
-            <ClipboardList size={18} />
-            Unpaid Orders
+            <div className={`w-6 h-6 flex items-center justify-center transition-transform duration-300 ${!isActive("/cashier/unpaid-orders") && "group-hover:scale-110"}`}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+            <span className="">Pesanan Belum Dibayar</span>
           </Link>
           <Link
             to="/cashier/Riwayat"
             onClick={() => setSidebarOpen(false)}
-            className={`w-full flex items-center gap-3 p-3 rounded-lg transition ${isActive("/cashier/Riwayat")
-              ? "bg-orange-500 text-white"
-              : "hover:bg-orange-500 hover:text-white"
+            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 ease-in-out font-medium text-sm group ${isActive("/cashier/Riwayat")
+              ? "bg-[#FF5400] text-white shadow-lg shadow-orange-500/20"
+              : "text-gray-500 hover:bg-orange-50 hover:text-orange-600"
               }`}
           >
-            <History size={18} />
-            Riwayat Transaksi
+            <div className={`w-6 h-6 flex items-center justify-center transition-transform duration-300 ${!isActive("/cashier/Riwayat") && "group-hover:scale-110"}`}>
+              <History size={20} className="" />
+            </div>
+            <span className="">Riwayat Transaksi</span>
           </Link>
         </nav>
 
-        <div className="absolute bottom-4 left-0 w-full px-3">
+        {/* SECTION 4: Logout */}
+        <div className="absolute bottom-8 left-0 w-full px-6">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition"
+            className="w-full flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-orange-500 transition font-medium text-sm"
           >
-            <LogOut size={18} /> Keluar
+            <div className="w-6 h-6 flex items-center justify-center">
+              <LogOut size={20} strokeWidth={2} />
+            </div>
+            <span className="-ml-2">Keluar</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-200 shadow-sm z-30">
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-4 flex-1">
-              <button onClick={() => setSidebarOpen(true)}>
-                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="0.272727" y="0.272727" width="35.4545" height="35.4545" rx="7.72727" fill="white" />
-                  <rect x="0.272727" y="0.272727" width="35.4545" height="35.4545" rx="7.72727" stroke="#E4E7EC" strokeWidth="0.545455" />
-                  <path d="M9.66675 18C9.66675 14.9257 9.66675 13.3886 10.3449 12.299C10.5958 11.8959 10.9075 11.5452 11.2658 11.263C12.2344 10.5 13.6007 10.5 16.3334 10.5H19.6667C22.3994 10.5 23.7658 10.5 24.7343 11.263C25.0927 11.5452 25.4043 11.8959 25.6552 12.299C26.3334 13.3886 26.3334 14.9257 26.3334 18C26.3334 21.0743 26.3334 22.6114 25.6552 23.701C25.4043 24.1041 25.0927 24.4548 24.7343 24.737C23.7658 25.5 22.3994 25.5 19.6667 25.5H16.3334C13.6007 25.5 12.2344 25.5 11.2658 24.737C10.9075 24.4548 10.5958 24.1041 10.3449 23.701C9.66675 22.6114 9.66675 21.0743 9.66675 18Z" stroke="#888888" strokeWidth="1.25" />
-                  <path d="M15.9167 10.5L15.9167 25.5" stroke="#888888" strokeWidth="1.25" strokeLinejoin="round" />
-                  <path d="M12.1667 13.8335H13.0001M12.1667 16.3335H13.0001" stroke="#888888" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
+      <div className="flex-1 flex overflow-hidden relative">
+        <div className="flex-1 flex flex-col min-w-0 bg-gray-50 h-full">
+          {/* Header */}
+          <header className="z-30 w-full px-4 sm:px-5 py-3 shrink-0 bg-white border-b border-gray-200 lg:bg-transparent lg:border-none">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 flex-1">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-xl transition-colors shrink-0"
+                >
+                  <svg width="32" height="32" viewBox="0 0 44 44" fill="none" className="sm:w-11 sm:h-11">
+                    <rect x="0.5" y="0.5" width="43" height="43" rx="13.5" fill="white" stroke="#E7E7E7" />
+                    <path d="M13.6667 22C13.6667 18.9257 13.6667 17.3886 14.3449 16.299C14.5958 15.8959 14.9075 15.5452 15.2658 15.263C16.2344 14.5 17.6007 14.5 20.3334 14.5H23.6667C26.3994 14.5 27.7658 14.5 28.7343 15.263C29.0927 15.5452 29.4043 15.8959 29.6552 16.299C30.3334 17.3886 30.3334 18.9257 30.3334 22C30.3334 25.0743 30.3334 26.6114 29.6552 27.701C29.4043 28.1041 29.0927 28.4548 28.7343 28.737C27.7658 29.5 26.3994 29.5 23.6667 29.5H20.3334C17.6007 29.5 16.2344 29.5 15.2658 28.737C14.9075 28.4548 14.5958 28.1041 14.3449 27.701C13.6667 26.6114 13.6667 25.0743 13.6667 22Z" stroke="#888888" strokeWidth="1.25" />
+                    <path d="M19.9167 14.5V29.5" stroke="#888888" strokeWidth="1.25" strokeLinejoin="round" />
+                    <path d="M16.1667 17.8335H17.0001M16.1667 20.3335H17.0001" stroke="#888888" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
 
-              <div className="relative flex-1">
-                <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-2 bg-white max-w-lg">
-                  <Search size={18} className="text-gray-400" />
-                  <input
-                    className="outline-none w-full bg-transparent text-gray-700 placeholder-gray-400"
-                    placeholder="Cari"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
+                {!['/cashier/unpaid-orders', '/cashier/Riwayat', '/cashier/riwayat'].some(path => location.pathname.toLowerCase().includes(path.toLowerCase())) && (
+                  <div className="relative group max-w-md w-full">
+                    <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-50 focus-within:bg-white focus-within:border-orange-500 transition-all w-full">
+                      <Search size={16} className="text-gray-400 group-focus-within:text-orange-500 transition-colors sm:w-[18px] sm:h-[18px]" />
+                      <input
+                        className="outline-none w-full bg-transparent text-gray-700 placeholder-gray-400 text-xs sm:text-sm font-medium"
+                        placeholder="Cari menu..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {!isDesktop && (
+                  <>
+                    {isDashboard && cartCount > 0 && (
+                      <button
+                        onClick={() => setIsRightPanelOpen(true)}
+                        className="p-2 sm:p-2.5 bg-orange-100 text-orange-600 rounded-xl hover:bg-orange-200 transition-colors shrink-0"
+                        title="Buka keranjang"
+                      >
+                        <ShoppingBag size={20} />
+                      </button>
+                    )}
+                  </>
+                )}
+
+                <button
+                  onClick={handleLogout}
+                  className="px-3 sm:px-5 py-2 sm:py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-semibold flex items-center gap-2 text-xs sm:text-sm shadow-sm shrink-0"
+                >
+                  <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <span>Tutup Kasir</span>
+                </button>
               </div>
             </div>
+          </header>
 
-            <div className="ml-4">
-              <button
-                onClick={handleLogout}
-                className="px-5 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition font-medium flex items-center gap-2 shadow-md hover:shadow-lg whitespace-nowrap"
-              >
-                <LogOut size={18} />
-                <span>Tutup Kasir</span>
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden">
-          <div className="scroll-area h-full">
-            <Outlet context={{ search, setSearch, transactions, addTransaction, unpaidOrders, addUnpaidOrder, updateUnpaidOrder, payUnpaidOrder } satisfies CashierContextType} />
+          {/* Page Content */}
+          <div className="flex-1 overflow-hidden relative">
+            <Outlet context={{
+              search,
+              setSearch,
+              transactions,
+              addTransaction,
+              unpaidOrders,
+              addUnpaidOrder,
+              updateUnpaidOrder,
+              payUnpaidOrder,
+              isRightPanelOpen,
+              setIsRightPanelOpen,
+              cartCount,
+              setCartCount
+            } satisfies CashierContextType} />
           </div>
         </div>
+
+        {/* Dynamic Right Panel System */}
+        {isDesktop ? (
+          /* Desktop: Fixed Sidebar */
+          <div
+            id="cashier-right-panel-slot"
+            className="w-[30%] min-w-[350px] max-w-[450px] border-l border-gray-200 bg-white h-full relative z-20 shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] shrink-0"
+          />
+        ) : (
+          /* Tablet & Mobile: Responsive Drawer Overlay */
+          isRightPanelOpen && (
+            <div className="fixed inset-0 z-50 flex justify-end">
+              {/* Backdrop */}
+              <div
+                className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity animate-in fade-in duration-300"
+                onClick={() => setIsRightPanelOpen(false)}
+              />
+
+              {/* Drawer Content Container */}
+              <div className={`
+                relative bg-white shadow-2xl flex flex-col
+                ${isMobile ? "w-full h-full animate-slideUp" : "w-[450px] h-full animate-slideInRight"}
+              `}>
+                {/* Portal Slot inside Drawer */}
+                <div id="cashier-right-panel-slot" className="flex-1 overflow-hidden" />
+              </div>
+            </div>
+          )
+        )}
       </div>
     </div>
   );

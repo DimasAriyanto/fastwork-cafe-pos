@@ -17,22 +17,24 @@ export class OutletService {
   }
 
   async get(id: number) {
-    const r = await this.repo.findById(id);
-    return r[0] || null;
+    // ⚠️ FIX: Repo returns single object
+    const result = await this.repo.findById(id);
+    return result || null;
   }
 
   async create(data: CreateOutletInput) {
+    // ⚠️ FIX: Remove [0]
     const created = await this.repo.create(data);
-    return created[0];
+    return created;
   }
 
   async update(id: number, data: UpdateOutletInput) {
     const updated = await this.repo.update(id, data);
-    return updated[0];
+    return updated;
   }
 
   async delete(id: number) {
     const deleted = await this.repo.delete(id);
-    return deleted[0];
+    return deleted;
   }
 }

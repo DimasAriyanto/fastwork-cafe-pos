@@ -18,9 +18,12 @@ export class UserController {
     const page = parseInt(params.page || '1', 10);
     const limit = parseInt(params.limit || '20', 10);
     const search = params.search || undefined;
+    
+    // Konfigurasi sorting default
     const sortBy = params.sortBy;
     const sortOrder = (params.sortOrder || 'asc') as 'asc' | 'desc';
     const filters = { ...params };
+    
     delete filters.page;
     delete filters.limit;
     delete filters.search;
@@ -41,7 +44,7 @@ export class UserController {
   async get(c: Context) {
     const id = Number(c.req.param('id'));
     const user = await this.service.get(id);
-    if (!user) return c.json({ error: 'User not found' }, 404);
+    if (!user) return c.json({ error: 'User tidak ditemukan' }, 404);
     return c.json({ success: true, user });
   }
 
@@ -61,6 +64,6 @@ export class UserController {
   async remove(c: Context) {
     const id = Number(c.req.param('id'));
     await this.service.delete(id);
-    return c.json({ success: true });
+    return c.json({ success: true, message: "User berhasil dihapus" });
   }
 }

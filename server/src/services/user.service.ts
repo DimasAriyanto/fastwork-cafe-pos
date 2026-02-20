@@ -16,33 +16,34 @@ export class UserService {
     return await this.repo.findAllWithPagination(options);
   }
 
+  // ⚠️ FIX: Hapus [0] karena Repository modern mengembalikan Object atau Null
   async get(id: number) {
-    const r = await this.repo.findById(id);
-    return r[0] || null;
+    const result = await this.repo.findById(id);
+    return result || null;
   }
 
   async create(data: CreateUserInput) {
     const created = await this.repo.create(data);
-    return created[0];
+    return created; // ⚠️ Hapus [0]
   }
 
   async update(id: number, data: UpdateUserInput) {
     const updated = await this.repo.update(id, data);
-    return updated[0];
+    return updated; // ⚠️ Hapus [0]
   }
 
   async findByEmail(email: string) {
-    const r = await this.repo.findByEmail(email);
-    return r[0] || null;
+    const result = await this.repo.findByEmail(email);
+    return result || null; // ⚠️ Hapus [0]
   }
 
   async findByUsername(username: string) {
-    const r = await this.repo.findByUsername(username);
-    return r[0] || null;
+    const result = await this.repo.findByUsername(username);
+    return result || null; // ⚠️ Hapus [0]
   }
 
   async delete(id: number) {
     const deleted = await this.repo.delete(id);
-    return deleted[0];
+    return deleted; // ⚠️ Hapus [0]
   }
 }

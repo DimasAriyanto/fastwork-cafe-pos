@@ -4,15 +4,19 @@ import { eq } from 'drizzle-orm';
 
 export class RefreshTokenRepository {
   async create(userId: number, token: string, expiresAt: Date) {
-    return await db.insert(refreshTokens).values({
+    // MySQL Insert
+    await db.insert(refreshTokens).values({
       userId,
       token,
       expiresAt,
     });
+    // Gak perlu return data lengkap buat refresh token, cukup void
   }
 
   async findByToken(token: string) {
-    return await db.select().from(refreshTokens).where(eq(refreshTokens.token, token)).limit(1);
+    // Return single object (bukan array)
+    const [result] = await db.select().from(refreshTokens).where(eq(refreshTokens.token, token)).limit(1);
+    return result;
   }
 
   async findByUserId(userId: number) {
@@ -20,20 +24,20 @@ export class RefreshTokenRepository {
   }
 
   async deleteByToken(token: string) {
-    return await db.delete(refreshTokens).where(eq(refreshTokens.token, token));
+    await db.delete(refreshTokens).where(eq(refreshTokens.token, token));
   }
 
   async deleteByUserId(userId: number) {
-    return await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+    await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
   }
 
   async isTokenValid(token: string): Promise<boolean> {
-    const result = await this.findByToken(token);
-    if (result.length === 0) {
+    const tokenRecord = await this.findByToken(token);
+    
+    if (!tokenRecord) {
       return false;
     }
 
-    const tokenRecord = result[0];
     return new Date() <= tokenRecord.expiresAt;
   }
 }

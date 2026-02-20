@@ -1,166 +1,197 @@
 /**
- * Seed initial data untuk POS Cafe System
- * Jalankan file ini setelah migrations selesai
- *
- * Usage: node src/db/seed.js
+ * Seed initial data untuk POS Cafe System (MySQL Version - Integer Price)
+ * Usage: npx tsx src/db/seed.ts
  */
 
 import 'dotenv/config';
 import bcrypt from 'bcrypt';
-import { eq } from 'drizzle-orm';
-import { db } from './index.ts';
+import { eq, sql } from 'drizzle-orm';
+import { db } from './index'; // Pastikan path ini benar
 import {
   roles,
   categories,
   taxes,
   outlets,
   menus,
+  menuVariants,
+  toppings, // 👈 Pastikan import tabel toppings
   tables,
   users,
   employees,
-} from './schemas/index.ts';
+} from './schemas/index';
 
 async function seed() {
-  console.log('🌱 Starting database seed...');
+  console.log('🌱 Starting database seed (MySQL - Owner & Integer Price)...');
 
   try {
+    // ----------------------------------------------------------------
     // 1. Seed Roles
+    // ----------------------------------------------------------------
     console.log('📋 Seeding roles...');
-    const rolesResult = await db
+    
+    // Kita pastikan role yang ada cuma owner dan cashier
+    await db
       .insert(roles)
       .values([
-        {
-          name: 'owner',
-          description: 'System owner with full access',
-        },
-        {
-          name: 'admin',
-          description: 'Administrator',
-        },
-        {
-          name: 'cashier',
-          description: 'Cashier staff',
-        },
-        {
-          name: 'kitchen',
-          description: 'Kitchen staff',
-        },
+        { name: 'owner', description: 'System owner with full access' },
+        { name: 'cashier', description: 'Cashier staff' },
       ])
-      .onConflictDoNothing()
-      .returning();
+      .onDuplicateKeyUpdate({ set: { id: sql`id` } });
 
-    console.log(`  - ${rolesResult.length} roles seeded`);
-
-    console.log('👤 Seeding admin user...');
-    const adminRole = await db
+    // Select ID Owner Role
+    const ownerRoleData = await db
       .select()
       .from(roles)
-      .where(eq(roles.name, 'admin'))
+      .where(eq(roles.name, 'owner'))
       .limit(1);
 
-    const adminRoleId = adminRole[0]?.id || null;
-    let adminUserId = null;
+    const ownerRoleId = ownerRoleData[0]?.id || null;
 
-    if (adminRoleId) {
+    // ----------------------------------------------------------------
+    // 2. Seed Owner User (Pengganti Admin)
+    // ----------------------------------------------------------------
+    let ownerUserId = null;
+
+    if (ownerRoleId) {
+      console.log('👤 Seeding OWNER user...');
       const hashed = await bcrypt.hash(
-        process.env.SEED_ADMIN_PASSWORD || 'admin123',
-        parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10),
+        process.env.SEED_ADMIN_PASSWORD || 'owner123', // Password default owner123
+        10
       );
 
-      const adminUserResult = await db
+      await db
         .insert(users)
         .values([
           {
-            roleId: adminRoleId,
-            username: 'admin',
-            name: 'Administrator',
-            email: 'admin@local.test',
+            roleId: ownerRoleId,
+            username: 'owner', // Username jadi owner
+            name: 'Owner System',
+            email: 'owner@local.test',
             password: hashed,
             status: 'active',
           },
         ])
-        .onConflictDoNothing()
-        .returning();
+        .onDuplicateKeyUpdate({ set: { id: sql`id` } });
 
-      adminUserId = adminUserResult[0]?.id;
-      console.log(`  - Admin user created (ID: ${adminUserId})`);
+      const fetchedUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, 'owner'))
+        .limit(1);
+
+      ownerUserId = fetchedUser[0]?.id;
+      console.log(`   - Owner user ID: ${ownerUserId}`);
     }
 
-    // 2. Seed Categories
-    console.log('☕ Seeding categories...');
-    await db
-      .insert(categories)
-      .values([
-        {
-          name: 'Beverage',
-          type: 'menu',
-          createdBy: adminUserId,
-        },
-        {
-          name: 'Food',
-          type: 'menu',
-          createdBy: adminUserId,
-        },
-        {
-          name: 'Dessert',
-          type: 'menu',
-          createdBy: adminUserId,
-        },
-        {
-          name: 'Topping',
-          type: 'topping',
-          createdBy: adminUserId,
-        },
-      ])
-      .onConflictDoNothing();
+    // ----------------------------------------------------------------
+    // 2.5 Seed Cashier User
+    // ----------------------------------------------------------------
+    let cashierUserId = null;
+    
+    const cashierRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, 'cashier'))
+      .limit(1);
+    
+    const cashierRoleId = cashierRole[0]?.id;
 
-    // 3. Seed Taxes
+    if (cashierRoleId) {
+      console.log('👤 Seeding cashier user...');
+      const hashedCashier = await bcrypt.hash('123456', 10);
+
+      await db
+        .insert(users)
+        .values([
+          {
+            roleId: cashierRoleId,
+            username: 'kasir1',
+            name: 'Si Kasir Andalan',
+            email: 'kasir@local.test',
+            password: hashedCashier,
+            status: 'active',
+          },
+        ])
+        .onDuplicateKeyUpdate({ set: { id: sql`id` } });
+
+      const fetchedCashier = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, 'kasir1'))
+        .limit(1);
+
+      cashierUserId = fetchedCashier[0]?.id;
+      console.log(`   - Cashier user ID: ${cashierUserId}`);
+    }
+
+    // ----------------------------------------------------------------
+    // 3. Seed Categories
+    // ----------------------------------------------------------------
+    console.log('☕ Seeding categories...');
+    if (ownerUserId) {
+      await db
+        .insert(categories)
+        .values([
+          { name: 'Beverage', type: 'menu', createdBy: ownerUserId },
+          { name: 'Food', type: 'menu', createdBy: ownerUserId },
+          { name: 'Dessert', type: 'menu', createdBy: ownerUserId },
+          { name: 'Topping', type: 'topping', createdBy: ownerUserId },
+        ])
+        .onDuplicateKeyUpdate({ set: { id: sql`id` } });
+    }
+
+    // ----------------------------------------------------------------
+    // 4. Seed Taxes
+    // ----------------------------------------------------------------
     console.log('💰 Seeding taxes...');
     await db
       .insert(taxes)
       .values([
-        {
-          name: 'PPN',
-          category: 'general',
-          percentage: '10.00',
-          isActive: true,
-        },
-        {
-          name: 'Service Charge',
-          category: 'service',
-          percentage: '5.00',
-          isActive: true,
-        },
+        { name: 'PPN', category: 'general', percentage: '11.00', isActive: true }, // PPN 11%
+        { name: 'Service Charge', category: 'service', percentage: '5.00', isActive: true },
       ])
-      .onConflictDoNothing();
+      .onDuplicateKeyUpdate({ set: { id: sql`id` } });
 
-    // 4. Seed Outlets
+    // ----------------------------------------------------------------
+    // 5. Seed Outlets
+    // ----------------------------------------------------------------
     console.log('🏪 Seeding outlets...');
-    const outletResult = await db
-      .insert(outlets)
-      .values([
-        {
-          name: 'Cafe Main',
-          address: 'Jl. Utama No. 123',
-          city: 'Jakarta',
-          province: 'DKI Jakarta',
-          phoneNumber: '021-123456',
-          createdBy: adminUserId,
-        },
-      ])
-      .returning();
+    if (ownerUserId) {
+        await db
+        .insert(outlets)
+        .values([
+            {
+            name: 'Cafe Pusat',
+            address: 'Jl. Utama No. 1',
+            city: 'Jakarta',
+            province: 'DKI Jakarta',
+            phoneNumber: '08123456789',
+            createdBy: ownerUserId,
+            },
+        ])
+        .onDuplicateKeyUpdate({ set: { id: sql`id` } });
+    }
 
-    const outletId = outletResult[0]?.id || 1;
+    const fetchedOutlet = await db
+      .select()
+      .from(outlets)
+      .where(eq(outlets.name, 'Cafe Pusat'))
+      .limit(1);
+    
+    const outletId = fetchedOutlet[0]?.id || 1;
 
-    // 5. Seed Menus (Beverages)
+    // ----------------------------------------------------------------
+    // 6. Seed Menus (Harga = Integer)
+    // ----------------------------------------------------------------
     console.log('🍵 Seeding menu items...');
+    
     const categoryBeverage = await db
       .select()
       .from(categories)
       .where(eq(categories.name, 'Beverage'))
       .limit(1);
 
-    if (categoryBeverage.length > 0) {
+    if (categoryBeverage.length > 0 && ownerUserId) {
       await db
         .insert(menus)
         .values([
@@ -168,164 +199,170 @@ async function seed() {
             outletId,
             categoryId: categoryBeverage[0].id,
             name: 'Espresso',
-            price: '15000.00',
+            price: 18000, // Integer
             description: 'Classic Italian espresso',
             isAvailable: true,
             currentStock: 100,
-            preparationTime: 3,
-            createdBy: adminUserId,
+            hasVariant: true,
+            createdBy: ownerUserId,
           },
           {
             outletId,
             categoryId: categoryBeverage[0].id,
             name: 'Cappuccino',
-            price: '25000.00',
+            price: 28000, // Integer
             description: 'Espresso with milk foam',
             isAvailable: true,
             currentStock: 100,
-            preparationTime: 5,
-            createdBy: adminUserId,
+            hasVariant: true,
+            createdBy: ownerUserId,
           },
           {
             outletId,
             categoryId: categoryBeverage[0].id,
             name: 'Latte',
-            price: '25000.00',
+            price: 28000, // Integer
             description: 'Espresso with steamed milk',
             isAvailable: true,
             currentStock: 100,
-            preparationTime: 5,
-            createdBy: adminUserId,
+            hasVariant: false,
+            createdBy: ownerUserId,
           },
           {
             outletId,
             categoryId: categoryBeverage[0].id,
             name: 'Americano',
-            price: '20000.00',
+            price: 22000, // Integer
             description: 'Espresso with hot water',
             isAvailable: true,
             currentStock: 100,
-            preparationTime: 3,
-            createdBy: adminUserId,
+            hasVariant: false,
+            createdBy: ownerUserId,
           },
         ])
-        .onConflictDoNothing();
+        .onDuplicateKeyUpdate({ set: { id: sql`id` } });
     }
 
-    // 6. Seed Toppings
-    const categoryTopping = await db
-      .select()
-      .from(categories)
-      .where(eq(categories.name, 'Topping'))
-      .limit(1);
+    // ----------------------------------------------------------------
+    // 6.5 Seed Menu Variants (Harga Adjustment = Integer)
+    // ----------------------------------------------------------------
+    console.log('🔄 Seeding menu variants...');
 
-    if (categoryTopping.length > 0) {
+    const espressoMenu = await db.select().from(menus).where(eq(menus.name, 'Espresso')).limit(1);
+    const cappucinoMenu = await db.select().from(menus).where(eq(menus.name, 'Cappuccino')).limit(1);
+
+    if (espressoMenu.length > 0) {
+      await db.insert(menuVariants).values([
+        { menuId: espressoMenu[0].id, name: 'Single Shot', priceAdjustment: 0, isAvailable: true },
+        { menuId: espressoMenu[0].id, name: 'Double Shot', priceAdjustment: 5000, isAvailable: true }, // +5000
+      ]).onDuplicateKeyUpdate({ set: { id: sql`id` } });
+    }
+
+    if (cappucinoMenu.length > 0) {
+      await db.insert(menuVariants).values([
+        { menuId: cappucinoMenu[0].id, name: 'Regular (Hot)', priceAdjustment: 0, isAvailable: true },
+        { menuId: cappucinoMenu[0].id, name: 'Large (Iced)', priceAdjustment: 4000, isAvailable: true }, // +4000
+      ]).onDuplicateKeyUpdate({ set: { id: sql`id` } });
+    }
+
+    // ----------------------------------------------------------------
+    // 7. Seed Toppings (TABEL TOPPINGS - Harga Integer)
+    // ----------------------------------------------------------------
+    console.log('✨ Seeding toppings...');
+    
+    // Pastikan kita insert ke tabel `toppings`
+    if (ownerUserId && outletId) {
       await db
-        .insert(menus)
+        .insert(toppings) // 👈 Tabel Toppings
         .values([
           {
             outletId,
-            categoryId: categoryTopping[0].id,
             name: 'Extra Shot',
-            price: '5000.00',
-            description: 'Additional espresso shot',
+            price: 6000, // Integer
             isAvailable: true,
-            currentStock: 200,
-            createdBy: adminUserId,
+            stock: 200,
           },
           {
             outletId,
-            categoryId: categoryTopping[0].id,
             name: 'Vanilla Syrup',
-            price: '3000.00',
-            description: 'Vanilla flavoring',
+            price: 4000, // Integer
             isAvailable: true,
-            currentStock: 150,
-            createdBy: adminUserId,
+            stock: 150,
           },
           {
             outletId,
-            categoryId: categoryTopping[0].id,
-            name: 'Caramel Syrup',
-            price: '3000.00',
-            description: 'Caramel flavoring',
+            name: 'Cheese Foam',
+            price: 5000, // Integer
             isAvailable: true,
-            currentStock: 150,
-            createdBy: adminUserId,
+            stock: 100,
           },
           {
             outletId,
-            categoryId: categoryTopping[0].id,
-            name: 'Chocolate',
-            price: '4000.00',
-            description: 'Chocolate topping',
+            name: 'Boba Pearl',
+            price: 3000, // Integer
             isAvailable: true,
-            currentStock: 100,
-            createdBy: adminUserId,
+            stock: 500,
           },
         ])
-        .onConflictDoNothing();
+        .onDuplicateKeyUpdate({ set: { id: sql`id` } });
     }
 
-    // 7. Seed Tables
+    // ----------------------------------------------------------------
+    // 8. Seed Tables
+    // ----------------------------------------------------------------
     console.log('🪑 Seeding tables...');
-    const tableSeeds = [];
-    for (let i = 1; i <= 10; i++) {
-      tableSeeds.push({
-        outletId,
-        tableNumber: `Table ${i}`,
-        seatsCapacity: 4,
-        status: 'available',
-        createdBy: adminUserId,
-      });
+    if (ownerUserId) {
+        const tableSeeds = [];
+        for (let i = 1; i <= 10; i++) {
+        tableSeeds.push({
+            outletId,
+            tableNumber: `Meja ${i}`,
+            seatsCapacity: 4,
+            status: 'available',
+            createdBy: ownerUserId,
+        });
+        }
+        await db.insert(tables).values(tableSeeds).onDuplicateKeyUpdate({ set: { id: sql`id` } });
     }
 
-    await db.insert(tables).values(tableSeeds).onConflictDoNothing();
-
-    // 8. Seed Admin Employee linked to admin user and outlet
-    console.log('🧑‍💼 Seeding admin employee...');
-    const adminUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, 'admin@local.test'))
-      .limit(1);
-
-    const mainOutlet = await db
-      .select()
-      .from(outlets)
-      .where(eq(outlets.name, 'Cafe Main'))
-      .limit(1);
-
-    if (adminUser.length > 0 && mainOutlet.length > 0) {
-      const userId = adminUser[0].id;
-      const outletRef = mainOutlet[0].id;
-
+    // ----------------------------------------------------------------
+    // 9. Seed Employees
+    // ----------------------------------------------------------------
+    console.log('🧑‍💼 Seeding employees...');
+    
+    // 9.1 Owner Employee
+    if (ownerUserId && outletId) {
       await db
         .insert(employees)
         .values([
           {
-            userId,
-            outletId: outletRef,
-            biographyData: 'System administrator',
-            name: 'Admin',
-            position: 'Admin',
-            email: adminUser[0].email,
-            salary: '0',
-            createdBy: adminUserId,
+            userId: ownerUserId,
+            outletId: outletId,
+            name: 'Owner System',
+            position: 'Owner', // Position Owner
+            createdBy: ownerUserId,
           },
         ])
-        .onConflictDoNothing();
+        .onDuplicateKeyUpdate({ set: { id: sql`id` } });
+    }
+
+    // 9.2 Cashier Employee
+    if (cashierUserId && outletId) {
+      await db
+        .insert(employees)
+        .values([
+          {
+            userId: cashierUserId, 
+            outletId: outletId,
+            name: 'Si Kasir Andalan',
+            position: 'Cashier',
+            createdBy: ownerUserId || undefined,
+          },
+        ])
+        .onDuplicateKeyUpdate({ set: { id: sql`id` } });
     }
 
     console.log('✅ Database seed completed successfully!');
-    console.log('\n📊 Seeded data:');
-    console.log('  - 4 roles');
-    console.log('  - 4 categories');
-    console.log('  - 2 tax rates');
-    console.log('  - 1 outlet');
-    console.log('  - 8 menu items (4 beverages + 4 toppings)');
-    console.log('  - 10 tables');
-
     process.exit(0);
   } catch (error) {
     console.error('❌ Error during seed:', error);

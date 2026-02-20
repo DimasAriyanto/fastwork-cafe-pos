@@ -1,11 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Coffee, ShoppingCart, FileText, LogOut, Users, Search, Bell, ChevronDown, ChevronRight, Circle } from 'lucide-react';
+import { LayoutDashboard, Coffee, ShoppingCart, FileText, LogOut, Users, Search, ChevronDown, ChevronRight, Circle, Menu, X } from 'lucide-react';
 
 const OwnerLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -26,7 +42,16 @@ const OwnerLayout = () => {
       ]
     },
     { path: '/owner/data-transaksi', label: 'Data Transaksi', icon: ShoppingCart },
-    { path: '/owner/laporan', label: 'Laporan Keuangan', icon: FileText },
+    { 
+      label: 'Laporan Keuangan', 
+      icon: FileText,
+      key: 'laporan', 
+      children: [
+        { path: '/owner/laporan-keuangan', label: 'Keuangan Toko' },
+        { path: '/owner/laporan-penjualan', label: 'Penjualan Toko' },
+        { path: '/owner/diskon', label: 'Diskon' },
+      ]
+    },
     { path: '/owner/pegawai', label: 'Pegawai', icon: Users },
   ];
 
@@ -46,12 +71,27 @@ const OwnerLayout = () => {
 
   return (
     <div className="min-h-screen bg-[#F5F6FA] flex font-sans">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="hidden lg:flex flex-col w-[280px] bg-white h-screen fixed top-0 left-0 z-30 shadow-lg rounded-r-[30px]">
-        <div className="h-28 flex items-center px-8">
+      <aside className={`fixed top-0 left-0 h-screen w-[280px] bg-white z-40 shadow-lg transition-transform duration-300 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+        <div className="h-24 flex items-center justify-between px-8">
           <h2 className="text-3xl font-bold tracking-tight text-[#202224]">
             <span className="text-[#FE4E10]">Owner</span>
           </h2>
+          {/* Close button for mobile */}
+          <button 
+            onClick={() => setIsSidebarOpen(false)}
+            className="lg:hidden text-gray-500 hover:text-[#FE4E10] transition-colors"
+          >
+            <X size={24} />
+          </button>
         </div>
         
         <nav className="flex-1 py-4 px-4 space-y-2 overflow-y-auto custom-scrollbar">
@@ -90,6 +130,7 @@ const OwnerLayout = () => {
                          <Link
                           key={child.path}
                           to={child.path}
+                          onClick={() => setIsSidebarOpen(false)} // Close on mobile nav
                           className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 ${
                             isSubActive 
                               ? 'text-[#FE4E10] bg-[#FE4E10]/10 font-medium translate-x-1' 
@@ -113,6 +154,7 @@ const OwnerLayout = () => {
               <Link
                 key={item.path}
                 to={item.path!} // Direct path existing items
+                onClick={() => setIsSidebarOpen(false)} // Close on mobile nav
                 className={`flex items-center gap-4 px-5 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden ${
                   isActive 
                     ? 'bg-[#FE4E10] text-white shadow-md shadow-[#FE4E10]/20' 
@@ -138,13 +180,24 @@ const OwnerLayout = () => {
       </aside>
 
       {/* Main Content Wrapper - Adjusted margin for fixed sidebar */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-[280px]">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-[280px] transition-all duration-300">
         {/* Top Header */}
         <header className="bg-white h-24 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-20 shadow-sm border-b border-[#EAEAEA]">
-          {/* Header Title */}
-          <h1 className="text-2xl font-bold text-[#202224] hidden sm:block">
-            {navItems.find(item => item.path === location.pathname)?.label || 'Dashboard'}
-          </h1>
+          <div className="flex items-center gap-4">
+              {/* Hamburger Menu (Mobile Only) */}
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden p-2 -ml-2 text-[#5C5C5C] hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Toggle menu"
+              >
+                <Menu size={24} />
+              </button>
+
+              {/* Header Title */}
+              <h1 className="text-2xl font-bold text-[#202224] hidden sm:block">
+                {navItems.find(item => item.path === location.pathname)?.label || 'Dashboard'}
+              </h1>
+          </div>
 
           {/* Search Bar - Responsive */}
           <div className="flex-1 max-w-md mx-6 hidden md:block">
@@ -161,22 +214,43 @@ const OwnerLayout = () => {
           </div>
           
           <div className="flex items-center gap-4 sm:gap-6 ml-auto">
-             {/* Notification */}
-             <button className="relative p-2.5 text-[#5C5C5C] hover:bg-[#F5F6FA] rounded-full transition-colors border border-[#D5D5D5]">
-                <Bell size={20} />
-                <span className="absolute top-2 right-2.5 w-2 h-2 bg-[#FE4E10] rounded-full border border-white"></span>
-             </button>
-
+            
              {/* User Profile */}
-             <div className="flex items-center gap-4 pl-0 sm:pl-6 sm:border-l border-[#EAEAEA]">
-                <div className="w-12 h-12 bg-gray-200 rounded-xl overflow-hidden shadow-sm relative shrink-0">
-                  <img src="https://ui-avatars.com/api/?name=Admin+Owner&background=random" alt="Admin" className="w-full h-full object-cover" />
-                </div>
-                <div className="text-left hidden sm:block">
-                  <p className="text-sm font-bold text-[#202224] leading-tight flex items-center gap-1">
-                    Jhon Doe <ChevronDown size={14} />
-                  </p>
-                  <p className="text-xs text-[#5C5C5C] font-medium mt-0.5">Admin</p>
+             <div className="relative pl-0 sm:pl-6 sm:border-l border-[#EAEAEA]" ref={profileRef}>
+                <button 
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center gap-4 focus:outline-none group appearance-none select-none"
+                >
+                  <div className="w-12 h-12 bg-gray-200 rounded-xl overflow-hidden shadow-sm relative shrink-0 transition-transform duration-200 group-hover:scale-105">
+                    <img src="/public/images/menu/ronaldo.jpg" alt="Admin" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="text-left hidden sm:block">
+                    <p className="text-sm font-bold text-[#202224] leading-tight flex items-center gap-1">
+                      Haji Dodo 
+                      <ChevronDown 
+                        size={14} 
+                        className={`transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} 
+                      />
+                    </p>
+                    <p className="text-xs text-[#5C5C5C] font-medium mt-0.5">Admin</p>
+                  </div>
+                </button>
+
+                {/* Dropdown Menu */}
+                <div 
+                  className={`absolute right-0 top-full mt-3 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 origin-top-right transition-all duration-200 ease-in-out ${
+                    isProfileOpen 
+                      ? 'opacity-100 visible translate-y-0 scale-100' 
+                      : 'opacity-0 invisible -translate-y-2 scale-95'
+                  }`}
+                >
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-[#5C5C5C] hover:bg-red-50 hover:text-red-500 transition-colors"
+                  >
+                    <LogOut size={16} />
+                    Log out
+                  </button>
                 </div>
              </div>
           </div>

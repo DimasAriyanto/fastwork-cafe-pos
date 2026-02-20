@@ -1,40 +1,56 @@
 import { db } from '../db/index.ts';
 import { users } from '../db/schemas/index.ts';
-import { eq, sql, and, desc, asc, or } from 'drizzle-orm';
+import { eq, and, desc, asc, or, like } from 'drizzle-orm'; // 👈 Tambah import 'like'
 import type { CreateUserInput, UpdateUserInput, PaginationOptions } from '../types/index.ts';
 
 export class UserRepository {
+  // 🔍 Helper: Ambil satu user (return object atau undefined)
   async findByUsername(username: string) {
-    return await db.select().from(users).where(eq(users.username, username)).limit(1);
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async findByEmail(email: string) {
-    return await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    return user;
   }
 
   async findById(id: number) {
-    return await db.select().from(users).where(eq(users.id, id)).limit(1);
+    const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return user;
   }
 
+  // ➕ CREATE: Insert -> Ambil ID -> Select Ulang
   async create(userData: CreateUserInput) {
-    return await db.insert(users).values(userData).returning();
+    // 1. Eksekusi Insert
+    const [result] = await db.insert(users).values(userData);
+    
+    // 2. Ambil ID yang baru dibuat
+    const insertId = result.insertId;
+
+    // 3. Return data user lengkap
+    return await this.findById(insertId);
   }
 
+  // ✏️ UPDATE: Update -> Select Ulang
   async update(id: number, userData: UpdateUserInput) {
-    return await db
+    await db
       .update(users)
       .set({
         ...userData,
-        updatedAt: new Date(),
+        updatedAt: new Date(), // Pastikan tanggal update berubah
       })
-      .where(eq(users.id, id))
-      .returning();
+      .where(eq(users.id, id));
+
+    // MySQL gak bisa returning, jadi kita fetch ulang datanya
+    return await this.findById(id);
   }
 
   async findAll() {
     return await db.select().from(users);
   }
 
+  // 📄 PAGINATION: Ganti ILIKE jadi LIKE
   async findAllWithPagination(options: PaginationOptions = {}) {
     const {
       page = 1,
@@ -50,10 +66,12 @@ export class UserRepository {
 
     if (search) {
       const pattern = `%${search}%`;
+      // ⚠️ MySQL Fix: Pakai 'like', bukan 'ILIKE'
+      // MySQL default collation biasanya sudah case-insensitive
       conditions.push(
         or(
-          sql`${users.name} ILIKE ${pattern}`,
-          sql`${users.email} ILIKE ${pattern}`
+          like(users.name, pattern),
+          like(users.email, pattern)
         )
       );
     }
@@ -87,25 +105,32 @@ export class UserRepository {
       ? desc(orderByColumn) 
       : asc(orderByColumn);
 
+    // Query Builder Logic
+    const baseQuery = db
+        .select()
+        .from(users)
+        .limit(limit)
+        .offset(offset)
+        .orderBy(orderByClause);
+
     if (conditions.length > 0) {
-      return await db
-        .select()
-        .from(users)
-        .where(and(...conditions))
-        .orderBy(orderByClause)
-        .limit(limit)
-        .offset(offset);
+      return await baseQuery.where(and(...conditions));
     } else {
-      return await db
-        .select()
-        .from(users)
-        .orderBy(orderByClause)
-        .limit(limit)
-        .offset(offset);
+      return await baseQuery;
     }
   }
 
+  // 🗑️ DELETE: Select dulu -> Delete -> Return data yg dihapus
   async delete(id: number) {
-    return await db.delete(users).where(eq(users.id, id)).returning();
+    // 1. Cari dulu datanya (buat di-return nanti)
+    const userToDelete = await this.findById(id);
+
+    // 2. Kalau ada, hapus
+    if (userToDelete) {
+        await db.delete(users).where(eq(users.id, id));
+    }
+
+    // 3. Return data yang barusan dihapus (biar behavior mirip .returning())
+    return userToDelete;
   }
 }

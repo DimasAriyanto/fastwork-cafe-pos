@@ -1,9 +1,13 @@
-export type Role = 'OWNER' | 'CASHIER';
+// =========================================
+// 1. CORE AUTH TYPES (Update ID jadi number)
+// =========================================
+export type Role = 'OWNER' | 'ADMIN' | 'CASHIER' | 'KITCHEN'; // Sesuaikan sama seed
 
 export interface User {
-  id: string;
+  id: number; // ⚠️ WAJIB NUMBER (sesuai DB MySQL)
   username: string;
-  role: Role;
+  role: string; // Bisa string aja biar fleksibel
+  outletId: number; // Tambahan biar middleware tau outlet mana
 }
 
 export interface AuthState {
@@ -11,7 +15,17 @@ export interface AuthState {
   token: string | null;
 }
 
-// Repository Types
+// Helper buat Context Hono (Biar middleware type-safe)
+export interface UserContext {
+  id: number;
+  outletId: number;
+  role: string;
+  username: string;
+}
+
+// =========================================
+// 2. REPOSITORY & COMMON TYPES
+// =========================================
 export interface PaginationOptions {
   page?: number;
   limit?: number;
@@ -21,6 +35,9 @@ export interface PaginationOptions {
   sortOrder?: 'asc' | 'desc';
 }
 
+// =========================================
+// 3. USER MANAGEMENT TYPES
+// =========================================
 export interface CreateUserInput {
   roleId: number;
   name: string;
@@ -29,6 +46,7 @@ export interface CreateUserInput {
   password: string;
   photo?: string;
   status?: string;
+  outletId?: number; // Tambahan
 }
 
 export interface UpdateUserInput {
@@ -42,30 +60,9 @@ export interface UpdateUserInput {
   updatedAt?: Date;
 }
 
-export interface CreateEmployeeInput {
-  userId: number;
-  outletId?: number;
-  biographyData?: string;
-  name: string;
-  position: string;
-  email: string;
-  salary: string;
-  imagePath?: string;
-  createdBy?: number;
-}
-
-export interface UpdateEmployeeInput {
-  userId?: number;
-  outletId?: number;
-  biographyData?: string;
-  name?: string;
-  position?: string;
-  email?: string;
-  salary?: string;
-  imagePath?: string;
-  createdBy?: number;
-}
-
+// =========================================
+// 4. ROLE & OUTLET TYPES
+// =========================================
 export interface CreateRoleInput {
   name: string;
   description?: string;
@@ -98,3 +95,7 @@ export interface RefreshTokenInput {
   token: string;
   expiresAt: Date;
 }
+
+export * from './menu';
+export * from './transaction';
+export * from './employee';

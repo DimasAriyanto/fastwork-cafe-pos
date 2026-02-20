@@ -3,33 +3,51 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
+
+// Import Routes
 import { authRoutes } from './routes/auth.ts';
 import { roleRoutes } from './routes/roles.ts';
 import { userRoutes } from './routes/users.ts';
 import { outletRoutes } from './routes/outlets.ts';
 import { employeeRoutes } from './routes/employees.ts';
+import { menuRoutes } from './routes/menu.ts';
+import { transactionRoutes } from './routes/transactions.ts';
+
 import { checkDatabaseHealth } from './db/index.ts';
+import { categoryRoutes } from './routes/category.ts';
+import { toppingRoutes } from './routes/topping.ts';
 
 const app = new Hono();
 
-// Middleware
+// 1. Static Files (Buat akses foto pegawai)
+// Akses: http://localhost:3000/uploads/nama-file.png
+app.use('/uploads/*', serveStatic({ root: './' }));
+
+// 2. Middleware
 app.use(logger());
 app.use(
   '*',
   cors({
-    origin: 'http://localhost:5173',
+    origin: 'http://localhost:5173', // URL Frontend Vite (sesuaikan nanti)
     credentials: true,
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
   }),
 );
 
-// Routes
+// 3. Routes Registration
 app.route('/api/auth', authRoutes);
 app.route('/api/roles', roleRoutes);
 app.route('/api/users', userRoutes);
 app.route('/api/outlets', outletRoutes);
-app.route('/api/employees', employeeRoutes);
+app.route('/api/employees', employeeRoutes); // 👈 Ini yang support Form-Data
+app.route('/api/menus', menuRoutes);
+app.route('/api/categories', categoryRoutes);
+app.route('/api/toppings', toppingRoutes);
+
+// ⚠️ FIX: Tambahkan '/' di depan
+app.route('/api/transactions', transactionRoutes); 
 
 // Health check
 app.get('/api/health', (c) => {
@@ -43,7 +61,7 @@ app.notFound((c) => {
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-// Initialize server with database health check
+// Initialize server
 async function startServer() {
   try {
     console.log('🔍 Checking database connection...');
@@ -59,7 +77,6 @@ async function startServer() {
   }
 }
 
-// Start server with HTTP listener
 startServer().then(() => {
   serve({
     fetch: app.fetch,

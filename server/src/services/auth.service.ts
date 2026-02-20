@@ -18,13 +18,12 @@ export class AuthService {
   }
 
   async login(username: string, password: string) {
-    const userList = await this.userRepository.findByUsername(username);
+    // Repo returns object | undefined
+    const user = await this.userRepository.findByUsername(username);
 
-    if (userList.length === 0) {
+    if (!user) {
       throw new Error('User not found');
     }
-
-    const user = userList[0];
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
@@ -32,10 +31,13 @@ export class AuthService {
     }
 
     // Get role name
-    const roleList = await this.roleRepository.findById(user.roleId);
-    const roleName = roleList[0]?.name || 'user';
+    const role = await this.roleRepository.findById(user.roleId);
+    if (!role) {
+      throw new Error('Role does not exist');
+    }
+    const roleName = role.name.toUpperCase();
 
-    // Generate tokens with role name
+    // Generate tokens
     const accessToken = signAccessToken({
       id: user.id,
       username: user.username,
@@ -50,40 +52,43 @@ export class AuthService {
       email: user.email,
     });
 
-    // Store refresh token in DB with expiry
+    // Store refresh token
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
 
     await this.refreshTokenRepository.create(user.id, refreshToken, expiresAt);
 
     return {
-      id: user.id,
-      username: user.username,
-      name: user.name,
-      email: user.email,
-      roleId: user.roleId,
-      role: roleName,
       accessToken,
       refreshToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        roleId: user.roleId,
+        role: roleName, // Sudah uppercase (OWNER/CASHIER)
+      },
     };
   }
 
   async register(username: string, email: string, password: string, fullName: string, roleId: number) {
-    // Check if user already exists (by email)
+    // ⚠️ FIX: Cek object langsung (bukan .length > 0)
     const existingEmail = await this.userRepository.findByEmail(email);
-    if (existingEmail.length > 0) {
+    if (existingEmail) {
       throw new Error('Email already exists');
     }
 
     const existingUsername = await this.userRepository.findByUsername(username);
-    if (existingUsername.length > 0) {
+    if (existingUsername) {
       throw new Error('Username already exists');
     }
 
-    // Hash password before storing
+    // Hash password
     const hashed = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const newUser = await this.userRepository.create({
+    // ⚠️ FIX: Create return single object
+    const user = await this.userRepository.create({
       roleId,
       name: fullName,
       username,
@@ -91,13 +96,13 @@ export class AuthService {
       password: hashed,
     });
 
-    const user = newUser[0];
+    if (!user) throw new Error("Failed to create user");
 
     // Get role name
-    const roleList = await this.roleRepository.findById(user.roleId);
-    const roleName = roleList[0]?.name || 'user';
+    const role = await this.roleRepository.findById(user.roleId);
+    const roleName = role?.name || 'user';
 
-    // Generate tokens with role name
+    // Generate tokens
     const accessToken = signAccessToken({
       id: user.id,
       username: user.username,
@@ -112,38 +117,44 @@ export class AuthService {
       email: user.email,
     });
 
-    // Store refresh token in DB
+    // Store refresh token
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     await this.refreshTokenRepository.create(user.id, refreshToken, expiresAt);
 
     return {
-      id: user.id,
-      username: user.username,
-      name: user.name,
-      email: user.email,
-      roleId: user.roleId,
-      role: roleName,
       accessToken,
       refreshToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        roleId: user.roleId,
+        role: roleName.toUpperCase(),
+      },
     };
   }
 
   async getUserById(id: number) {
-    const userList = await this.userRepository.findById(id);
+    const user = await this.userRepository.findById(id);
 
-    if (userList.length === 0) {
+    if (!user) {
       throw new Error('User not found');
     }
 
-    const user = userList[0];
+    // 👇 TAMBAHAN: Ambil nama role berdasarkan roleId user
+    const role = await this.roleRepository.findById(user.roleId);
+    const roleName = role?.name || 'user'; // Default kalo gak ketemu
+
     return {
       id: user.id,
       username: user.username,
       name: user.name,
       email: user.email,
       roleId: user.roleId,
+      roleName: roleName.toUpperCase(), // 👈 PENTING: Kembalikan ini biar Frontend tau
     };
   }
 
@@ -158,18 +169,17 @@ export class AuthService {
       }
 
       // Get user info
-      const userList = await this.userRepository.findById(decoded.id);
-      if (userList.length === 0) {
+      // ⚠️ FIX: Remove Array destructuring
+      const user = await this.userRepository.findById(decoded.id);
+      if (!user) {
         throw new Error('User not found');
       }
 
-      const user = userList[0];
-
       // Get role name
-      const roleList = await this.roleRepository.findById(user.roleId);
-      const roleName = roleList[0]?.name || 'user';
+      const role = await this.roleRepository.findById(user.roleId);
+      const roleName = role?.name || 'user';
 
-      // Generate new access token with same payload as login
+      // Generate new access token
       const accessToken = signAccessToken({
         id: user.id,
         username: user.username,
@@ -196,7 +206,6 @@ export class AuthService {
   }
 
   async logout(refreshToken: string) {
-    // Delete refresh token from DB
     await this.refreshTokenRepository.deleteByToken(refreshToken);
     return { success: true };
   }

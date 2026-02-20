@@ -1,7 +1,7 @@
 import { db } from '../db/index.ts';
 import { employees } from '../db/schemas/index.ts';
-import { eq, sql, and, desc, asc, or } from 'drizzle-orm';
-import type { CreateEmployeeInput, UpdateEmployeeInput, PaginationOptions } from '../types/index.ts';
+import { eq, and, desc, asc, or, like } from 'drizzle-orm';
+import type { CreateEmployeeRepoInput, UpdateEmployeeInput, PaginationOptions } from '../types/index';
 
 export class EmployeeRepository {
   async findAll() {
@@ -21,37 +21,31 @@ export class EmployeeRepository {
     const offset = (Math.max(page, 1) - 1) * limit;
     const conditions = [];
 
+    // MySQL Friendly Search
     if (search) {
       const pattern = `%${search}%`;
       conditions.push(
         or(
-          sql`${employees.name} ILIKE ${pattern}`,
-          sql`${employees.email} ILIKE ${pattern}`,
-          sql`${employees.position} ILIKE ${pattern}`
+          like(employees.name, pattern),
+          like(employees.position, pattern)
         )
       );
     }
 
     if (filters.userId && typeof filters.userId === 'number') {
-      conditions.push(eq(employees.userId, filters.userId));
+      conditions.push(eq(employees.id, filters.userId));
     }
-    if (filters.outletId && typeof filters.outletId === 'number') {
-      conditions.push(eq(employees.outletId, filters.outletId));
-    }
+    // ❌ SENSEI NOTE: Filter Outlet ID dihapus sesuai request (Single Outlet)
+    
     if (filters.position && typeof filters.position === 'string') {
       conditions.push(eq(employees.position, filters.position));
-    }
-    if (filters.email && typeof filters.email === 'string') {
-      conditions.push(eq(employees.email, filters.email));
     }
 
     const sortableColumns = {
       id: employees.id,
-      userId: employees.userId,
       outletId: employees.outletId,
       name: employees.name,
       position: employees.position,
-      email: employees.email,
       createdAt: employees.createdAt,
       updatedAt: employees.updatedAt,
     } as const;
@@ -64,45 +58,52 @@ export class EmployeeRepository {
       ? desc(orderByColumn) 
       : asc(orderByColumn);
 
+    const baseQuery = db
+        .select()
+        .from(employees)
+        .limit(limit)
+        .offset(offset)
+        .orderBy(orderByClause);
+
     if (conditions.length > 0) {
-      return await db
-        .select()
-        .from(employees)
-        .where(and(...conditions))
-        .orderBy(orderByClause)
-        .limit(limit)
-        .offset(offset);
+      return await baseQuery.where(and(...conditions));
     } else {
-      return await db
-        .select()
-        .from(employees)
-        .orderBy(orderByClause)
-        .limit(limit)
-        .offset(offset);
+      return await baseQuery;
     }
   }
 
   async findById(id: number) {
-    return await db.select().from(employees).where(eq(employees.id, id)).limit(1);
+    const [employee] = await db.select().from(employees).where(eq(employees.id, id)).limit(1);
+    return employee;
   }
 
   async findByUserId(userId: number) {
-    return await db.select().from(employees).where(eq(employees.userId, userId)).limit(1);
+    const [employee] = await db.select().from(employees).where(eq(employees.id, userId)).limit(1);
+    return employee;
   }
 
-  async create(data: CreateEmployeeInput) {
-    return await db.insert(employees).values(data).returning();
+  // MySQL Create Pattern
+  async create(data: CreateEmployeeRepoInput) {
+    const [result] = await db.insert(employees).values(data);
+    return await this.findById(result.insertId);
   }
 
+  // MySQL Update Pattern
   async update(id: number, data: UpdateEmployeeInput) {
-    return await db
+    await db
       .update(employees)
-      .set({ ...data })
-      .where(eq(employees.id, id))
-      .returning();
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(employees.id, id));
+      
+    return await this.findById(id);
   }
 
+  // MySQL Delete Pattern
   async delete(id: number) {
-    return await db.delete(employees).where(eq(employees.id, id)).returning();
+    const dataToDelete = await this.findById(id);
+    if (dataToDelete) {
+        await db.delete(employees).where(eq(employees.id, id));
+    }
+    return dataToDelete;
   }
 }

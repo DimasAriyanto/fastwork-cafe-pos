@@ -80,10 +80,10 @@ const Dashboard = () => {
   ];
 
   const bestSelling = [
-    { name: 'Es Coklat', price: 'Rp.12.000', orders: 1200 },
-    { name: 'Roti Maryam', price: 'Rp.15.000', orders: 950 },
-    { name: 'Es Matcha', price: 'Rp.17.000', orders: 800 },
-    { name: 'Jagoeng Bakar', price: 'Rp.18.000', orders: 600 },
+    { name: 'Es Coklat', price: 'Rp.12.000', orders: 1200, image: '/images/menu/gambar-coklat.jpg' },
+    { name: 'Roti Maryam', price: 'Rp.15.000', orders: 950, image: '/images/menu/gambar-roti-maryam.jpg' },
+    { name: 'Es Matcha', price: 'Rp.17.000', orders: 800, image: '/images/menu/gambar-es-matcha.jpg' },
+    { name: 'Jagoeng Bakar', price: 'Rp.18.000', orders: 600, image: '/images/menu/gambar-jagung-bakar.jpg' },
   ];
 
   return (
@@ -118,8 +118,8 @@ const Dashboard = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Revenue Chart */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA] min-h-[400px]">
-            <div className="flex items-center justify-between mb-8">
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA] flex flex-col min-h-[500px]">
+            <div className="flex items-center justify-between mb-6">
                <h3 className="text-xl font-bold text-[#202224]">Grafik Pendapatan</h3>
                <select className="bg-[#FCFDFD] border border-[#D5D5D5] text-[#202224] text-sm rounded-lg px-3 py-2 outline-none focus:border-[#FE4E10]">
                   <option>Tahun Ini</option>
@@ -127,7 +127,7 @@ const Dashboard = () => {
                </select>
             </div>
             
-            <div className="h-[300px] w-full">
+            <div className="flex-1 w-full min-h-[300px]">
                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={revenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                      <defs>
@@ -173,7 +173,7 @@ const Dashboard = () => {
            {/* Secondary Bar Chart */}
            <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA]">
               <div className="flex items-center justify-between mb-6">
-                 <h3 className="text-lg font-bold text-[#202224]">Jumlah Pendapatan</h3>
+                 <h3 className="text-lg font-bold text-[#202224]">Jumlah Pelanggan</h3>
                  <select className="bg-[#FCFDFD] border border-[#D5D5D5] text-[#202224] text-xs rounded-lg px-2 py-1 outline-none">
                     <option>Mingguan</option>
                  </select>
@@ -217,7 +217,7 @@ const Dashboard = () => {
                         </div>
                         <div className="w-12 h-12 bg-gray-100 rounded-xl shrink-0 overflow-hidden">
                            <img 
-                              src={`https://placehold.co/100x100/FE4E10/white?text=${item.name.charAt(0)}`}
+                              src={item.image}
                               alt={item.name} 
                               className="w-full h-full object-cover" 
                            />

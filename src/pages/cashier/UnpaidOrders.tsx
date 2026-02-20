@@ -1,86 +1,303 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useOutletContext } from "react-router-dom";
-import { Search, SlidersHorizontal, Minus, Plus, Trash2, Edit } from "lucide-react";
+import { Search, Minus, Plus, Trash2, Edit, ClipboardList, Check } from "lucide-react";
+import DateFilter from "../../components/cashier/DateFilter";
 import type { CashierContextType } from "../../layouts/CashierLayout";
+import PaymentModal from "../../components/cashier/modals/PaymentModal";
+import QRISPaymentModal from "../../components/cashier/modals/QRISPaymentModal";
+import PaymentSuccessModal from "../../components/cashier/modals/PaymentSuccessModal";
+import AddMenuModal from "../../components/cashier/modals/AddMenuModal";
+import type { Product, PaymentMethod, Transaction, UnpaidOrder } from "../../types/cashier";
+
+// Hooks
+import { usePayment } from "../../hooks/usePayment";
+import { usePortalTarget } from "../../hooks/usePortalTarget";
+import { useResponsive } from "../../hooks/useResponsive";
+
 
 export default function UnpaidOrders() {
-    const { unpaidOrders, payUnpaidOrder } = useOutletContext<CashierContextType>();
+    const { unpaidOrders, payUnpaidOrder, updateUnpaidOrder, setIsRightPanelOpen } = useOutletContext<CashierContextType>();
+    const { isDesktop } = useResponsive();
     const [localSearch, setLocalSearch] = useState("");
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-    const [paymentOption, setPaymentOption] = useState<"payNow" | "payLater">("payNow");
+    const [paymentOption, setPaymentOption] = useState<PaymentMethod>("CASH");
+    const [showAddMenu, setShowAddMenu] = useState(false);
+    const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" });
+
+    // Edit Name State
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [tempCustomerName, setTempCustomerName] = useState("");
+
+    // Modal states using shared hook
+    const {
+        isPaymentModalOpen, openPaymentModal, closePaymentModal,
+        isQRISModalOpen, openQRISModal, closeQRISModal,
+        isSuccessModalOpen, openSuccessModal, closeSuccessModal,
+        lastTransaction
+    } = usePayment();
+
 
     // Filter orders
     const filteredOrders = useMemo(() => {
-        return unpaidOrders.filter(o =>
-            o.customerName.toLowerCase().includes(localSearch.toLowerCase()) ||
-            o.id.toLowerCase().includes(localSearch.toLowerCase())
-        );
-    }, [unpaidOrders, localSearch]);
+        return unpaidOrders.filter(o => {
+            const matchesSearch = o.customerName.toLowerCase().includes(localSearch.toLowerCase()) ||
+                o.id.toLowerCase().includes(localSearch.toLowerCase());
+
+            let matchDate = true;
+            if (dateRange.start && dateRange.end) {
+                const orderDate = new Date(o.date);
+                const startDate = new Date(dateRange.start);
+                const endDate = new Date(dateRange.end);
+
+                // Set hours to compare strictly by date
+                orderDate.setHours(0, 0, 0, 0);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(0, 0, 0, 0);
+
+                matchDate = orderDate >= startDate && orderDate <= endDate;
+            } else if (dateRange.start) {
+                const orderDate = new Date(o.date);
+                const startDate = new Date(dateRange.start);
+                orderDate.setHours(0, 0, 0, 0);
+                startDate.setHours(0, 0, 0, 0);
+                matchDate = orderDate >= startDate;
+            }
+
+            return matchesSearch && matchDate;
+        });
+    }, [unpaidOrders, localSearch, dateRange]);
 
     const selectedOrder = useMemo(() =>
         unpaidOrders.find(o => o.id === selectedOrderId),
         [unpaidOrders, selectedOrderId]);
+
+    // Selection handler for responsiveness
+    const handleOrderSelect = (id: string) => {
+        setSelectedOrderId(id);
+        if (!isDesktop) {
+            setIsRightPanelOpen(true);
+        }
+    };
+
+    // Reset edit state when selection changes
+    useEffect(() => {
+        setIsEditingName(false);
+        if (selectedOrder) {
+            setTempCustomerName(selectedOrder.customerName);
+            if (selectedOrder.paymentMethod) {
+                setPaymentOption(selectedOrder.paymentMethod);
+            }
+        }
+    }, [selectedOrder]);
 
     // Handle local edits within the detail panel (if we were to implement full editing)
     // For now, we assume "Simpan" just persists what is there (or any future edits).
     // "Bayar" triggers payment.
 
     const handlePay = () => {
-        if (selectedOrderId) {
-            // For simplicity, defaulting to Cash here or opening a modal for payment method could be better. 
-            // But prompt implies 'Bayar' button on the panel does the job. 
-            // Since 'Bayar Sekarang' is selected in options, we proceed.
-            if (confirm("Proses pembayaran?")) {
-                payUnpaidOrder(selectedOrderId, "Cash"); // Default to Cash for now or add selector
-                setSelectedOrderId(null);
-            }
+        if (!selectedOrder) return;
+
+        if (paymentOption === "CASH") {
+            openPaymentModal();
+        } else if (paymentOption === "QRIS") {
+            openQRISModal();
         }
+
+    };
+
+    const handlePaymentSuccess = (paidAmount: number, change: number, method: PaymentMethod) => {
+        if (!selectedOrder) return;
+
+        const transaction: Transaction = {
+            ...selectedOrder,
+            paymentMethod: method,
+            paidAmount,
+            change: method === "QRIS" ? 0 : change,
+            date: new Date().toISOString()
+        };
+
+
+        payUnpaidOrder(selectedOrder.id, method, paidAmount, change);
+        openSuccessModal(transaction);
+        closePaymentModal();
+        closeQRISModal();
+        setSelectedOrderId(null);
+        setIsRightPanelOpen(false); // Close drawer
+    };
+
+
+    const handleQRISPaymentConfirm = () => {
+        if (!selectedOrder) return;
+        handlePaymentSuccess(selectedOrder.totalPrice, 0, "QRIS");
+    };
+
+    const handleSaveName = () => {
+        if (!selectedOrder || !tempCustomerName.trim()) return;
+
+        const updatedOrder: UnpaidOrder = {
+            ...selectedOrder,
+            customerName: tempCustomerName.trim()
+        };
+
+        updateUnpaidOrder(updatedOrder);
+        setIsEditingName(false);
     };
 
     const handleSave = () => {
         // Logic to save changes would go here if items were editable
+        // For name edit, we use handleSaveName
+        setIsEditingName(false);
         alert("Perubahan disimpan!");
         setSelectedOrderId(null);
+        setIsRightPanelOpen(false); // Close drawer
+    };
+
+    const handleAddProduct = (product: Product) => {
+        if (!selectedOrder) return;
+
+        const existingItemIndex = selectedOrder.items.findIndex(item => item.name === product.name);
+        let updatedItems = [...selectedOrder.items];
+
+        if (existingItemIndex > -1) {
+            updatedItems[existingItemIndex] = {
+                ...updatedItems[existingItemIndex],
+                qty: updatedItems[existingItemIndex].qty + 1
+            };
+        } else {
+            updatedItems.push({
+                name: product.name,
+                price: product.price,
+                qty: 1
+            });
+        }
+
+        const newSubtotal = updatedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+        const discountPercent = selectedOrder.discount || 0;
+        const totalAfterDiscount = newSubtotal * (1 - discountPercent / 100);
+        const newTax = totalAfterDiscount * 0.10;
+        const newTotal = totalAfterDiscount + newTax;
+
+        const updatedOrder: UnpaidOrder = {
+            ...selectedOrder,
+            items: updatedItems,
+            totalItems: updatedItems.reduce((acc, item) => acc + item.qty, 0),
+            subtotal: newSubtotal,
+            tax: newTax,
+            totalPrice: newTotal
+        };
+
+        updateUnpaidOrder(updatedOrder);
+        // We keep the modal open so user can add multiple items
+    };
+
+    const handleUpdateQty = (itemName: string, delta: number) => {
+        if (!selectedOrder) return;
+
+        const updatedItems = selectedOrder.items.map(item => {
+            if (item.name === itemName) {
+                const newQty = Math.max(0, item.qty + delta);
+                return { ...item, qty: newQty };
+            }
+            return item;
+        }).filter(item => item.qty > 0);
+
+        const newSubtotal = updatedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+        const discountPercent = selectedOrder.discount || 0;
+        const totalAfterDiscount = newSubtotal * (1 - discountPercent / 100);
+        const newTax = totalAfterDiscount * 0.10;
+        const newTotal = totalAfterDiscount + newTax;
+
+        const updatedOrder: UnpaidOrder = {
+            ...selectedOrder,
+            items: updatedItems,
+            totalItems: updatedItems.reduce((acc, item) => acc + item.qty, 0),
+            subtotal: newSubtotal,
+            tax: newTax,
+            totalPrice: newTotal
+        };
+
+        updateUnpaidOrder(updatedOrder);
+    };
+
+    const handleDeleteItem = (itemName: string) => {
+        if (!selectedOrder) return;
+
+        const updatedItems = selectedOrder.items.filter(item => item.name !== itemName);
+
+        const newSubtotal = updatedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+        const discountPercent = selectedOrder.discount || 0;
+        const totalAfterDiscount = newSubtotal * (1 - discountPercent / 100);
+        const newTax = totalAfterDiscount * 0.10;
+        const newTotal = totalAfterDiscount + newTax;
+
+        const updatedOrder: UnpaidOrder = {
+            ...selectedOrder,
+            items: updatedItems,
+            totalItems: updatedItems.reduce((acc, item) => acc + item.qty, 0),
+            subtotal: newSubtotal,
+            tax: newTax,
+            totalPrice: newTotal
+        };
+
+        updateUnpaidOrder(updatedOrder);
     };
 
 
+    // Portal Target
+    const rightPanelTarget = usePortalTarget("cashier-right-panel-slot");
 
     return (
-        <div className="flex h-full bg-gray-50 overflow-hidden">
+        <>
             {/* LEFT CONTENT: Grid of Unpaid Orders */}
-            <div className={`flex-1 flex flex-col h-full overflow-hidden ${selectedOrderId ? 'w-2/3 pr-0' : 'w-full'} transition-all duration-300`}>
-                <div className="p-6 pb-2">
-                    <div className="mb-6">
-                        <h1 className="text-2xl font-bold text-gray-900">Pesanan Belum Dibayar</h1>
-                        <p className="text-gray-500 mt-1">Daftar transaksi hari ini dengan status, pembayaran, dan pelanggan</p>
-                    </div>
-
-                    <div className="flex gap-4 mb-4">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                            <input
-                                type="text"
-                                placeholder="Cari Order ID atau Nama Pelanggan"
-                                value={localSearch}
-                                onChange={(e) => setLocalSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
-                            />
+            {/* This div now sits DIRECTLY in the Left Column of CashierLayout */}
+            <div className="flex flex-col h-full bg-gray-50 overflow-hidden w-full">
+                <div className="px-6 py-5 border-b border-transparent">
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">Pesanan Belum Dibayar</h1>
+                            <p className="text-sm text-gray-500 mt-1">Daftar transaksi hari ini dengan status, pembayaran, dan pelanggan</p>
                         </div>
-                        <button className="px-4 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors">
-                            <SlidersHorizontal size={20} />
-                        </button>
+
+                        <div className="flex items-center gap-3 w-full xl:w-auto">
+                            <div className="relative group w-full xl:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-orange-500 transition-colors" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Cari Order ID..."
+                                    value={localSearch}
+                                    onChange={(e) => setLocalSearch(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm"
+                                />
+                            </div>
+                            <DateFilter onFilterChange={setDateRange} />
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-6 pb-6 scroll-area">
+                <div className="flex-1 overflow-y-auto px-6 pb-24 scroll-area hide-scrollbar">
                     {filteredOrders.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-gray-400">
                             <p>Tidak ada pesanan belum dibayar</p>
                         </div>
                     ) : (
-                        <div className={`grid gap-4 ${selectedOrderId ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+                        // Grid Layout: 3 columns on LG because we have more space now (65% of screen)
+                        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
                             {filteredOrders.map(order => (
-                                <div key={order.id} className="bg-white rounded-xl p-5 border border-gray-200 hover:shadow-lg transition-all duration-200 flex flex-col justify-between group h-full">
+                                <div
+                                    key={order.id}
+                                    onClick={() => handleOrderSelect(order.id)}
+                                    className={`bg-white border rounded-xl p-4 cursor-pointer hover:shadow-lg transition-all active:scale-[0.98] group relative overflow-hidden
+                                        ${selectedOrderId === order.id
+                                            ? "border-[#FE4E10]"
+                                            : "border-gray-200 hover:border-[#FE4E10]"
+                                        }
+                                    `}
+                                >
+                                    {selectedOrderId === order.id && (
+                                        <div className="absolute top-0 right-0 w-[40px] h-[40px] bg-orange-500 blur-2xl opacity-20 -mr-2 -mt-2"></div>
+                                    )}
+
                                     <div>
                                         <div className="flex items-start gap-3 mb-4">
                                             <div className="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-lg">
@@ -100,7 +317,7 @@ export default function UnpaidOrders() {
                                             <div className="flex justify-between text-xs text-gray-400 border-b pb-1 mb-2">
                                                 <span>Nama</span>
                                                 <div className="flex gap-4">
-                                                    <span>Jumlah</span>
+                                                    <span>Jml</span>
                                                     <span>Harga</span>
                                                 </div>
                                             </div>
@@ -108,8 +325,8 @@ export default function UnpaidOrders() {
                                                 {order.items.slice(0, 3).map((item, idx) => (
                                                     <div key={idx} className="flex justify-between text-sm">
                                                         <span className="text-gray-800 font-medium truncate w-32">{item.name}</span>
-                                                        <div className="flex gap-6 text-right">
-                                                            <span className="w-4">{item.qty}</span>
+                                                        <div className="flex gap-4 text-right">
+                                                            <span className="w-6 text-center">{item.qty}</span>
                                                             <span className="w-20">Rp{item.price.toLocaleString('id-ID')}</span>
                                                         </div>
                                                     </div>
@@ -126,12 +343,13 @@ export default function UnpaidOrders() {
                                             <span className="font-bold text-gray-700">Total</span>
                                             <span className="font-bold text-gray-900 text-lg">Rp{order.totalPrice.toLocaleString('id-ID')}</span>
                                         </div>
+                                        {/* Button is redundant as whole card is clickable, but kept for clarity */}
                                         <button
-                                            onClick={() => setSelectedOrderId(order.id)}
-                                            className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-all transform active:scale-95 shadow-md hover:shadow-lg"
+                                            className="w-full py-3 rounded-xl font-bold transition-all bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
                                         >
                                             Lihat Detail
                                         </button>
+
                                     </div>
                                 </div>
                             ))}
@@ -140,112 +358,225 @@ export default function UnpaidOrders() {
                 </div>
             </div>
 
-            {/* RIGHT CONTENT: Detail Panel */}
-            {selectedOrderId && selectedOrder && (
-                <div className="w-[400px] bg-white border-l border-gray-200 h-full flex flex-col animate-slideInRight z-10 transition-transform duration-300">
-                    <div className="p-6 flex-1 overflow-y-auto scroll-area">
-                        <div className="flex justify-between items-start mb-6">
-                            <div className="text-center w-full">
-                                <h2 className="font-bold text-lg text-gray-900">{selectedOrder.customerName}</h2>
-                                <p className="text-gray-500 text-sm">{selectedOrder.id}</p>
-                            </div>
-                            <button className="absolute right-6 top-6 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 text-gray-400">
-                                <Edit size={16} />
-                            </button>
-                        </div>
-
-                        <div className="mb-6">
-                            <div className="w-full border border-gray-200 rounded-lg p-3 flex justify-between items-center">
-                                <span className="text-sm text-gray-600">Makan di tempat</span>
-                                {/* Would be a dropdown in full version */}
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 mb-6">
-                            {selectedOrder.items.map((item, idx) => (
-                                <div key={idx} className="flex gap-3">
-                                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-                                        {/* Placeholder image or mapped if available in item (TransactionItem might need image prop or we map from name) */}
-                                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">Img</div>
+            {/* RIGHT CONTENT: Detail Panel via Portal */}
+            {rightPanelTarget && createPortal(
+                <div className="h-full flex flex-col bg-white">
+                    {selectedOrderId && selectedOrder ? (
+                        <>
+                            <div className="p-6 flex-1 overflow-y-auto scroll-area hide-scrollbar">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="text-center w-full relative">
+                                        {isEditingName ? (
+                                            <input
+                                                autoFocus
+                                                type="text"
+                                                className="font-bold text-lg text-gray-900 text-center border-b-2 border-orange-500 focus:outline-none w-full bg-transparent px-2 py-1"
+                                                value={tempCustomerName}
+                                                onChange={(e) => setTempCustomerName(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                                            />
+                                        ) : (
+                                            <h2 className="font-bold text-lg text-gray-900 px-2 py-1 border-b-2 border-transparent">{selectedOrder.customerName}</h2>
+                                        )}
+                                        <p className="text-gray-500 text-sm">{selectedOrder.id}</p>
                                     </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-start">
-                                            <h4 className="font-bold text-sm text-gray-800">{item.name}</h4>
-                                            <button className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={14} /></button>
-                                        </div>
-                                        {item.variant && <p className="text-xs text-gray-500 mb-1">Rasa: {item.variant}</p>}
-                                        <div className="flex justify-between items-end mt-2">
-                                            <span className="text-xs font-medium text-gray-500">Rp{item.price.toLocaleString('id-ID')}</span>
-                                            <div className="flex items-center gap-3">
-                                                <button className="p-1 border rounded text-gray-400 hover:bg-gray-50"><Edit size={12} /></button>
-                                                <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2 py-0.5">
-                                                    <button className="text-gray-400 hover:text-orange-500"><Minus size={12} /></button>
-                                                    <span className="text-sm font-medium w-4 text-center">{item.qty}</span>
-                                                    <button className="text-gray-400 hover:text-orange-500"><Plus size={12} /></button>
+                                    <button
+                                        onClick={() => {
+                                            if (isEditingName) {
+                                                handleSaveName();
+                                            } else {
+                                                setTempCustomerName(selectedOrder.customerName);
+                                                setIsEditingName(true);
+                                            }
+                                        }}
+                                        className={`absolute right-6 top-6 p-2 rounded-lg hover:bg-gray-100 transition-colors ${isEditingName ? 'bg-orange-50 text-orange-500' : 'text-gray-400'}`}
+                                    >
+                                        {isEditingName ? <Check size={16} /> : <Edit size={16} />}
+                                    </button>
+                                </div>
+
+                                <div className="mb-6">
+                                    <div className="w-full border border-gray-200 rounded-lg p-3 flex justify-between items-center">
+                                        <span className="text-sm text-gray-600">Makan di tempat</span>
+                                        {/* Would be a dropdown in full version */}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 mb-6">
+                                    {selectedOrder.items.map((item, idx) => (
+                                        <div key={idx} className="flex gap-3">
+                                            <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                                                {/* Placeholder image or mapped if available in item (TransactionItem might need image prop or we map from name) */}
+                                                <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">Img</div>
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start">
+                                                    <h4 className="font-bold text-sm text-gray-800">{item.name}</h4>
+                                                    <button
+                                                        onClick={() => handleDeleteItem(item.name)}
+                                                        className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                                {item.variant && <p className="text-xs text-gray-500 mb-1">Rasa: {item.variant}</p>}
+                                                <div className="flex justify-between items-end mt-2">
+                                                    <span className="text-xs font-medium text-gray-500">Rp{item.price.toLocaleString('id-ID')}</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <button className="p-1 border rounded text-gray-400 hover:bg-gray-50"><Edit size={12} /></button>
+                                                        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2 py-0.5">
+                                                            <button
+                                                                onClick={() => handleUpdateQty(item.name, -1)}
+                                                                className="text-gray-400 hover:text-orange-500"
+                                                            >
+                                                                <Minus size={12} />
+                                                            </button>
+                                                            <span className="text-sm font-medium w-4 text-center">{item.qty}</span>
+                                                            <button
+                                                                onClick={() => handleUpdateQty(item.name, 1)}
+                                                                className="text-gray-400 hover:text-orange-500"
+                                                            >
+                                                                <Plus size={12} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
+                                    ))}
+
+                                </div>
+
+                                <button
+                                    onClick={() => setShowAddMenu(true)}
+                                    className="w-full py-3 border-2 border-dashed border-orange-300 text-orange-500 rounded-xl font-medium mb-8 hover:bg-orange-50 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    Tambahkan Menu <Plus size={16} />
+                                </button>
+
+
+                                {/* Summary */}
+                                <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                                    <div className="flex justify-between text-sm mb-2">
+                                        <span className="text-gray-500">Sub Total</span>
+                                        <span className="font-medium">Rp{selectedOrder.subtotal.toLocaleString('id-ID')}</span>
+                                    </div>
+                                    {(selectedOrder.discount || 0) > 0 && (
+                                        <div className="flex justify-between text-sm mb-2 text-orange-500 italic">
+                                            <span className="text-gray-500">Potongan ({selectedOrder.discount}%)</span>
+                                            <span className="font-medium">- Rp{(selectedOrder.subtotal * (selectedOrder.discount || 0) / 100).toLocaleString('id-ID')}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between text-sm mb-4">
+                                        <span className="text-gray-500">Pajak (10%)</span>
+                                        <span className="font-medium">Rp{selectedOrder.tax.toLocaleString('id-ID')}</span>
+                                    </div>
+                                    <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
+                                        <span>Total</span>
+                                        <span>Rp{selectedOrder.totalPrice.toLocaleString('id-ID')}</span>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
 
-                        <button className="w-full py-3 border-2 border-dashed border-orange-300 text-orange-500 rounded-xl font-medium mb-8 hover:bg-orange-50 transition-colors flex items-center justify-center gap-2">
-                            Tambahkan Menu <Plus size={16} />
-                        </button>
+                                {/* Payment Options */}
+                                <div className="mb-4">
+                                    <h4 className="font-bold text-sm text-gray-800 mb-3">Metode Pembayaran</h4>
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        {/* CASH */}
+                                        <div className="flex flex-col items-center gap-2">
+                                            <button
+                                                onClick={() => setPaymentOption('CASH')}
+                                                className={`w-full h-14 rounded-2xl flex items-center justify-center border transition-all duration-200 ${paymentOption === "CASH"
+                                                    ? "border-[#FE4E10] bg-white shadow-sm"
+                                                    : "border-gray-200 bg-gray-50 opacity-50"
+                                                    }`}
+                                            >
+                                                <svg width="38" height="20" viewBox="0 0 38 20" fill="none" xmlns="http://www.w3.org/2000/svg"> <path d="M37.767 4.54042C37.767 4.54042 34.0025 1.66805 29.6481 1.32605C25.2937 0.984039 15.9703 3.15752 12.6295 2.20833C9.2912 1.25913 6.11152 -0.00976562 6.11152 -0.00976562L0 16.2876C0 16.2876 7.75465 18.4363 11.1673 18.3521C15.9182 18.2381 21.8166 15.5664 25.0211 16.2182C28.8253 16.994 35.8116 19.9902 35.8116 19.9902L37.767 4.54042Z" fill="#BDE377" /> <path d="M36.7312 5.12006C36.7312 5.12006 32.9592 2.99862 28.9344 2.69627C24.9096 2.39639 16.3123 4.10147 13.2194 3.31585C10.1264 2.52774 7.17973 1.48438 7.17973 1.48438L1.89844 15.1969C1.89844 15.1969 6.53289 16.726 11.1525 17.073C14.8848 17.3505 22.0124 14.5724 24.9988 15.0358C27.9852 15.4992 34.7535 17.98 34.7535 17.98L36.7312 5.12006Z" fill="#6BA638" /> <path d="M25.128 13.9106C28.5952 14.2749 33.9186 16.5079 33.9186 16.5079L35.6856 5.91311C35.6856 5.91311 33.0983 4.15599 28.7017 3.64793C24.8851 3.20679 16.2333 4.94657 13.2817 4.27742C10.33 3.61076 7.51462 2.73096 7.51462 2.73096L3.68066 14.2997C3.68066 14.2997 7.242 15.5538 11.2792 15.9949C15.9136 16.503 22.2655 13.6083 25.128 13.9106Z" fill="#BDE377" /> <path d="M21.2389 3.77932C23.7123 3.45466 25.1794 4.65664 24.8424 8.23533C24.4533 12.3518 22.084 14.9937 20.3517 15.1548C18.6218 15.3184 14.9093 15.4819 15.3529 10.5327C15.6503 7.24152 17.9948 3.96519 19.2042 3.82888C20.4112 3.6901 21.2389 3.77932 21.2389 3.77932Z" fill="#6BA638" /> <path d="M19.026 13.556L20.0694 13.561L20.1214 12.934C21.5886 12.872 22.5675 12.3516 22.7162 10.9513C22.917 9.06781 21.373 8.83237 20.6072 8.46558C19.8414 8.09878 19.2986 7.97239 19.3779 7.43707C19.4548 6.90424 19.7596 6.59445 20.5353 6.58206C21.886 6.56223 21.6877 7.40981 21.6877 7.40981L22.9888 7.42716C22.9888 7.42716 23.2615 5.46434 21.0954 5.27103L21.1475 4.68862L20.2776 4.67871L20.1437 5.29581C18.8897 5.47177 18.2131 6.21527 18.0471 7.00337C17.6629 8.82493 19.0409 9.2512 19.7992 9.50399C20.7063 9.80882 21.2962 10.1087 21.2491 10.6614C21.1871 11.39 20.6667 11.7072 19.7571 11.6056C18.4436 11.4544 18.6691 10.24 18.6691 10.24L17.4473 10.2054C17.4473 10.2054 16.798 12.6614 19.1301 12.9117L19.026 13.556Z" fill="#BDE377" /> <path d="M30.3048 11.0355C29.7745 10.8793 29.4894 10.3217 29.6728 9.79385C29.8538 9.26349 30.4312 8.96113 30.964 9.11727C31.4944 9.2734 31.7794 9.82854 31.596 10.3589C31.4151 10.8893 30.8377 11.1916 30.3048 11.0355Z" fill="#6BA638" /> <path d="M8.63685 9.94808C8.10649 9.79195 7.82148 9.23433 8.00488 8.70644C8.18579 8.17609 8.76324 7.87373 9.29608 8.02986C9.82644 8.186 10.109 8.74114 9.92805 9.2715C9.74713 9.80186 9.16721 10.1042 8.63685 9.94808Z" fill="#6BA638" /> </svg>
+                                            </button>
+                                            <span className={`text-sm font-medium ${paymentOption === 'CASH' ? 'text-[#FE4E10]' : 'text-gray-400'}`}>Cash</span>
+                                        </div>
 
-                        {/* Summary */}
-                        <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                            <div className="flex justify-between text-sm mb-2">
-                                <span className="text-gray-500">Sub Total</span>
-                                <span className="font-medium">Rp{selectedOrder.subtotal.toLocaleString('id-ID')}</span>
-                            </div>
-                            <div className="flex justify-between text-sm mb-4">
-                                <span className="text-gray-500">Pajak (11%)</span>
-                                <span className="font-medium">Rp{selectedOrder.tax.toLocaleString('id-ID')}</span>
-                            </div>
-                            <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
-                                <span>Total</span>
-                                <span>Rp{selectedOrder.totalPrice.toLocaleString('id-ID')}</span>
-                            </div>
-                        </div>
+                                        {/* QRIS */}
+                                        <div className="flex flex-col items-center gap-2">
+                                            <button
+                                                onClick={() => setPaymentOption('QRIS')}
+                                                className={`w-full h-14 rounded-2xl flex items-center justify-center border transition-all duration-200 ${paymentOption === "QRIS"
+                                                    ? "border-[#FE4E10] bg-white shadow-sm"
+                                                    : "border-gray-200 bg-gray-50 opacity-50"
+                                                    }`}
+                                            >
+                                                <svg viewBox="0 0 80 30" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-[20px] w-auto" > <path d="M76.7227 10.4773H64.024V7.936H76.7227V2.856H56.4053V15.5547H69.104V18.096H56.4053V23.176H76.7227V10.4773Z" fill="black" /> <path d="M53.8667 2.856H48.7867V23.1733H53.8667V2.856Z" fill="black" /> <path d="M25.9307 2.856V7.936H41.168V10.4773H25.9307V23.176H31.008V15.632L38.6293 23.176H46.248L38.2987 15.5547H46.248V2.856H25.9307Z" fill="black" /> <path d="M10.6907 15.5547H15.7573V10.488H10.6907V15.5547ZM11.9627 11.7467H14.5013V14.2853H11.9627V11.7467Z" fill="black" /> <path d="M8.152 2.856H3.70667C3.53867 2.85728 3.37786 2.92428 3.25867 3.04267C3.19937 3.10176 3.15234 3.172 3.12031 3.24935C3.08827 3.3267 3.07185 3.40962 3.072 3.49333V22.5387C3.07185 22.6224 3.08827 22.7053 3.12031 22.7827C3.15234 22.86 3.19937 22.9302 3.25867 22.9893C3.37813 23.107 3.539 23.1731 3.70667 23.1733H15.7707V18.1067H8.152V2.856Z" fill="black" /> <path d="M22.7547 2.856H10.6907V7.936H18.312V15.5547H23.3787V3.49333C23.3802 3.32555 23.3161 3.16381 23.2 3.04267C23.081 2.92563 22.9216 2.8588 22.7547 2.856Z" fill="black" /> <path d="M23.392 18.096H18.312V29.5253H23.392V18.096Z" fill="black" /> <path d="M10.16 0H0.634667C0.466559 0.000701921 0.305536 0.0677938 0.186665 0.186665C0.0677938 0.305536 0.000701921 0.466559 0 0.634667V10.16H1.26933V1.89333C1.27281 1.72708 1.34113 1.56878 1.4597 1.4522C1.57827 1.33562 1.73772 1.26999 1.904 1.26933H10.1707L10.16 0Z" fill="black" /> <path d="M78.7307 16.5067V24.7733C78.73 24.9414 78.6629 25.1025 78.544 25.2213C78.4251 25.3402 78.2641 25.4073 78.096 25.408H69.8293V26.6667H79.3547C79.4388 26.6677 79.5223 26.6521 79.6004 26.6207C79.6785 26.5893 79.7496 26.5428 79.8096 26.4838C79.8696 26.4248 79.9173 26.3545 79.95 26.2769C79.9826 26.1994 79.95 26.2769C79.9826 26.1994 79.9997 26.1161 80 26.032V16.5067H78.7307Z" fill="black" /> </svg>
+                                            </button>
+                                            <span className={`text-sm font-medium ${paymentOption === 'QRIS' ? 'text-[#FE4E10]' : 'text-gray-400'}`}>Qris</span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        {/* Payment Options */}
-                        <div className="mb-4">
-                            <h4 className="font-bold text-sm text-gray-800 mb-3">Opsi Pembayaran</h4>
-                            <div className="grid grid-cols-2 gap-3 mb-4">
+                            </div>
+
+                            {/* Bottom Buttons */}
+                            <div className="p-4 border-t border-gray-200 grid grid-cols-2 gap-4 bg-white">
                                 <button
-                                    className={`py-3 rounded-lg border text-sm font-medium ${paymentOption === 'payLater' ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-gray-200 text-gray-500'}`}
+                                    onClick={handleSave}
+                                    className="py-3 px-4 rounded-xl border border-gray-300 font-bold text-gray-700 hover:bg-gray-50 transition-all"
                                 >
-                                    Bayar Nanti
+                                    Simpan
                                 </button>
                                 <button
-                                    className={`py-3 rounded-lg border text-sm font-medium ${paymentOption === 'payNow' ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-gray-200 text-gray-500'}`}
-                                    onClick={() => setPaymentOption('payNow')}
+                                    onClick={handlePay}
+                                    className="py-3 px-4 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all transform active:scale-95"
                                 >
-                                    Bayar Sekarang
+                                    Bayar
                                 </button>
                             </div>
+                        </>
+                    ) : (
+                        // Placeholder when no order selected
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-gray-400">
+                            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                <ClipboardList size={32} className="opacity-50" />
+                            </div>
+                            <h3 className="text-gray-600 font-bold text-lg mb-1">Tidak ada pesanan dipilih</h3>
+                            <p className="text-sm max-w-[200px]">Pilih salah satu pesanan di sebelah kiri untuk melihat detail atau melakukan pembayaran.</p>
                         </div>
-                    </div>
-
-                    {/* Bottom Buttons */}
-                    <div className="p-4 border-t border-gray-200 grid grid-cols-2 gap-4">
-                        <button
-                            onClick={handleSave}
-                            className="py-3 px-4 rounded-xl border border-gray-300 font-bold text-gray-700 hover:bg-gray-50 transition-all"
-                        >
-                            Simpan
-                        </button>
-                        <button
-                            onClick={handlePay}
-                            className="py-3 px-4 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all transform active:scale-95"
-                        >
-                            Bayar
-                        </button>
-                    </div>
-                </div>
+                    )}
+                </div>,
+                rightPanelTarget
             )}
-        </div>
+
+
+            {/* Modals are fine staying here */}
+            <PaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={closePaymentModal}
+                items={selectedOrder?.items || []}
+                subtotal={selectedOrder?.subtotal || 0}
+                tax={selectedOrder?.tax || 0}
+                total={selectedOrder?.totalPrice || 0}
+                discount={selectedOrder?.discount || 0}
+                onPaymentSuccess={handlePaymentSuccess}
+            />
+
+            <QRISPaymentModal
+                isOpen={isQRISModalOpen}
+                onClose={closeQRISModal}
+                total={selectedOrder?.totalPrice || 0}
+                onPaymentConfirm={handleQRISPaymentConfirm}
+            />
+
+            <PaymentSuccessModal
+                isOpen={isSuccessModalOpen}
+                onClose={closeSuccessModal}
+                transaction={lastTransaction}
+                onPrintReceipt={() => alert("Printing receipt...")}
+                onNewOrder={closeSuccessModal}
+            />
+
+
+            <AddMenuModal
+                isOpen={showAddMenu}
+                onClose={() => setShowAddMenu(false)}
+                onAddProduct={handleAddProduct}
+            />
+        </>
     );
 }

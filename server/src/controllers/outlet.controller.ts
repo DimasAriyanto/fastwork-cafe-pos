@@ -1,5 +1,6 @@
 import { OutletService } from '../services/outlet.service.ts';
 import type { Context } from 'hono';
+import { User } from '../types/index.ts';
 
 export class OutletController {
   private service: OutletService;
@@ -47,8 +48,8 @@ export class OutletController {
 
   async create(c: Context) {
     const body = await c.req.json();
-    const user = c.get('user');
-    // Auto-populate createdBy from authenticated user
+    const user = c.get('user') as User;
+    // Otomatis set 'createdBy' dari user yang login
     const data = { ...body, createdBy: user?.id };
     const outlet = await this.service.create(data);
     return c.json({ success: true, outlet }, 201);

@@ -1,5 +1,5 @@
-import { EmployeeService } from '../services/employee.service.ts';
 import type { Context } from 'hono';
+import { EmployeeService } from '../services/employee.service';
 
 export class EmployeeController {
   private service: EmployeeService;
@@ -8,62 +8,58 @@ export class EmployeeController {
     this.service = new EmployeeService();
   }
 
-  async list(c: Context) {
-    const items = await this.service.list();
-    return c.json({ success: true, data: items });
+  async index(c: Context) {
+    const data = await this.service.getAll();
+    return c.json({ success: true, data });
   }
 
-  async listPaginated(c: Context) {
-    const params = c.req.query();
-    const page = parseInt(params.page || '1', 10);
-    const limit = parseInt(params.limit || '20', 10);
-    const search = params.search || undefined;
-    const sortBy = params.sortBy;
-    const sortOrder = (params.sortOrder || 'asc') as 'asc' | 'desc';
-    const filters = { ...params };
-    delete filters.page;
-    delete filters.limit;
-    delete filters.search;
-    delete filters.sortBy;
-    delete filters.sortOrder;
+  async store(c: Context) {
+    try {
+      const body = await c.req.parseBody();
+      const name = String(body['name']);
+      const position = String(body['position']);
+      const photo = body['photo'] instanceof File ? body['photo'] : undefined;
+      
+      // 👇 PARSING BOOLEAN DARI FORM DATA
+      // FormData cuma kirim string, jadi kita cek stringnya
+      const isActive = body['isActive'] === 'true'; 
 
-    const items = await this.service.listWithPagination({
-      page,
-      limit,
-      search,
-      filters,
-      sortBy,
-      sortOrder,
-    });
-    return c.json({ success: true, data: items, meta: { page, limit } });
-  }
+      if (!name || !position) {
+        return c.json({ success: false, message: "Nama dan Posisi wajib diisi" }, 400);
+      }
 
-  async get(c: Context) {
-    const id = Number(c.req.param('id'));
-    const item = await this.service.get(id);
-    if (!item) return c.json({ error: 'Employee not found' }, 404);
-    return c.json({ success: true, employee: item });
-  }
-
-  async create(c: Context) {
-    const body = await c.req.json();
-    const user = c.get('user');
-    // Auto-populate createdBy from authenticated user
-    const data = { ...body, createdBy: user?.id };
-    const employee = await this.service.create(data);
-    return c.json({ success: true, employee }, 201);
+      // Kita update signature service create biar terima isActive
+      const result = await this.service.create(name, position, isActive, photo);
+      return c.json({ success: true, message: "Pegawai ditambah", data: result }, 201);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Error";
+      return c.json({ success: false, message: msg }, 500);
+    }
   }
 
   async update(c: Context) {
-    const id = Number(c.req.param('id'));
-    const body = await c.req.json();
-    const employee = await this.service.update(id, body);
-    return c.json({ success: true, employee });
+    try {
+      const id = Number(c.req.param('id'));
+      const body = await c.req.parseBody();
+      
+      const name = String(body['name']);
+      const position = String(body['position']);
+      const photo = body['photo'] instanceof File ? body['photo'] : undefined;
+      
+      // 👇 PARSING BOOLEAN
+      const isActive = body['isActive'] === 'true';
+
+      const result = await this.service.update(id, name, position, isActive, photo);
+      return c.json({ success: true, message: "Pegawai diupdate", data: result });
+    } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Error";
+      return c.json({ success: false, message: msg }, 500);
+    }
   }
 
-  async remove(c: Context) {
+  async delete(c: Context) {
     const id = Number(c.req.param('id'));
     await this.service.delete(id);
-    return c.json({ success: true });
+    return c.json({ success: true, message: "Pegawai dihapus" });
   }
 }
