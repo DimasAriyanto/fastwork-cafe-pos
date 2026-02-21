@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '../db/index';
-import { menus, menuVariants, categories } from '../db/schemas/index';
+import { menus, menuVariants, categories, menuToppings, toppings } from '../db/schemas/index';
 import { eq, and, like, desc, asc, sql } from 'drizzle-orm';
 import type { 
   PaginationOptions 
@@ -9,14 +8,14 @@ import type {
   CreateMenuRepositoryInput, 
   MenuDetailResponse, 
   UpdateMenuRequest 
-} from '../types/menu'; // 👈 Import tipe baru
+} from '../types/menu';
 
 export class MenuRepository {
   
   // ✅ 1. CREATE (Strict Typed)
   async create(data: CreateMenuRepositoryInput): Promise<MenuDetailResponse | null> {
-    // Destructure variants biar gak ikut masuk ke tabel menus
-    const { variants = [], ...menuData } = data;
+    // Destructure variants \u0026 toppingIds biar gak ikut masuk ke tabel menus
+    const { variants = [], toppingIds = [], ...menuData } = data;
 
     // A. Insert Menu Utama
     const [result] = await db.insert(menus).values({
@@ -24,7 +23,7 @@ export class MenuRepository {
         categoryId: menuData.categoryId,
         name: menuData.name,
         description: menuData.description,
-        price: Number(menuData.price), // Sesuai schema menus.price yang bertipe int
+        price: Number(menuData.price),
         image: menuData.image,
         isAvailable: true,
         hasVariant: variants.length > 0,
@@ -39,10 +38,19 @@ export class MenuRepository {
         const variantsData = variants.map((v) => ({
             menuId: newMenuId,
             name: v.name,
-            priceAdjustment: Number(v.priceAdjustment), // Ensure it is a number
+            priceAdjustment: Number(v.priceAdjustment),
             isAvailable: true
         }));
         await db.insert(menuVariants).values(variantsData);
+    }
+
+    // C. Insert Toppings (Junction Table)
+    if (toppingIds.length > 0) {
+        const toppingData = toppingIds.map((tid) => ({
+            menuId: newMenuId,
+            toppingId: tid
+        }));
+        await db.insert(menuToppings).values(toppingData);
     }
 
     return this.findById(newMenuId);
@@ -54,16 +62,26 @@ export class MenuRepository {
     
     if (!menu) return null;
 
-    const variants = await db
-        .select()
-        .from(menuVariants)
-        .where(eq(menuVariants.menuId, id));
+    const [variants, menuToppingData] = await Promise.all([
+        db.select().from(menuVariants).where(eq(menuVariants.menuId, id)),
+        db.select({
+            id: toppings.id,
+            name: toppings.name,
+            price: toppings.price,
+            isAvailable: toppings.isAvailable,
+            stock: toppings.stock,
+            outletId: toppings.outletId
+        })
+        .from(menuToppings)
+        .innerJoin(toppings, eq(menuToppings.toppingId, toppings.id))
+        .where(eq(menuToppings.menuId, id))
+    ]);
 
     return {
         ...menu,
         variants: variants,
-        // Konversi Decimal ke Number kalau perlu, tapi string aman buat currency
-        price: menu.price, // Casting tipis buat compatibility
+        toppings: menuToppingData,
+        price: menu.price,
     };
   }
 
@@ -136,13 +154,36 @@ export class MenuRepository {
       .offset(offset);
 
     // ---------------------------------------------------------
-    // C. MAPPING DATA (Flattening)
+    // C. MAPPING DATA WITH TOPPINGS
     // ---------------------------------------------------------
+    // Fetch toppings for all menus in a single query
+    const menuIds = rows.map(row => row.menu.id);
+    
+    let menuToppingMap: Record<number, any[]> = {};
+    if (menuIds.length > 0) {
+      const allMenuToppings = await db
+        .select({
+          menuId: menuToppings.menuId,
+          id: toppings.id,
+          name: toppings.name,
+          price: toppings.price,
+          isAvailable: toppings.isAvailable,
+        })
+        .from(menuToppings)
+        .innerJoin(toppings, eq(menuToppings.toppingId, toppings.id))
+        .where(sql`${menuToppings.menuId} IN (${sql.join(menuIds.map(id => sql`${id}`), sql`, `)})`);
+
+      for (const mt of allMenuToppings) {
+        if (!menuToppingMap[mt.menuId]) menuToppingMap[mt.menuId] = [];
+        menuToppingMap[mt.menuId].push({ id: mt.id, name: mt.name, price: mt.price, isAvailable: mt.isAvailable });
+      }
+    }
+
     const data = rows.map(row => ({
       ...row.menu,
-      categoryName: row.categoryName || 'Uncategorized', // Handle jika kategori terhapus
-      // Pastikan price jadi string sesuai Interface Frontend
-      price: row.menu.price, 
+      categoryName: row.categoryName || 'Uncategorized',
+      price: row.menu.price,
+      toppings: menuToppingMap[row.menu.id] || [],
     }));
 
     // Return format standard { data, meta }
@@ -159,14 +200,32 @@ export class MenuRepository {
 
   // ✅ 4. UPDATE
   async update(id: number, data: UpdateMenuRequest) {
-    // Hapus field undefined biar gak update jadi NULL
-    // (Helper function cleanObject bisa dipake disini kalo ada)
-    const { createdAt, updatedAt, id: bodyId, variants, ...cleanData } = data as any;
+    const { variants, toppingIds, ...cleanData } = data as any;
 
-    // 2. Gunakan cleanData untuk update ke database
-    await db.update(menus)
-        .set(cleanData)
-        .where(eq(menus.id, id));
+    // 1. Update Menu Utama
+    if (Object.keys(cleanData).length > 0) {
+        await db.update(menus)
+            .set(cleanData)
+            .where(eq(menus.id, id));
+    }
+
+    // 2. Update Toppings (Sync Junction Table)
+    if (toppingIds !== undefined) {
+        // Hapus link lama
+        await db.delete(menuToppings).where(eq(menuToppings.menuId, id));
+        
+        // Insert link baru jika ada
+        if (toppingIds.length > 0) {
+            const toppingData = toppingIds.map((tid: number) => ({
+                menuId: id,
+                toppingId: tid
+            }));
+            await db.insert(menuToppings).values(toppingData);
+        }
+    }
+
+    // Catatan: Variant update biasanya lebih kompleks (CRUDS), 
+    // tapi untuk MVP ini kita fokus ke Topping dulu sesuai request.
 
     return this.findById(id);
   }

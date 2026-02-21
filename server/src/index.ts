@@ -13,6 +13,7 @@ import { outletRoutes } from './routes/outlets.ts';
 import { employeeRoutes } from './routes/employees.ts';
 import { menuRoutes } from './routes/menu.ts';
 import { transactionRoutes } from './routes/transactions.ts';
+import { customerRoutes } from './routes/customer.ts';
 
 import { checkDatabaseHealth } from './db/index.ts';
 import { categoryRoutes } from './routes/category.ts';
@@ -48,6 +49,7 @@ app.route('/api/menus', menuRoutes);
 app.route('/api/categories', categoryRoutes);
 app.route('/api/toppings', toppingRoutes);
 app.route('/api/discounts', discountRoutes);
+app.route('/api/customers', customerRoutes);
 
 // ⚠️ FIX: Tambahkan '/' di depan
 app.route('/api/transactions', transactionRoutes); 

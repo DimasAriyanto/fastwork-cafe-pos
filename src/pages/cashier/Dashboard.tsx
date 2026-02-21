@@ -30,6 +30,7 @@ export default function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState("Semua Menu");
   const [isLoading, setIsLoading] = useState(true);
   const [customer, setCustomer] = useState("");
+  const [customerId, setCustomerId] = useState<number | null>(null);
   const [dineType, setDineType] = useState<"dinein" | "takeaway">("dinein");
   const [selectedProductForModal, setSelectedProductForModal] = useState<CartItem | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | undefined>();
@@ -52,7 +53,12 @@ export default function Dashboard() {
                 image: m.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random`,
                 isAvailable: m.isAvailable,
                 variants: m.variants?.map((v: any) => v.name) || [],
-                toppings: [] 
+                // Use per-menu toppings from the API response
+                toppings: (m.toppings || []).map((t: any) => ({
+                    id: Number(t.id),
+                    name: t.name,
+                    price: Number(t.price)
+                }))
             }));
 
             setAllProducts(productsData);
@@ -112,7 +118,11 @@ export default function Dashboard() {
 
   // Handlers
   const handleProductClick = (product: Product) => {
-    setSelectedProductForModal({ ...product, qty: 1 });
+    setSelectedProductForModal({ 
+        ...product, 
+        qty: 1
+        // product.toppings already has the correct per-menu toppings from the API
+    });
     setEditingIndex(undefined);
   };
 
@@ -143,12 +153,16 @@ export default function Dashboard() {
         customerName: customer || "Pelanggan",
         orderType: dineType === "dinein" ? "dine_in" : "take_away",
         notes: customer || "Pelanggan",
+        customerId: customerId || undefined,
         items: cart.map(c => ({
           menuId: c.id,
           qty: c.qty,
           price: c.price,
           variantId: undefined, 
-          toppings: [] 
+          toppings: (c.selectedToppings || []).map(tName => {
+              const t = (c as any).toppings?.find((top: any) => top.name === tName);
+              return t ? { toppingId: t.id, price: t.price } : null;
+          }).filter(Boolean)
         }))
       };
 
@@ -179,6 +193,7 @@ export default function Dashboard() {
       clearCart();
       removeDiscount();
       setCustomer("");
+      setCustomerId(null);
       closePaymentModal();
       closeQRISModal();
       setIsRightPanelOpen(false);
@@ -198,12 +213,16 @@ export default function Dashboard() {
         customerName: customer || "Pelanggan",
         orderType: dineType === "dinein" ? "dine_in" : "take_away",
         notes: customer || "Pelanggan",
+        customerId: customerId || undefined,
         items: cart.map(c => ({
           menuId: c.id,
           qty: c.qty,
           price: c.price,
-          variantId: undefined,
-          toppings: []
+          variantId: undefined, // variant selection not yet fully integrated with IDs
+          toppings: (c.selectedToppings || []).map(tName => {
+              const t = (c as any).toppings?.find((top: any) => top.name === tName);
+              return t ? { toppingId: t.id, price: t.price } : null;
+          }).filter(Boolean)
         }))
       };
 
@@ -212,6 +231,7 @@ export default function Dashboard() {
       clearCart();
       removeDiscount();
       setCustomer("");
+      setCustomerId(null);
       setIsRightPanelOpen(false);
       refreshData();
     } catch (err: any) {
@@ -252,6 +272,7 @@ export default function Dashboard() {
             cart={cart}
             customer={customer}
             setCustomer={setCustomer}
+            setCustomerId={setCustomerId}
             dineType={dineType}
             setDineType={setDineType}
             onUpdateQuantity={updateQuantity}

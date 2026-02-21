@@ -50,6 +50,7 @@ export default function CashierLayout() {
     paidAmount: Number(t.paidAmount || t.totalPrice),
     change: Number(t.changeAmount || 0),
     cashierName: t.cashierName || t.employeeName || '',
+    serviceType: t.orderType === 'take_away' ? 'Take Away' : 'Dine In',
   });
 
   // Normalize API order → frontend UnpaidOrder shape
@@ -61,6 +62,7 @@ export default function CashierLayout() {
     status: 'unpaid',
     date: o.createdAt || new Date().toISOString(),
     cashierName: o.cashierName || o.employeeName || '',
+    serviceType: o.orderType === 'take_away' ? 'Take Away' : 'Dine In',
     paymentMethod: undefined,
   });
 

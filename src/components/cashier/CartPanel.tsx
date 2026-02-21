@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import OrderTypeSelector from "./OrderTypeSelector";
 import CartItem from "./CartItem";
 import type { CartItem as CartItemType, PaymentMethod } from "../../types/cashier";
+import { apiClient } from "../../api/client";
+import { ChevronDown, Plus, X, UserPlus, Phone } from "lucide-react";
 
 type CartPanelProps = {
     cart: CartItemType[];
     customer: string;
     setCustomer: (name: string) => void;
+    setCustomerId?: (id: number | null) => void;
     dineType: "dinein" | "takeaway";
     setDineType: (type: "dinein" | "takeaway") => void;
     onUpdateQuantity: (index: number, delta: number) => void;
@@ -21,10 +24,16 @@ type CartPanelProps = {
     removeDiscount: () => void;
 };
 
+interface CustomerSuggestion {
+    id: number;
+    name: string;
+}
+
 export default function CartPanel({
     cart,
     customer,
     setCustomer,
+    setCustomerId,
     dineType,
     setDineType,
     onUpdateQuantity,
@@ -42,6 +51,53 @@ export default function CartPanel({
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
     const [isDiscountFocused, setIsDiscountFocused] = useState(false);
     const [discountCode, setDiscountCode] = useState("");
+    const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [newCustomer, setNewCustomer] = useState({ name: "", phoneNumber: "" });
+    const suggestionRef = useRef<HTMLDivElement>(null);
+
+    // Click outside listener
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // Fetch customer suggestions when typing
+    useEffect(() => {
+        const fetchSuggestions = async () => {
+            if (customer.length < 2) {
+                setSuggestions([]);
+                return;
+            }
+            try {
+                const data = await apiClient.getCustomers(customer);
+                setSuggestions(data);
+                setShowSuggestions(true);
+            } catch (err) {
+                console.error("Failed to fetch customer suggestions", err);
+            }
+        };
+
+        const timeoutId = setTimeout(fetchSuggestions, 300);
+        return () => clearTimeout(timeoutId);
+    }, [customer]);
+
+    const handleCustomerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setCustomer(val);
+        
+        // Find if the typed value matches a suggestion to set ID
+        if (setCustomerId) {
+            const match = suggestions.find(s => s.name === val);
+            setCustomerId(match ? match.id : null);
+        }
+    };
 
     const handleApplyDiscount = async () => {
         const result = await applyDiscountCode(discountCode);
@@ -62,20 +118,84 @@ export default function CartPanel({
         onCheckout(payType, paymentMethod || undefined);
     };
 
+    const handleQuickAdd = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newCustomer.name.trim()) return;
+
+        try {
+            const created = await apiClient.createCustomer(newCustomer);
+            setCustomer(created.name);
+            if (setCustomerId) setCustomerId(created.id);
+            setIsAddModalOpen(false);
+            setNewCustomer({ name: "", phoneNumber: "" });
+            setShowSuggestions(false);
+        } catch (err: any) {
+            alert(err.message || "Gagal menambah pelanggan");
+        }
+    };
+
     return (
         <div className="w-full bg-white flex flex-col h-full">
             <div className="flex-1 overflow-y-auto hide-scrollbar">
                 <div className="p-6">
                     {/* Customer Info */}
-                    <div className="mb-6">
+                    <div className="mb-6 relative" ref={suggestionRef}>
                         <h3 className="font-medium text-gray-700 mb-3">Nama Pelanggan</h3>
-                        <input
-                            type="text"
-                            placeholder="Tulis nama pelanggan"
-                            value={customer}
-                            onChange={(e) => setCustomer(e.target.value)}
-                            className="w-full p-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white text-gray-700 placeholder-gray-400"
-                        />
+                        <div className="relative group">
+                            <input
+                                type="text"
+                                placeholder="Tulis nama pelanggan"
+                                value={customer}
+                                onChange={handleCustomerChange}
+                                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                                className="w-full p-4 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white text-gray-700 placeholder-gray-400 transition-all font-medium"
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                                <ChevronDown size={20} />
+                            </div>
+                        </div>
+
+                        {/* Custom Dropdown Suggestions */}
+                        {showSuggestions && (customer.length >= 2 || suggestions.length > 0) && (
+                            <div className="absolute left-0 right-0 mt-2 bg-[#202224] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[100] border border-white/5 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="py-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                                    {suggestions.map((s) => (
+                                        <button
+                                            key={s.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setCustomer(s.name);
+                                                if (setCustomerId) setCustomerId(s.id);
+                                                setShowSuggestions(false);
+                                            }}
+                                            className="w-full text-left px-5 py-4 text-white hover:bg-orange-500 transition-colors flex items-center justify-between group"
+                                        >
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-[15px]">{s.name}</span>
+                                                <span className="text-[11px] text-gray-400 group-hover:text-white/80">ID: CUST-{s.id.toString().padStart(4, '0')}</span>
+                                            </div>
+                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Plus size={16} />
+                                            </div>
+                                        </button>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setNewCustomer({ ...newCustomer, name: customer });
+                                            setIsAddModalOpen(true);
+                                            setShowSuggestions(false);
+                                        }}
+                                        className="w-full text-left px-5 py-4 border-t border-white/5 text-orange-500 hover:bg-orange-500 hover:text-white transition-colors flex items-center gap-3 font-bold text-sm"
+                                    >
+                                        <div className="bg-orange-500/10 p-2 rounded-lg group-hover:bg-white/20">
+                                            <UserPlus size={18} />
+                                        </div>
+                                        Tambah "{customer || "Pelanggan Baru"}"
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <OrderTypeSelector orderType={dineType} setOrderType={setDineType} />
@@ -266,6 +386,80 @@ hover:bg-[#e0440e] transition-all duration-200 active:scale-[0.98] mt-4"
                     )}
                 </div>
             </div>
+
+            {/* Quick Add Modal */}
+            {isAddModalOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-white w-full max-w-[440px] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="bg-[#1F2937] p-6 flex items-center justify-between text-white">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-orange-500 p-2 rounded-xl">
+                                    <UserPlus size={20} />
+                                </div>
+                                <h2 className="text-xl font-bold">Tambah Pelanggan</h2>
+                            </div>
+                            <button 
+                                onClick={() => setIsAddModalOpen(false)}
+                                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleQuickAdd} className="p-8 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-gray-700">Nama Lengkap</label>
+                                <div className="relative">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                        <Plus size={18} />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        required
+                                        autoFocus
+                                        value={newCustomer.name}
+                                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                                        placeholder="Nama pelanggan..."
+                                        className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all font-medium"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-gray-700">Nomor Telepon (Opsional)</label>
+                                <div className="relative">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                        <Phone size={18} />
+                                    </div>
+                                    <input
+                                        type="tel"
+                                        value={newCustomer.phoneNumber}
+                                        onChange={(e) => setNewCustomer({ ...newCustomer, phoneNumber: e.target.value })}
+                                        placeholder="08xxxxxxxxxx"
+                                        className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all font-medium"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAddModalOpen(false)}
+                                    className="flex-1 py-4 text-gray-500 font-bold rounded-2xl hover:bg-gray-100 transition-all"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-4 bg-orange-500 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-all active:scale-95"
+                                >
+                                    Simpan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

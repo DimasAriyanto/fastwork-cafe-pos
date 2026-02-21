@@ -6,11 +6,13 @@ interface EditMenuModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialData: any | null;
-  onSaved: () => void; // Callback to refresh list
+  onSaved: () => void;
 }
 
 const EditMenuModal = ({ isOpen, onClose, initialData, onSaved }: EditMenuModalProps) => {
   const [categories, setCategories] = useState<any[]>([]);
+  const [allToppings, setAllToppings] = useState<any[]>([]);
+  const [selectedToppingIds, setSelectedToppingIds] = useState<number[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     categoryId: '',
@@ -33,16 +35,28 @@ const EditMenuModal = ({ isOpen, onClose, initialData, onSaved }: EditMenuModalP
         isAvailable: initialData.isAvailable ?? true,
       });
       setImagePreview(initialData.image ? apiClient.getImageUrl(initialData.image) : null);
-      setImageFile(null); // Reset file selection when changing menu
+      setImageFile(null);
+      // Pre-select toppings already linked to this menu
+      const linkedIds = (initialData.toppings || []).map((t: any) => Number(t.id));
+      setSelectedToppingIds(linkedIds);
     }
     if (isOpen) {
       apiClient.getCategories().then((data: any) => {
         setCategories(Array.isArray(data) ? data : (data.data || data));
       });
+      apiClient.getToppings().then((data: any) => {
+        setAllToppings(Array.isArray(data) ? data : (data.data || data));
+      });
     }
   }, [isOpen, initialData]);
 
   if (!isOpen || !initialData) return null;
+
+  const toggleTopping = (id: number) => {
+    setSelectedToppingIds(prev =>
+      prev.includes(id) ? prev.filter(tid => tid !== id) : [...prev, id]
+    );
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,6 +79,7 @@ const EditMenuModal = ({ isOpen, onClose, initialData, onSaved }: EditMenuModalP
       submitData.append('price', formData.price);
       submitData.append('description', formData.description);
       submitData.append('isAvailable', String(formData.isAvailable));
+      submitData.append('toppingIds', JSON.stringify(selectedToppingIds));
       
       if (imageFile) {
         submitData.append('image', imageFile);
@@ -173,6 +188,45 @@ const EditMenuModal = ({ isOpen, onClose, initialData, onSaved }: EditMenuModalP
               className="w-full px-4 py-3 bg-gray-50 border border-[#EAEAEA] rounded-xl text-[#202224] focus:outline-none focus:ring-2 focus:ring-[#FE4E10]/20 focus:border-[#FE4E10] transition-all resize-none"
             />
           </div>
+
+          {/* Extra Toppings */}
+          {allToppings.length > 0 && (
+            <div className="space-y-3">
+              <label className="block text-sm font-bold text-[#202224]">Extra Topping Tersedia</label>
+              <p className="text-xs text-gray-400">Pilih topping yang bisa ditambahkan ke menu ini oleh kasir.</p>
+              <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-1">
+                {allToppings.map((t: any) => {
+                  const isSelected = selectedToppingIds.includes(Number(t.id));
+                  return (
+                    <button
+                      type="button"
+                      key={t.id}
+                      onClick={() => toggleTopping(Number(t.id))}
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                        isSelected
+                          ? 'bg-[#FE4E10]/10 border-[#FE4E10] text-[#FE4E10]'
+                          : 'bg-gray-50 border-[#EAEAEA] text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      <span>{t.name}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-400">Rp{Number(t.price).toLocaleString('id-ID')}</span>
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${
+                          isSelected ? 'bg-[#FE4E10] border-[#FE4E10]' : 'border-gray-300'
+                        }`}>
+                          {isSelected && (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Status */}
           <div className="space-y-2">

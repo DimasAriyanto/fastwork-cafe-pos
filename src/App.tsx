@@ -11,6 +11,7 @@ import Pegawai from './pages/owner/Pegawai';
 import Kategori from './pages/owner/Kategori';
 import TambahanMenu from './pages/owner/TambahanMenu';
 import Diskon from './pages/owner/Diskon';
+import Customers from './pages/owner/Customers';
 import Unauthorized from './pages/auth/Unauthorized';
 
 // Cashier Pages
@@ -38,6 +39,7 @@ function App() {
           <Route path="laporan-penjualan" element={<LaporanPenjualanToko />} />
           <Route path="diskon" element={<Diskon />} />
           <Route path="pegawai" element={<Pegawai />} />
+          <Route path="pelanggan" element={<Customers />} />
         </Route>
       </Route>
 

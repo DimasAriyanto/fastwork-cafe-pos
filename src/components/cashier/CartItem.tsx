@@ -30,9 +30,24 @@ export default function CartItem({ item, index, onUpdateQuantity, onRemove, onEd
                         </p>
                     )}
                 </div>
-                <p className="font-bold text-orange-600 text-lg">
-                    Rp{(item.price * item.qty).toLocaleString()}
-                </p>
+                <div className="text-right">
+                    <p className="font-bold text-orange-600 text-lg leading-tight">
+                        Rp{(
+                            (item.price + (item.selectedToppings?.reduce((acc, toppingName) => {
+                                const topping = item.toppings?.find(t => t.name === toppingName);
+                                return acc + (topping ? topping.price : 0);
+                            }, 0) || 0)) * item.qty
+                        ).toLocaleString()}
+                    </p>
+                    {item.qty > 1 && (
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                            Rp{(item.price + (item.selectedToppings?.reduce((acc, toppingName) => {
+                                const topping = item.toppings?.find(t => t.name === toppingName);
+                                return acc + (topping ? topping.price : 0);
+                            }, 0) || 0)).toLocaleString()} / item
+                        </p>
+                    )}
+                </div>
             </div>
 
             <div className="flex items-center justify-between">

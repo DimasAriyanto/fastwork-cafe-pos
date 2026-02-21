@@ -12,6 +12,7 @@ import { outlets, tables } from './organization';
 import { employees } from './hr';
 import { menus, menuVariants, toppings } from './menu';
 import { discounts } from './sales';
+import { customers } from './customers';
 
 export const transactions = mysqlTable('transactions', {
   id: int('id').autoincrement().primaryKey(),
@@ -32,6 +33,7 @@ export const transactions = mysqlTable('transactions', {
   totalItems: int('total_items').notNull().default(0),
   orderType: varchar('order_type', { length: 50 }).default('dine_in'),
   notes: text('notes'),
+  customerId: int('customer_id').references(() => customers.id, { onDelete: 'set null' }),
   createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
@@ -40,6 +42,7 @@ export const transactions = mysqlTable('transactions', {
   cashierIdx: index('idx_transactions_cashier').on(table.cashierId),
   tableIdx: index('idx_transactions_table').on(table.tableId),
   statusIdx: index('idx_transactions_status_date').on(table.status, table.createdAt),
+  customerIdx: index('idx_transactions_customer').on(table.customerId),
   paymentStatusIdx: index('idx_transactions_payment_status').on(table.paymentStatus, table.createdAt),
   createdAtIdx: index('idx_transactions_created_at_desc').on(table.createdAt),
 }));

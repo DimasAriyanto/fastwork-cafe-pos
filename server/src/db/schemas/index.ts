@@ -5,6 +5,9 @@ export * from './auth.ts';
 export * from './organization.ts';
 export * from './hr.ts';
 
+// Customers
+export * from './customers.ts';
+
 // Menu & Recipes
 export * from './menu.ts';
 

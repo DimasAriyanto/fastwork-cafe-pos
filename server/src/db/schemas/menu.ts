@@ -94,3 +94,15 @@ export const toppings = mysqlTable('toppings', {
   isAvailable: boolean('is_available').default(true),
   stock: int('stock').default(0), // Opsional: Kalo topping mau dihitung stoknya
 });
+
+// 👇 TAMBAHAN 3: TABEL PENGHUBUNG MENU \u0026 TOPPING
+// Ini supaya kita bisa atur topping A cuma muncul di Menu X
+export const menuToppings = mysqlTable('menu_toppings', {
+  id: int('id').autoincrement().primaryKey(),
+  menuId: int('menu_id').notNull().references(() => menus.id, { onDelete: 'cascade' }),
+  toppingId: int('topping_id').notNull().references(() => toppings.id, { onDelete: 'cascade' }),
+}, (table) => ({
+  menuIdx: index('idx_menu_toppings_menu').on(table.menuId),
+  toppingIdx: index('idx_menu_toppings_topping').on(table.toppingId),
+  uniqueMenuTopping: unique('unique_menu_topping').on(table.menuId, table.toppingId),
+}));

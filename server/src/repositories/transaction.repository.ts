@@ -68,7 +68,7 @@ export class TransactionRepository {
         status: "completed",
         paymentStatus: "paid", // Status transaksi lunas
         totalItems: data.items.reduce((acc, curr) => acc + curr.qty, 0),
-        orderType: "dine_in",
+        orderType: (data as any).orderType || "dine_in",
         notes: data.notes,
         createdBy: data.cashierId,
       });

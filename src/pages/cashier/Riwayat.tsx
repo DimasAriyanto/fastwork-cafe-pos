@@ -81,7 +81,8 @@ export default function Riwayat() {
               price: item.price,
               variant: undefined, // avoid redundant "Rasa: ..." display
               note: undefined // item-level notes not supported in schema
-            }))
+            })),
+            serviceType: detail.orderType === 'take_away' ? 'Take Away' : 'Dine In'
           } as Transaction
         }));
       } catch (err) {

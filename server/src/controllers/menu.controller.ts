@@ -143,6 +143,16 @@ export class MenuController {
         }
       }
 
+      // Handle toppingIds if any (sent as JSON string in FormData)
+      let toppingIds: number[] = [];
+      if (body['toppingIds']) {
+        try {
+          toppingIds = JSON.parse(String(body['toppingIds']));
+        } catch (e) {
+          console.error("Gagal parse toppingIds:", e);
+        }
+      }
+
       const data = { 
         name,
         categoryId,
@@ -150,6 +160,7 @@ export class MenuController {
         description,
         currentStock,
         variants,
+        toppingIds,
         createdBy: user?.id,
         outletId: user?.outletId || 1 
       };
@@ -204,6 +215,15 @@ export class MenuController {
       if (body['isAvailable']) updateData.isAvailable = body['isAvailable'] === 'true';
       if (body['currentStock']) updateData.currentStock = parseInt(body['currentStock'] as string, 10);
       
+      // Handle toppingIds update
+      if (body['toppingIds'] !== undefined) {
+        try {
+          updateData.toppingIds = JSON.parse(String(body['toppingIds']));
+        } catch (e) {
+          console.error("Gagal parse toppingIds:", e);
+        }
+      }
+
       const photo = body['image'] instanceof File ? body['image'] : undefined;
 
       const menu = await this.service.updateMenu(id, updateData, photo);

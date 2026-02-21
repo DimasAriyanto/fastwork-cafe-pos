@@ -15,6 +15,20 @@
       "when": 1771625107451,
       "tag": "0001_panoramic_warpath",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1771691295920,
+      "tag": "0002_jittery_gargoyle",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1771693180225,
+      "tag": "0003_exotic_zzzax",
+      "breakpoints": true
     }
   ]
 }

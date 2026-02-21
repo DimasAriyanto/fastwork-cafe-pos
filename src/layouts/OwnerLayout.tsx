@@ -66,6 +66,7 @@ const OwnerLayout = () => {
       ]
     },
     { path: '/owner/pegawai', label: 'Pegawai', icon: Users },
+    { path: '/owner/pelanggan', label: 'Pelanggan', icon: Users },
   ];
 
   // Auto-expand submenu if current path is a child

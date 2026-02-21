@@ -761,6 +761,41 @@ class ApiClient {
     if (response.success) return response.data;
     throw new Error(response.error || response.message || 'Gagal mengambil laporan penjualan produk');
   }
+
+  // == Customer Methods ==
+
+  async getCustomers(query?: string) {
+    const endpoint = query ? `/customers?q=${encodeURIComponent(query)}` : '/customers';
+    const response = await this.request<ApiResponse>(endpoint, { method: 'GET' });
+    if (response.success) return response.data;
+    throw new Error(response.error || 'Gagal mengambil data pelanggan');
+  }
+
+  async createCustomer(data: any) {
+    const response = await this.request<ApiResponse>('/customers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (response.success) return response.data;
+    throw new Error(response.error || 'Gagal membuat data pelanggan');
+  }
+
+  async updateCustomer(id: number, data: any) {
+    const response = await this.request<ApiResponse>(`/customers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    if (response.success) return response.data;
+    throw new Error(response.error || 'Gagal memperbarui data pelanggan');
+  }
+
+  async deleteCustomer(id: number) {
+    const response = await this.request<ApiResponse>(`/customers/${id}`, {
+      method: 'DELETE',
+    });
+    if (response.success) return response.data;
+    throw new Error(response.error || 'Gagal menghapus data pelanggan');
+  }
 }
 
 export const apiClient = new ApiClient();
