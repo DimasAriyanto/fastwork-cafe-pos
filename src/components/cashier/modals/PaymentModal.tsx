@@ -51,6 +51,25 @@ export default function PaymentModal({
         }
     };
 
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key >= "0" && e.key <= "9") {
+                handleNumPadClick(e.key);
+            } else if (e.key === "Backspace") {
+                handleNumPadClick("delete");
+            } else if (e.key === "Enter") {
+                handlePay();
+            } else if (e.key === "Escape") {
+                onClose();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isOpen, cashAmount, total, onClose]); // Added necessary dependencies
+
     const handlePay = () => {
         const cash = parseInt(cashAmount) || 0;
         if (cash >= total) onPaymentSuccess(cash, change, "CASH");
