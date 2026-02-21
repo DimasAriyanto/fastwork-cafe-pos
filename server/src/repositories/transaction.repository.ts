@@ -289,7 +289,7 @@ export class TransactionRepository {
         paymentStatus: transactions.paymentStatus,
         status: transactions.status,
         createdAt: transactions.createdAt,
-        cashierName: employees.name, // Use employees table
+        employeeName: employees.name, // Match frontend property name
         paymentMethod: payments.paymentMethod,
         paidAmount: payments.amountPaid,
         changeAmount: payments.changeAmount,
@@ -311,7 +311,32 @@ export class TransactionRepository {
 
   async findById(id: number) {
     // 1. Ambil Header
-    const [trx] = await db.select().from(transactions).where(eq(transactions.id, id));
+    // 1. Ambil Header + Employee Name
+    const [trx] = await db
+      .select({
+        id: transactions.id,
+        outletId: transactions.outletId,
+        tableId: transactions.tableId,
+        cashierId: transactions.cashierId,
+        subtotal: transactions.subtotal,
+        taxAmount: transactions.taxAmount,
+        serviceChargeAmount: transactions.serviceChargeAmount,
+        discountAmount: transactions.discountAmount,
+        totalPrice: transactions.totalPrice,
+        status: transactions.status,
+        paymentStatus: transactions.paymentStatus,
+        totalItems: transactions.totalItems,
+        orderType: transactions.orderType,
+        notes: transactions.notes,
+        customerId: transactions.customerId,
+        createdBy: transactions.createdBy,
+        createdAt: transactions.createdAt,
+        updatedAt: transactions.updatedAt,
+        employeeName: employees.name,
+      })
+      .from(transactions)
+      .leftJoin(employees, eq(transactions.cashierId, employees.id))
+      .where(eq(transactions.id, id));
     if (!trx) return null;
 
     // 2. Ambil Items & Toppings (Logic sama seperti sebelumnya)

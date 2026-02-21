@@ -91,7 +91,7 @@ const LaporanKeuanganToko = () => {
           return {
             id: trx.id,
             waktu: new Date(trx.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-            kasir: trx.cashierName || 'System',
+            kasir: trx.employeeName || 'System',
             metode: trx.paymentMethod || 'Tunai',
             total: trx.totalPrice,
             items: detail.items.map((it: any) => ({
