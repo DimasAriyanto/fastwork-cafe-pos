@@ -1,43 +1,30 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Pencil, Trash2, X, Upload } from 'lucide-react';
+import { apiClient } from '../../api/client';
 
 interface Employee {
   id: number;
   name: string;
   position: string;
-  avatar: string;
+  imagePath: string; // From BE
+  isActive: boolean;
 }
-
-const mockEmployees: Employee[] = [
-  { 
-    id: 1, 
-    name: "Aurelia Kartini", 
-    position: "Kasir",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150"
-  },
-  { 
-    id: 2, 
-    name: "Broicad Lauren", 
-    position: "Kasir",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150&h=150"
-  },
-  { 
-    id: 3, 
-    name: "Karelia Syalie", 
-    position: "Kasir",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150"
-  },
-];
 
 const OwnerPegawai = () => {
   // Main Employee State
-  const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Add Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [position, setPosition] = useState("");
   const [avatar, setAvatar] = useState<File | null>(null);
+  const [isActive, setIsActive] = useState(true);
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit Modal State
@@ -47,7 +34,29 @@ const OwnerPegawai = () => {
   const [editPosition, setEditPosition] = useState("");
   const [editAvatar, setEditAvatar] = useState<File | null>(null);
   const [editPreviewAvatar, setEditPreviewAvatar] = useState("");
+  const [editIsActive, setEditIsActive] = useState(true);
+  const [editUsername, setEditUsername] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
   const editFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch Employees
+  const fetchEmployees = async () => {
+    setIsLoading(true);
+    try {
+      const data = await apiClient.getEmployees();
+      setEmployees(data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || "Gagal mengambil data pegawai");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
 
   // --- Add Employee Handlers ---
   const handleAddEmployee = () => {
@@ -59,6 +68,10 @@ const OwnerPegawai = () => {
     setName("");
     setPosition("");
     setAvatar(null);
+    setIsActive(true);
+    setUsername("");
+    setEmail("");
+    setPassword("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -70,36 +83,43 @@ const OwnerPegawai = () => {
     }
   };
 
-  const handleSubmit = () => {
-    if (!name.trim() || !position.trim() || !avatar) return;
+  const handleSubmit = async () => {
+    if (!name.trim() || !position.trim() || !username.trim() || !email.trim() || !password.trim()) return;
     
-    // Create new employee object (mock)
-    const newEmployee: Employee = {
-      id: employees.length + 1, // Simple ID generation
-      name,
-      position,
-      avatar: URL.createObjectURL(avatar) // Create generic URL for preview
-    };
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('position', position);
+    formData.append('isActive', String(isActive));
+    formData.append('username', username);
+    formData.append('email', email);
+    formData.append('password', password);
+    if (avatar) {
+      formData.append('photo', avatar);
+    }
 
-    setEmployees([...employees, newEmployee]);
-    
-    console.log("Employee Submitted:", {
-      name,
-      position,
-      avatar: avatar.name,
-      fileObject: avatar
-    });
-    
-    handleCloseModal();
+    try {
+      await apiClient.createEmployee(formData);
+      fetchEmployees();
+      handleCloseModal();
+    } catch (err: any) {
+      alert(err.message || "Gagal menambah pegawai");
+    }
   };
 
   // --- Edit Employee Handlers ---
-  const handleEditClick = (employee: Employee) => {
+  const handleEditClick = (employee: any) => {
     setEditingId(employee.id);
     setEditName(employee.name);
     setEditPosition(employee.position);
-    setEditPreviewAvatar(employee.avatar);
-    setEditAvatar(null); // Reset file input
+    setEditPreviewAvatar(employee.imagePath ? apiClient.getImageUrl(employee.imagePath) : "");
+    setEditIsActive(employee.isActive);
+    setEditAvatar(null);
+    
+    // Set Account Data (from join)
+    setEditUsername(employee.username || "");
+    setEditEmail(employee.email || "");
+    setEditPassword(""); // Reset password field
+    
     setIsEditModalOpen(true);
   };
 
@@ -110,6 +130,10 @@ const OwnerPegawai = () => {
     setEditPosition("");
     setEditAvatar(null);
     setEditPreviewAvatar("");
+    setEditIsActive(true);
+    setEditUsername("");
+    setEditEmail("");
+    setEditPassword("");
     if (editFileInputRef.current) {
       editFileInputRef.current.value = "";
     }
@@ -123,25 +147,42 @@ const OwnerPegawai = () => {
     }
   };
 
-  const handleEditSubmit = () => {
+  const handleEditSubmit = async () => {
     if (!editName.trim() || !editPosition.trim() || !editingId) return;
 
-    setEmployees(employees.map(emp => 
-      emp.id === editingId 
-        ? { 
-            ...emp, 
-            name: editName, 
-            position: editPosition,
-            avatar: editAvatar ? URL.createObjectURL(editAvatar) : emp.avatar 
-          } 
-        : emp
-    ));
+    const formData = new FormData();
+    formData.append('name', editName);
+    formData.append('position', editPosition);
+    formData.append('isActive', String(editIsActive));
+    
+    // Data Akun
+    formData.append('username', editUsername);
+    formData.append('email', editEmail);
+    if (editPassword.trim() !== "") {
+      formData.append('password', editPassword);
+    }
 
-    handleCloseEditModal();
+    if (editAvatar) {
+      formData.append('photo', editAvatar);
+    }
+
+    try {
+      await apiClient.updateEmployee(editingId, formData);
+      fetchEmployees();
+      handleCloseEditModal();
+    } catch (err: any) {
+      alert(err.message || "Gagal mengupdate pegawai");
+    }
   };
 
-  const handleDeleteEmployee = (id: number) => {
-    setEmployees(employees.filter(emp => emp.id !== id));
+  const handleDeleteEmployee = async (id: number) => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus pegawai ini?")) return;
+    try {
+      await apiClient.deleteEmployee(id);
+      fetchEmployees();
+    } catch (err: any) {
+      alert(err.message || "Gagal menghapus pegawai");
+    }
   };
 
   return (
@@ -164,7 +205,21 @@ const OwnerPegawai = () => {
 
       {/* Table Container */}
       <div className="bg-white rounded-[20px] shadow-sm border border-[#EAEAEA] overflow-hidden min-h-[400px]">
-        {employees.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center h-[400px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FE4E10]"></div>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-[400px] gap-4">
+            <p className="text-red-500 font-medium">{error}</p>
+            <button 
+              onClick={fetchEmployees}
+              className="px-4 py-2 bg-[#FE4E10] text-white rounded-lg hover:bg-[#e0450e]"
+            >
+              Coba Lagi
+            </button>
+          </div>
+        ) : employees.length > 0 ? (
             <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
                 <thead className="bg-white text-[#202224] border-b border-[#EAEAEA]">
@@ -173,6 +228,7 @@ const OwnerPegawai = () => {
                     <th className="px-6 py-5 font-bold text-sm">Foto Profil</th>
                     <th className="px-6 py-5 font-bold text-sm">Nama</th>
                     <th className="px-6 py-5 font-bold text-sm">Posisi</th>
+                    <th className="px-6 py-5 font-bold text-sm">Status</th>
                     <th className="px-6 py-5 font-bold text-sm text-center w-40">Aksi</th>
                 </tr>
                 </thead>
@@ -182,13 +238,18 @@ const OwnerPegawai = () => {
                     <td className="px-6 py-4 font-semibold text-[#202224]">{index + 1}</td>
                     <td className="px-6 py-4">
                         <img 
-                            src={employee.avatar} 
+                            src={employee.imagePath ? apiClient.getImageUrl(employee.imagePath) : `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name)}&background=random`} 
                             alt={employee.name} 
                             className="w-10 h-10 rounded-full object-cover border border-gray-200"
                         />
                     </td>
                     <td className="px-6 py-4 text-[#202224] font-medium">{employee.name}</td>
                     <td className="px-6 py-4 text-[#202224] font-medium">{employee.position}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${employee.isActive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                        {employee.isActive ? 'Aktif' : 'Tidak Aktif'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-3">
                         <button 
@@ -235,7 +296,7 @@ const OwnerPegawai = () => {
               {/* File Input */}
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-[#202224]">
-                  Masukkan Foto Profil <span className="text-red-500">*</span>
+                  Masukkan Foto Profil
                 </label>
                 <div 
                   onClick={() => fileInputRef.current?.click()}
@@ -283,10 +344,60 @@ const OwnerPegawai = () => {
                 />
               </div>
 
+              {/* User Account Section */}
+              <div className="pt-4 border-t border-gray-100 space-y-4">
+                <h3 className="text-sm font-bold text-[#FE4E10]">Data Akun Login</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[#202224]">Username *</label>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="username"
+                      className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[#202224]">Email *</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="email@example.com"
+                      className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-[#202224]">Password *</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Minimal 6 karakter"
+                    className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
+                  />
+                </div>
+              </div>
+
+              {/* Active Toggle */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-[#202224]">Status Aktif</label>
+                <button 
+                  onClick={() => setIsActive(!isActive)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${isActive ? 'bg-[#FE4E10]' : 'bg-gray-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isActive ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+
               <div className="flex justify-end pt-2">
                 <button
                   onClick={handleSubmit}
-                  disabled={!name.trim() || !position.trim() || !avatar}
+                  disabled={!name.trim() || !position.trim() || !username.trim() || !email.trim() || !password.trim()}
                   className="px-8 py-3 bg-[#FE4E10] text-white font-bold rounded-xl shadow-lg shadow-[#FE4E10]/30 hover:bg-[#e0450e] disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95"
                 >
                   Kirim
@@ -369,10 +480,61 @@ const OwnerPegawai = () => {
                 />
               </div>
 
+              {/* User Account Section */}
+              <div className="pt-4 border-t border-gray-100 space-y-4">
+                <h3 className="text-sm font-bold text-[#FE4E10]">Data Akun Login</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[#202224]">Username *</label>
+                    <input
+                      type="text"
+                      value={editUsername}
+                      onChange={(e) => setEditUsername(e.target.value)}
+                      placeholder="username"
+                      className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[#202224]">Email *</label>
+                    <input
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      placeholder="email@example.com"
+                      className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-[#202224]">Password (Opsional)</label>
+                  <input
+                    type="password"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="Kosongkan jika tidak ingin mengubah"
+                    className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
+                  />
+                  <p className="text-[10px] text-gray-400 italic font-medium">* Isi jika ingin mengganti password pegawai</p>
+                </div>
+              </div>
+
+              {/* Active Toggle */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-[#202224]">Status Aktif</label>
+                <button 
+                  onClick={() => setEditIsActive(!editIsActive)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${editIsActive ? 'bg-[#FE4E10]' : 'bg-gray-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${editIsActive ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+
               <div className="flex justify-end pt-2">
                 <button
                   onClick={handleEditSubmit}
-                  disabled={!editName.trim() || !editPosition.trim()}
+                  disabled={!editName.trim() || !editPosition.trim() || !editUsername.trim() || !editEmail.trim() || !editingId}
                   className="px-8 py-3 bg-[#FE4E10] text-white font-bold rounded-xl shadow-lg shadow-[#FE4E10]/30 hover:bg-[#e0450e] disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95"
                 >
                   Simpan Perubahan

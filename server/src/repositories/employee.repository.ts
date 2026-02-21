@@ -1,11 +1,26 @@
 import { db } from '../db/index.ts';
-import { employees } from '../db/schemas/index.ts';
+import { employees, users } from '../db/schemas/index.ts';
 import { eq, and, desc, asc, or, like } from 'drizzle-orm';
 import type { CreateEmployeeRepoInput, UpdateEmployeeInput, PaginationOptions } from '../types/index';
 
 export class EmployeeRepository {
   async findAll() {
-    return await db.select().from(employees);
+    return await db
+      .select({
+        id: employees.id,
+        userId: employees.userId,
+        outletId: employees.outletId,
+        name: employees.name,
+        position: employees.position,
+        imagePath: employees.imagePath,
+        isActive: employees.isActive,
+        createdAt: employees.createdAt,
+        updatedAt: employees.updatedAt,
+        username: users.username,
+        email: users.email,
+      })
+      .from(employees)
+      .leftJoin(users, eq(employees.userId, users.id));
   }
 
   async findAllWithPagination(options: PaginationOptions = {}) {
@@ -73,7 +88,24 @@ export class EmployeeRepository {
   }
 
   async findById(id: number) {
-    const [employee] = await db.select().from(employees).where(eq(employees.id, id)).limit(1);
+    const [employee] = await db
+      .select({
+        id: employees.id,
+        userId: employees.userId,
+        outletId: employees.outletId,
+        name: employees.name,
+        position: employees.position,
+        imagePath: employees.imagePath,
+        isActive: employees.isActive,
+        createdAt: employees.createdAt,
+        updatedAt: employees.updatedAt,
+        username: users.username,
+        email: users.email,
+      })
+      .from(employees)
+      .leftJoin(users, eq(employees.userId, users.id))
+      .where(eq(employees.id, id))
+      .limit(1);
     return employee;
   }
 

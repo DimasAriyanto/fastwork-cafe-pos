@@ -1,5 +1,5 @@
-import { writeFile, unlink } from 'fs/promises';
-import { join } from 'path';
+import { writeFile, unlink, mkdir } from 'fs/promises';
+import { join, dirname } from 'path';
 import { EmployeeRepository } from '../repositories/employee.repository';
 
 export class EmployeeService {
@@ -17,30 +17,67 @@ export class EmployeeService {
   private async saveFile(file: File): Promise<string> {
     const buffer = await file.arrayBuffer();
     const fileName = `${Date.now()}-${file.name.replace(/\s/g, '_')}`;
-    // Pastikan folder 'uploads' sudah ada di root project
-    const uploadPath = join(process.cwd(), 'uploads', fileName);
+    const uploadDir = join(process.cwd(), 'uploads');
+    const uploadPath = join(uploadDir, fileName);
+    
+    // Pastikan folder 'uploads' ada
+    await mkdir(uploadDir, { recursive: true });
     
     await writeFile(uploadPath, Buffer.from(buffer));
     return `/uploads/${fileName}`;
   }
 
-  async create(name: string, position: string, isActive: boolean, photo?: File) {
+  async create(name: string, position: string, isActive: boolean, photo?: File, userData?: any) {
     let imagePath: string | null = null;
     
     if (photo) {
       imagePath = await this.saveFile(photo);
     }
 
+    let userId = userData?.userId;
+
+    // Jika ada data user (username, email, password), buat user dulu
+    if (userData && !userId) {
+      const { username, email, password } = userData;
+      
+      // 1. Cari Role 'cashier'
+      const roleRepo = new (await import('../repositories/role.repository')).RoleRepository();
+      const cashierRole = await roleRepo.findByName('cashier');
+      if (!cashierRole) throw new Error("Role 'cashier' tidak ditemukan. Silakan run seed.");
+
+      // 2. Hash Password
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.default.hash(password, 10);
+
+      // 3. Create User
+      const userRepo = new (await import('../repositories/user.repository')).UserRepository();
+      const newUser = await userRepo.create({
+        username,
+        email,
+        password: hashedPassword,
+        name: name,
+        roleId: cashierRole.id,
+        status: 'active',
+        outletId: 1 // Default
+      });
+      
+      if (!newUser) throw new Error("Gagal membuat akun user untuk pegawai");
+      userId = newUser.id;
+    }
+
+    if (!userId) throw new Error("Pegawai wajib memiliki akun user (user_id)");
+
     return await this.repo.create({
+      userId,
       name,
       position,
       imagePath,
       outletId: 1,
-      isActive // 👈 Masuk ke DB
+      isActive
     });
   }
 
-  async update(id: number, name: string, position: string, isActive: boolean, photo?: File) {
+  async update(id: number, name: string, position: string, isActive: boolean, photo?: File, userData?: any) {
     const employee = await this.repo.findById(id);
     if (!employee) throw new Error("Pegawai tidak ditemukan");
 
@@ -51,7 +88,25 @@ export class EmployeeService {
       imagePath = await this.saveFile(photo);
     }
 
-    // 👈 Update isActive juga
+    // Update data akun user jika ada
+    if (userData && employee.userId) {
+      const userRepo = new (await import('../repositories/user.repository')).UserRepository();
+      const userUpdate: any = {};
+      
+      if (userData.username) userUpdate.username = userData.username;
+      if (userData.email) userUpdate.email = userData.email;
+      
+      // Update password hanya jika diisi (tidak kosong)
+      if (userData.password && userData.password.trim() !== "") {
+        const bcrypt = await import('bcrypt');
+        userUpdate.password = await bcrypt.default.hash(userData.password, 10);
+      }
+
+      if (Object.keys(userUpdate).length > 0) {
+        await userRepo.update(employee.userId, userUpdate);
+      }
+    }
+
     return await this.repo.update(id, { name, position, isActive, imagePath });
   }
 

@@ -8,11 +8,12 @@ export interface Employee {
 }
 
 export interface CreateEmployeeRepoInput {
+  userId: number; // 👈 Tambah ini
   name: string;
   position: string;
   imagePath: string | null;
   outletId: number;
-  isActive: boolean; // 👈 Tambah ini
+  isActive: boolean;
 }
 
 export interface UpdateEmployeeInput extends Partial<CreateEmployeeRepoInput> {

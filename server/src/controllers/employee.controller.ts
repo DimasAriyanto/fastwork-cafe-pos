@@ -24,12 +24,21 @@ export class EmployeeController {
       // FormData cuma kirim string, jadi kita cek stringnya
       const isActive = body['isActive'] === 'true'; 
 
+      // New: User account data
+      const username = body['username'] ? String(body['username']) : undefined;
+      const email = body['email'] ? String(body['email']) : undefined;
+      const password = body['password'] ? String(body['password']) : undefined;
+
       if (!name || !position) {
         return c.json({ success: false, message: "Nama dan Posisi wajib diisi" }, 400);
       }
 
-      // Kita update signature service create biar terima isActive
-      const result = await this.service.create(name, position, isActive, photo);
+      // Kita update signature service create biar terima isActive dan userData
+      const result = await this.service.create(name, position, isActive, photo, {
+        username,
+        email,
+        password
+      });
       return c.json({ success: true, message: "Pegawai ditambah", data: result }, 201);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error";
@@ -49,7 +58,16 @@ export class EmployeeController {
       // 👇 PARSING BOOLEAN
       const isActive = body['isActive'] === 'true';
 
-      const result = await this.service.update(id, name, position, isActive, photo);
+      // New: User account data
+      const username = body['username'] ? String(body['username']) : undefined;
+      const email = body['email'] ? String(body['email']) : undefined;
+      const password = body['password'] ? String(body['password']) : undefined;
+
+      const result = await this.service.update(id, name, position, isActive, photo, {
+        username,
+        email,
+        password
+      });
       return c.json({ success: true, message: "Pegawai diupdate", data: result });
     } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Error";

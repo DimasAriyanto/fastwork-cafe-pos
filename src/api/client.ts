@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:3000/api';
+export const API_BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'http://localhost:3000';
 
 export interface ApiResponse<T = any> {
   success?: boolean;
@@ -106,10 +107,14 @@ class ApiClient {
     const url = `${this.baseUrl}${endpoint}`;
     const accessToken = this.getAccessToken();
 
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+    const headers: any = {
       ...options.headers,
     };
+
+    // Only set Content-Type to application/json if not sending FormData
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`;
@@ -272,7 +277,7 @@ class ApiClient {
   async createUser(userData: any) {
     const response = await this.request<ApiResponse>('/users', {
       method: 'POST',
-      body: JSON.stringify(userData),
+      body: userData instanceof FormData ? userData : JSON.stringify(userData),
     });
 
     if (response.success) {
@@ -288,7 +293,7 @@ class ApiClient {
   async updateUser(id: number, userData: any) {
     const response = await this.request<ApiResponse>(`/users/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(userData),
+      body: userData instanceof FormData ? userData : JSON.stringify(userData),
     });
 
     if (response.success) {
@@ -430,7 +435,7 @@ class ApiClient {
   async createEmployee(employeeData: any) {
     const response = await this.request<ApiResponse>('/employees', {
       method: 'POST',
-      body: JSON.stringify(employeeData),
+      body: employeeData instanceof FormData ? employeeData : JSON.stringify(employeeData),
     });
 
     if (response.success) {
@@ -446,7 +451,7 @@ class ApiClient {
   async updateEmployee(id: number, employeeData: any) {
     const response = await this.request<ApiResponse>(`/employees/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(employeeData),
+      body: employeeData instanceof FormData ? employeeData : JSON.stringify(employeeData),
     });
 
     if (response.success) {
@@ -580,6 +585,15 @@ class ApiClient {
     }
 
     throw new Error(response.error || 'Invalid discount code');
+  }
+
+  /**
+   * Get image URL
+   */
+  getImageUrl(path: string) {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    return `${BASE_URL}${path}`;
   }
 }
 
