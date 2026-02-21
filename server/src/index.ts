@@ -18,6 +18,7 @@ import { checkDatabaseHealth } from './db/index.ts';
 import { categoryRoutes } from './routes/category.ts';
 import { toppingRoutes } from './routes/topping.ts';
 import { discountRoutes } from './routes/discount.ts';
+import { reportRoutes } from './routes/reports.ts';
 
 const app = new Hono();
 
@@ -50,6 +51,7 @@ app.route('/api/discounts', discountRoutes);
 
 // ⚠️ FIX: Tambahkan '/' di depan
 app.route('/api/transactions', transactionRoutes); 
+app.route('/api/reports', reportRoutes);
 
 // Health check
 app.get('/api/health', (c) => {

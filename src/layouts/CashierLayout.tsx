@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Search, LogOut, History, ShoppingBag } from "lucide-react";
 import { useResponsive } from "../hooks/useResponsive";
+import { apiClient } from "../api/client";
 
 import type { Transaction, UnpaidOrder, PaymentMethod } from "../types/cashier";
 
@@ -14,6 +15,8 @@ export type CashierContextType = {
   addUnpaidOrder: (u: UnpaidOrder) => void;
   updateUnpaidOrder: (u: UnpaidOrder) => void;
   payUnpaidOrder: (id: string, paymentMethod: PaymentMethod, paidAmount?: number, change?: number) => void;
+  createOrder: (data: any) => Promise<any>;
+  refreshData: () => void;
   isRightPanelOpen: boolean;
   setIsRightPanelOpen: (open: boolean) => void;
   cartCount: number;
@@ -28,27 +31,54 @@ export default function CashierLayout() {
   const [search, setSearch] = useState("");
   const { isDesktop, isMobile } = useResponsive();
 
-  // Initialize from localStorage if available
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('transactions');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [unpaidOrders, setUnpaidOrders] = useState<UnpaidOrder[]>(() => {
-    const saved = localStorage.getItem('unpaidOrders');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // API-backed state
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [unpaidOrders, setUnpaidOrders] = useState<UnpaidOrder[]>([]);
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    localStorage.setItem('transactions', JSON.stringify(transactions));
-  }, [transactions]);
+  // Normalize API transaction → frontend Transaction shape
+  const normalizeTransaction = (t: any): Transaction => ({
+    id: String(t.id),
+    customerName: t.customerName || t.notes || 'Guest',
+    items: t.items || [],
+    totalPrice: Number(t.totalPrice),
+    paymentMethod: (t.paymentMethod?.toUpperCase() || 'CASH') as PaymentMethod,
+    date: t.createdAt || new Date().toISOString(),
+    paidAmount: Number(t.paidAmount || t.totalPrice),
+    change: Number(t.changeAmount || 0),
+    cashierName: t.cashierName || t.employeeName || '',
+  });
 
-  useEffect(() => {
-    localStorage.setItem('unpaidOrders', JSON.stringify(unpaidOrders));
-  }, [unpaidOrders]);
+  // Normalize API order → frontend UnpaidOrder shape
+  const normalizeOrder = (o: any): UnpaidOrder => ({
+    id: String(o.id),
+    customerName: o.customerName || o.notes || 'Guest',
+    items: o.items || [],
+    totalPrice: Number(o.totalPrice),
+    status: 'unpaid',
+    date: o.createdAt || new Date().toISOString(),
+    cashierName: o.cashierName || o.employeeName || '',
+    paymentMethod: undefined,
+  });
+
+  const refreshData = useCallback(async () => {
+    try {
+      const [txResponse, unpaidResponse] = await Promise.all([
+        apiClient.getTransactions({ limit: 50 }),
+        apiClient.getUnpaidOrders(),
+      ]);
+      const txData = txResponse ?? [];
+      setTransactions(Array.isArray(txData) ? txData.map(normalizeTransaction) : []);
+      const unpaidData = Array.isArray(unpaidResponse) ? unpaidResponse : [];
+      setUnpaidOrders(unpaidData.map(normalizeOrder));
+    } catch (err) {
+      console.error('Failed to refresh cashier data:', err);
+    }
+  }, []);
+
+  useEffect(() => { refreshData(); }, [refreshData]);
 
   const addTransaction = (transaction: Transaction) => {
     setTransactions(prev => [transaction, ...prev]);
@@ -62,21 +92,22 @@ export default function CashierLayout() {
     setUnpaidOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
   };
 
-  const payUnpaidOrder = (id: string, paymentMethod: PaymentMethod, paidAmount?: number, change?: number) => {
-    const order = unpaidOrders.find(o => o.id === id);
-    if (order) {
-      const { status, ...transactionData } = order;
-      const completedTransaction: Transaction = {
-        ...transactionData,
-        paymentMethod: paymentMethod,
-        date: new Date().toISOString(),
-        paidAmount: paidAmount ?? transactionData.totalPrice,
-        change: paymentMethod === "QRIS" ? 0 : (change ?? 0)
-      };
+  // Create a new pending order via API
+  const createOrder = async (data: any) => {
+    const result = await apiClient.createOrder(data);
+    await refreshData();
+    return result;
+  };
 
-
-      setTransactions(prev => [completedTransaction, ...prev]);
-      setUnpaidOrders(prev => prev.filter(o => o.id !== id));
+  // Pay an existing unpaid order via API
+  const payUnpaidOrder = async (id: string, paymentMethod: PaymentMethod, paidAmount?: number) => {
+    try {
+      const order = unpaidOrders.find(o => o.id === id);
+      const amount = paidAmount ?? order?.totalPrice ?? 0;
+      await apiClient.payOrder(Number(id), { paymentMethod, paidAmount: amount });
+      await refreshData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal memproses pembayaran');
     }
   };
 
@@ -313,6 +344,8 @@ export default function CashierLayout() {
               addUnpaidOrder,
               updateUnpaidOrder,
               payUnpaidOrder,
+              createOrder,
+              refreshData,
               isRightPanelOpen,
               setIsRightPanelOpen,
               cartCount,

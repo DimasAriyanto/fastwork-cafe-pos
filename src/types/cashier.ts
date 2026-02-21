@@ -33,16 +33,18 @@ export type Transaction = {
     id: string;
     date: string;
     customerName: string;
-    serviceType: OrderType;
+    serviceType?: OrderType;
+    orderType?: string;
     items: TransactionItem[];
-    totalItems: number;
-    subtotal: number;
-    tax: number;
+    totalItems?: number;
+    subtotal?: number;
+    tax?: number;
     totalPrice: number;
     paymentMethod?: PaymentMethod;
     paidAmount?: number;
     change?: number;
     discount?: number;
+    cashierName?: string; // employee who created the transaction
 };
 
 export type UnpaidOrder = Transaction & {

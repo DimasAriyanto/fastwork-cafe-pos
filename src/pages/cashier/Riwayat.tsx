@@ -4,6 +4,8 @@ import { useOutletContext } from "react-router-dom";
 import { Search, X } from "lucide-react";
 import DateFilter from "../../components/cashier/DateFilter";
 import type { CashierContextType } from "../../layouts/CashierLayout";
+import type { Transaction } from "../../types/cashier";
+import { apiClient } from "../../api/client";
 
 // Hooks
 import { usePortalTarget } from "../../hooks/usePortalTarget";
@@ -14,6 +16,7 @@ export default function Riwayat() {
   const { isDesktop } = useResponsive();
   const [localSearch, setLocalSearch] = useState("");
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
+  const [fetchedDetails, setFetchedDetails] = useState<Record<string, Transaction>>({});
   const [overlayMode, setOverlayMode] = useState<"print" | "view" | null>(null);
 
   // Filter State
@@ -48,15 +51,42 @@ export default function Riwayat() {
     });
   }, [transactions, localSearch, dateRange]);
 
-  const selectedTx = useMemo(() =>
-    transactions.find(t => t.id === selectedTxId),
-    [transactions, selectedTxId]);
+  const selectedTx = useMemo(() => {
+    if (!selectedTxId) return null;
+    return fetchedDetails[selectedTxId] || transactions.find(t => t.id === selectedTxId);
+  }, [transactions, selectedTxId, fetchedDetails]);
 
   // Selection handler for responsiveness
-  const handleTxSelect = (id: string) => {
+  const handleTxSelect = async (id: string) => {
     setSelectedTxId(id);
     if (!isDesktop) {
       setIsRightPanelOpen(true);
+    }
+
+    if (!fetchedDetails[id]) {
+      try {
+        const detail = await apiClient.getTransactionDetail(Number(id));
+        setFetchedDetails(prev => ({
+          ...prev,
+          [id]: {
+            ...detail,
+            id: String(detail.id),
+            date: detail.createdAt,
+            tax: detail.taxAmount,
+            change: detail.changeAmount,
+            customerName: detail.customerName || detail.notes || "Pelanggan",
+            items: (detail.items || []).map((item: any) => ({
+              name: item.name, // contains combined "Name (Variant)"
+              qty: item.qty,
+              price: item.price,
+              variant: undefined, // avoid redundant "Rasa: ..." display
+              note: undefined // item-level notes not supported in schema
+            }))
+          } as Transaction
+        }));
+      } catch (err) {
+        console.error("Gagal memuat detail transaksi:", err);
+      }
     }
   };
 
@@ -71,8 +101,8 @@ export default function Riwayat() {
     return `${day}/${month}/${year} - ${hours}.${mins}`;
   };
 
-  const formatCurrency = (val: number) =>
-    "Rp" + val.toLocaleString("id-ID") + ",00";
+  const formatCurrency = (val: number | undefined | null) =>
+    "Rp" + (val || 0).toLocaleString("id-ID") + ",00";
 
   // Reusable Receipt Content Render
   const renderReceiptContent = (tx: typeof transactions[0]) => (
@@ -116,7 +146,7 @@ export default function Riwayat() {
           {(tx.discount || 0) > 0 && (
             <div className="flex justify-between text-orange-500 italic">
               <span className="text-gray-500">Potongan ({tx.discount}%)</span>
-              <span className="font-medium">- {formatCurrency(tx.subtotal * (tx.discount || 0) / 100)}</span>
+              <span className="font-medium">- {formatCurrency((tx.subtotal || 0) * (tx.discount || 0) / 100)}</span>
             </div>
           )}
           <div className="flex justify-between">

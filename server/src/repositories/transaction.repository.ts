@@ -3,14 +3,32 @@ import {
   transactions,
   transactionItems,
   transactionItemToppings,
-  payments, // 👈 Pastikan ini diimport
+  payments,
   menuStockHistory,
   menus,
   toppings,
   users,
   menuVariants,
+  employees,
 } from "../db/schemas/index";
-import { eq, sql, desc, inArray } from "drizzle-orm";
+import { eq, sql, desc, inArray, and, gte, lte } from "drizzle-orm";
+
+// Interface for creating a PENDING order (no payment yet)
+export interface CreateOrderParams {
+  outletId: number;
+  cashierId: number; // employee id of cashier
+  createdBy: number; // user id
+  customerName?: string;
+  notes?: string;
+  orderType?: string;
+  items: Array<{
+    menuId: number;
+    variantId?: number;
+    qty: number;
+    price: number;
+    toppings?: { toppingId: number; price: number }[];
+  }>;
+}
 
 // Interface Parameter (Sudah mencakup semua)
 export interface CreateTransactionParams {
@@ -119,39 +137,171 @@ export class TransactionRepository {
     });
   }
 
-  // --- Find All & Find By ID (Diupdate untuk join payments) ---
+  // Create a PENDING order (belum dibayar)
+  async createOrder(data: CreateOrderParams): Promise<number> {
+    return await db.transaction(async (tx) => {
+      // Calculate subtotal
+      let subtotal = 0;
+      const mappedItems = data.items.map((item) => {
+        const toppingsTotal = item.toppings?.reduce((acc, t) => acc + Number(t.price), 0) || 0;
+        const unitPrice = Number(item.price) + toppingsTotal;
+        subtotal += unitPrice * item.qty;
+        return { ...item, unitPrice };
+      });
 
+      const taxRate = 0.11;
+      const taxAmount = Math.round(subtotal * taxRate);
+      const totalPrice = subtotal + taxAmount;
 
-  async findAll(options: { outletId: number; limit?: number; page?: number }) {
-    const { outletId, limit = 20, page = 1 } = options;
+      // 1. INSERT header
+      const [trxResult] = await tx.insert(transactions).values({
+        outletId: data.outletId,
+        cashierId: data.cashierId,
+        subtotal,
+        taxAmount,
+        totalPrice,
+        serviceChargeAmount: 0,
+        discountAmount: 0,
+        status: 'pending',
+        paymentStatus: 'unpaid',
+        totalItems: data.items.reduce((acc, curr) => acc + curr.qty, 0),
+        orderType: data.orderType || 'dine_in',
+        notes: data.notes || data.customerName,
+        createdBy: data.createdBy,
+      });
+
+      const transactionId = trxResult.insertId;
+
+      // 2. INSERT items
+      for (const item of mappedItems) {
+        const lineTotal = Number(item.price) * item.qty;
+        const [itemRes] = await tx.insert(transactionItems).values({
+          transactionId,
+          menuId: item.menuId,
+          variantId: item.variantId || null,
+          qty: item.qty,
+          originalPrice: item.price,
+          subTotal: lineTotal,
+          finalPrice: lineTotal,
+          discountPercentage: 0,
+        });
+        const transactionItemId = itemRes.insertId;
+        if (item.toppings && item.toppings.length > 0) {
+          for (const topping of item.toppings) {
+            await tx.insert(transactionItemToppings).values({
+              transactionItemId,
+              toppingId: topping.toppingId,
+              price: topping.price,
+            });
+          }
+        }
+      }
+
+      return transactionId;
+    });
+  }
+
+  // Pay a pending order (update status + insert payment record)
+  async payOrder(transactionId: number, paymentMethod: string, paidAmount: number, userId: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Fetch current transaction to get totalPrice
+      const [trx] = await tx.select().from(transactions).where(eq(transactions.id, transactionId));
+      if (!trx) throw new Error('Transaksi tidak ditemukan');
+      if (trx.paymentStatus === 'paid') throw new Error('Transaksi sudah dibayar');
+
+      const changeAmount = paidAmount - trx.totalPrice;
+      if (changeAmount < 0) throw new Error(`Pembayaran kurang. Total: ${trx.totalPrice}, Dibayar: ${paidAmount}`);
+
+      // Update transaction status
+      await tx.update(transactions)
+        .set({ paymentStatus: 'paid', status: 'completed', updatedAt: new Date() })
+        .where(eq(transactions.id, transactionId));
+
+      // Insert payment record
+      await tx.insert(payments).values({
+        transactionId,
+        paymentSequence: 1,
+        paymentMethod,
+        amountPaid: paidAmount,
+        changeAmount: changeAmount < 0 ? 0 : changeAmount,
+        status: 'completed',
+        notes: 'Pembayaran Kasir',
+        createdBy: userId,
+      });
+
+      // Deduct stock for each item
+      const items = await tx.select().from(transactionItems).where(eq(transactionItems.transactionId, transactionId));
+      for (const item of items) {
+        await tx.update(menus)
+          .set({ currentStock: sql`${menus.currentStock} - ${item.qty}` })
+          .where(eq(menus.id, item.menuId));
+        await tx.insert(menuStockHistory).values({
+          menuId: item.menuId,
+          transactionId,
+          changeType: 'sold',
+          quantityChange: -item.qty,
+          finalStock: 0,
+          notes: `Trx #${transactionId} - PAID`,
+        });
+      }
+    });
+  }
+
+  // Get unpaid orders
+  async getUnpaidOrders(outletId: number) {
+    return await db.select({
+      id: transactions.id,
+      customerName: transactions.notes,
+      subtotal: transactions.subtotal,
+      taxAmount: transactions.taxAmount,
+      totalPrice: transactions.totalPrice,
+      totalItems: transactions.totalItems,
+      orderType: transactions.orderType,
+      paymentStatus: transactions.paymentStatus,
+      status: transactions.status,
+      createdAt: transactions.createdAt,
+      cashierName: users.name,
+      cashierId: transactions.cashierId,
+      employeeName: employees.name,
+    })
+    .from(transactions)
+    .leftJoin(users, eq(transactions.createdBy, users.id))
+    .leftJoin(employees, eq(transactions.cashierId, employees.id))
+    .where(and(
+      eq(transactions.outletId, outletId),
+      eq(transactions.paymentStatus, 'unpaid'),
+    ))
+    .orderBy(desc(transactions.createdAt));
+  }
+
+  async findAll(options: { outletId: number; limit?: number; page?: number; startDate?: Date; endDate?: Date }) {
+    const { outletId, limit = 20, page = 1, startDate, endDate } = options;
     const offset = (Math.max(page, 1) - 1) * limit;
 
     const data = await db
       .select({
         id: transactions.id,
-        customerInfo: transactions.notes,
+        customerName: transactions.notes, // Map notes to customerName for consistency
         totalPrice: transactions.totalPrice,
-        
-        // 👇 TAMBAHKAN INI AGAR ITEM TERJUAL MUNCUL
-        totalItems: transactions.totalItems, 
-        
-        // 👇 Tambahkan ini juga biar perhitungan profit di frontend akurat
-        subtotal: transactions.subtotal, 
+        totalItems: transactions.totalItems,
+        subtotal: transactions.subtotal,
         taxAmount: transactions.taxAmount,
-
         paymentStatus: transactions.paymentStatus,
         status: transactions.status,
         createdAt: transactions.createdAt,
-        cashierName: users.name,
-        paymentMethod: sql<string>`(
-            SELECT payment_method FROM payments 
-            WHERE payments.transaction_id = transactions.id 
-            LIMIT 1
-        )`,
+        cashierName: employees.name, // Use employees table
+        paymentMethod: payments.paymentMethod,
+        paidAmount: payments.amountPaid,
+        changeAmount: payments.changeAmount,
       })
       .from(transactions)
-      .leftJoin(users, eq(transactions.cashierId, users.id))
-      .where(eq(transactions.outletId, outletId))
+      .leftJoin(employees, eq(transactions.cashierId, employees.id))
+      .leftJoin(payments, eq(transactions.id, payments.transactionId))
+      .where(and(
+        eq(transactions.outletId, outletId),
+        startDate ? gte(transactions.createdAt, startDate) : sql`1=1`,
+        endDate ? lte(transactions.createdAt, endDate) : sql`1=1`
+      ))
       .orderBy(desc(transactions.createdAt))
       .limit(limit)
       .offset(offset);

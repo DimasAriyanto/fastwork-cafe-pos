@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useOutletContext } from "react-router-dom";
 import { apiClient } from "../../api/client";
 import type { CashierContextType } from "../../layouts/CashierLayout";
-import type { Product, CartItem, PaymentMethod, Transaction, UnpaidOrder } from "../../types/cashier";
+import type { Product, CartItem, PaymentMethod } from "../../types/cashier";
 
 // Hooks
 import { useCart } from "../../hooks/useCart";
@@ -22,7 +22,7 @@ import QRISPaymentModal from "../../components/cashier/modals/QRISPaymentModal";
 import PaymentSuccessModal from "../../components/cashier/modals/PaymentSuccessModal";
 
 export default function Dashboard() {
-  const { search, addTransaction, addUnpaidOrder, setIsRightPanelOpen, setCartCount } = useOutletContext<CashierContextType>();
+  const { search, createOrder, refreshData, setIsRightPanelOpen, setCartCount } = useOutletContext<CashierContextType>();
 
   // Local State
   const [categories, setCategories] = useState<{ name: string; icon: string; count: number }[]>([]);
@@ -125,7 +125,7 @@ export default function Dashboard() {
     setSelectedProductForModal(null);
   };
 
-  const handleCheckout = (payType: "payNow" | "payLater", method?: string) => {
+  const handleCheckout = async (payType: "payNow" | "payLater", method?: string) => {
     if (payType === "payNow") {
       if (method === "CASH") {
         openPaymentModal();
@@ -133,79 +133,90 @@ export default function Dashboard() {
         openQRISModal();
       }
     } else if (payType === "payLater") {
-      createUnpaidOrder(method as PaymentMethod);
+      await createUnpaidOrder();
     }
   };
 
-  const onPaymentConfirm = (paidAmount: number, change: number, method: PaymentMethod) => {
-    const now = new Date();
-    const newTransaction: Transaction = {
-      id: `#${Math.floor(1000 + Math.random() * 9000)}`,
-      date: now.toISOString(),
-      customerName: customer || "Pelanggan",
-      totalItems: cart.reduce((acc, item) => acc + item.qty, 0),
-      totalPrice: totalAfterDiscount, // Use discounted price
-      paymentMethod: method,
-      serviceType: dineType === "dinein" ? "Dine In" : "Take Away",
-      items: cart.map(c => ({
-        name: c.name,
-        qty: c.qty,
-        price: c.price,
-        variant: c.selectedVariant,
-        note: c.note
-      })),
-      subtotal: subtotal,
-      tax: tax,
-      discount: appliedDiscount?.percentage || 0,
-      paidAmount: paidAmount,
-      change: method === "QRIS" ? 0 : change
-    };
+  const onPaymentConfirm = async (paidAmount: number, change: number, method: PaymentMethod) => {
+    try {
+      const orderData = {
+        customerName: customer || "Pelanggan",
+        orderType: dineType === "dinein" ? "dine_in" : "take_away",
+        notes: customer || "Pelanggan",
+        items: cart.map(c => ({
+          menuId: c.id,
+          qty: c.qty,
+          price: c.price,
+          variantId: undefined, 
+          toppings: [] 
+        }))
+      };
 
-    addTransaction(newTransaction);
-    openSuccessModal(newTransaction);
-    clearCart();
-    removeDiscount(); // Clear discount
-    setCustomer("");
-    closePaymentModal();
-    closeQRISModal();
-    setIsRightPanelOpen(false); // Close drawer on mobile
+      // Create order first
+      const orderResult = await createOrder(orderData);
+      
+      // Immediately pay it
+      const transaction = await apiClient.payOrder(orderResult.transactionId, {
+        paymentMethod: method,
+        paidAmount: paidAmount
+      });
+
+      // Show success modal (normalize the data for modal)
+      openSuccessModal({
+        id: String(transaction.id),
+        customerName: customer || "Pelanggan",
+        totalPrice: totalAfterDiscount,
+        paymentMethod: method,
+        paidAmount: paidAmount,
+        change: method === "QRIS" ? 0 : change,
+        date: new Date().toISOString(),
+        subtotal: subtotal,
+        tax: tax,
+        discount: appliedDiscount?.percentage || 0,
+        items: cart.map(c => ({ name: c.name, qty: c.qty, price: c.price })) as any
+      } as any);
+
+      clearCart();
+      removeDiscount();
+      setCustomer("");
+      closePaymentModal();
+      closeQRISModal();
+      setIsRightPanelOpen(false);
+      refreshData();
+    } catch (err: any) {
+      alert(err.message || "Gagal memproses transaksi");
+    }
   };
 
   const handleQRISPaymentConfirm = () => {
     onPaymentConfirm(totalAfterDiscount, 0, "QRIS");
   };
 
-  const createUnpaidOrder = (method?: PaymentMethod) => {
-    const now = new Date();
-    const newUnpaidOrder: UnpaidOrder = {
-      id: `#${Math.floor(1000 + Math.random() * 9000)}`,
-      date: now.toISOString(),
-      customerName: customer || "Pelanggan",
-      totalItems: cart.reduce((acc, item) => acc + item.qty, 0),
-      totalPrice: totalAfterDiscount,
-      paymentMethod: method || "CASH",
-      serviceType: dineType === "dinein" ? "Dine In" : "Take Away",
-      items: cart.map(c => ({
-        name: c.name,
-        qty: c.qty,
-        price: c.price,
-        variant: c.selectedVariant,
-        note: c.note
-      })),
-      subtotal: subtotal,
-      tax: tax,
-      discount: appliedDiscount?.percentage || 0,
-      paidAmount: 0,
-      change: 0,
-      status: "unpaid"
-    };
+  const createUnpaidOrder = async () => {
+    try {
+      const orderData = {
+        customerName: customer || "Pelanggan",
+        orderType: dineType === "dinein" ? "dine_in" : "take_away",
+        notes: customer || "Pelanggan",
+        items: cart.map(c => ({
+          menuId: c.id,
+          qty: c.qty,
+          price: c.price,
+          variantId: undefined,
+          toppings: []
+        }))
+      };
 
-    addUnpaidOrder(newUnpaidOrder);
-    alert(`Pesanan ${customer || "tanpa nama"} disimpan sebagai Bayar Nanti!`);
-    clearCart();
-    removeDiscount(); // Clear discount
-    setCustomer("");
-    setIsRightPanelOpen(false); // Close drawer on mobile
+      await createOrder(orderData);
+      alert(`Pesanan ${customer || "tanpa nama"} disimpan sebagai Bayar Nanti!`);
+      clearCart();
+      removeDiscount();
+      setCustomer("");
+      setIsRightPanelOpen(false);
+      refreshData();
+    } catch (err: any) {
+      alert(err.message || "Gagal menyimpan pesanan");
+    }
   };
 
   // Portal Target

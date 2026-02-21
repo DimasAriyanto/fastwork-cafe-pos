@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { RoleRepository } from '../repositories/role.repository.ts';
 import { RefreshTokenRepository } from '../repositories/refresh-token.repository.ts';
+import { EmployeeRepository } from '../repositories/employee.repository.ts';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt.ts';
 
 const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
@@ -10,11 +11,13 @@ export class AuthService {
   private userRepository: UserRepository;
   private roleRepository: RoleRepository;
   private refreshTokenRepository: RefreshTokenRepository;
+  private employeeRepository: EmployeeRepository;
 
   constructor() {
     this.userRepository = new UserRepository();
     this.roleRepository = new RoleRepository();
     this.refreshTokenRepository = new RefreshTokenRepository();
+    this.employeeRepository = new EmployeeRepository();
   }
 
   async login(username: string, password: string) {
@@ -37,6 +40,10 @@ export class AuthService {
     }
     const roleName = role.name.toUpperCase();
 
+    // Get outlet id from employee profile
+    const employee = await this.employeeRepository.findByUserId(user.id);
+    const outletId = employee?.outletId || 1; // Default to 1 if not found
+
     // Generate tokens
     const accessToken = signAccessToken({
       id: user.id,
@@ -45,6 +52,7 @@ export class AuthService {
       name: user.name,
       roleId: user.roleId,
       role: roleName,
+      outletId: outletId,
     });
 
     const refreshToken = signRefreshToken({
@@ -102,6 +110,10 @@ export class AuthService {
     const role = await this.roleRepository.findById(user.roleId);
     const roleName = role?.name || 'user';
 
+    // Get outlet info
+    const employee = await this.employeeRepository.findByUserId(user.id);
+    const outletId = employee?.outletId || 1;
+
     // Generate tokens
     const accessToken = signAccessToken({
       id: user.id,
@@ -110,6 +122,7 @@ export class AuthService {
       name: user.name,
       roleId: user.roleId,
       role: roleName,
+      outletId: outletId,
     });
 
     const refreshToken = signRefreshToken({
@@ -179,6 +192,10 @@ export class AuthService {
       const role = await this.roleRepository.findById(user.roleId);
       const roleName = role?.name || 'user';
 
+      // Get outlet info
+      const employee = await this.employeeRepository.findByUserId(user.id);
+      const outletId = employee?.outletId || 1;
+
       // Generate new access token
       const accessToken = signAccessToken({
         id: user.id,
@@ -187,6 +204,7 @@ export class AuthService {
         name: user.name,
         roleId: user.roleId,
         role: roleName,
+        outletId: outletId,
       });
 
       return {

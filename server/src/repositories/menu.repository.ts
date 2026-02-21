@@ -28,7 +28,7 @@ export class MenuRepository {
         image: menuData.image,
         isAvailable: true,
         hasVariant: variants.length > 0,
-        currentStock: menuData.currentStock || 0,
+        currentStock: Number(menuData.currentStock || 0),
         createdBy: menuData.createdBy
     });
     
@@ -39,7 +39,7 @@ export class MenuRepository {
         const variantsData = variants.map((v) => ({
             menuId: newMenuId,
             name: v.name,
-            priceAdjustment: v.priceAdjustment.toString(), // Decimal conversion
+            priceAdjustment: Number(v.priceAdjustment), // Ensure it is a number
             isAvailable: true
         }));
         await db.insert(menuVariants).values(variantsData);
@@ -161,11 +161,9 @@ export class MenuRepository {
   async update(id: number, data: UpdateMenuRequest) {
     // Hapus field undefined biar gak update jadi NULL
     // (Helper function cleanObject bisa dipake disini kalo ada)
-    const { createdAt, updatedAt, id: bodyId, ...cleanData } = data as any;
+    const { createdAt, updatedAt, id: bodyId, variants, ...cleanData } = data as any;
 
     // 2. Gunakan cleanData untuk update ke database
-    //    Sekarang ORM tidak akan protes karena field timestamp yang string itu sudah hilang
-    //    Dan database akan otomatis mengupdate 'updated_at' karena setting .onUpdateNow()
     await db.update(menus)
         .set(cleanData)
         .where(eq(menus.id, id));

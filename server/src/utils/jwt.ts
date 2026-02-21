@@ -26,6 +26,7 @@ export interface AccessTokenPayload {
   name: string;
   roleId: number;
   role: string;
+  outletId: number;
 }
 
 export interface RefreshTokenPayload {

@@ -1,14 +1,53 @@
-import { TransactionRepository } from '../repositories/transaction.repository'; // Hapus .ts saat import
-import { MenuRepository } from '../repositories/menu.repository';
+import { TransactionRepository } from '../repositories/transaction.repository';
+import { EmployeeRepository } from '../repositories/employee.repository';
 import type { CreateTransactionRequest, TransactionResponse } from '../types/index';
 
 export class TransactionService {
   private trxRepo: TransactionRepository;
-  private menuRepo: MenuRepository;
+  private employeeRepo: EmployeeRepository;
 
   constructor() {
     this.trxRepo = new TransactionRepository();
-    this.menuRepo = new MenuRepository();
+    this.employeeRepo = new EmployeeRepository();
+  }
+
+  // Create a pending/unpaid order (checkout from cashier POS)
+  async createOrder(userId: number, outletId: number, data: {
+    customerName?: string;
+    orderType?: string;
+    notes?: string;
+    items: Array<{ menuId: number; variantId?: number; qty: number; price: number; toppings?: { toppingId: number; price: number }[] }>;
+  }) {
+    if (!data.items || data.items.length === 0) {
+      throw new Error('Keranjang belanja kosong.');
+    }
+    // Find employee linked to this user
+    const allEmployees = await this.employeeRepo.findAll();
+    const emp = allEmployees.find((e: any) => e.userId === userId);
+    const cashierId = emp?.id ?? userId; // fallback to userId if no employee record
+
+    const transactionId = await this.trxRepo.createOrder({
+      outletId,
+      cashierId,
+      createdBy: userId,
+      customerName: data.customerName,
+      notes: data.notes || data.customerName || 'Guest',
+      orderType: data.orderType || 'dine_in',
+      items: data.items,
+    });
+
+    return { transactionId };
+  }
+
+  // Pay a pending order
+  async payOrder(transactionId: number, userId: number, data: { paymentMethod: string; paidAmount: number }) {
+    await this.trxRepo.payOrder(transactionId, data.paymentMethod, data.paidAmount, userId);
+    return await this.trxRepo.findById(transactionId);
+  }
+
+  // Get all unpaid orders for an outlet
+  async getUnpaidOrders(outletId: number) {
+    return await this.trxRepo.getUnpaidOrders(outletId);
   }
 
   async createTransaction(
@@ -88,8 +127,8 @@ export class TransactionService {
   }
 
   // ... (Method history & detail tetap sama)
-  async getTransactionHistory(outletId: number, page: number = 1, limit: number = 20) {
-    return await this.trxRepo.findAll({ outletId, page, limit });
+  async getTransactionHistory(outletId: number, page: number = 1, limit: number = 20, startDate?: Date, endDate?: Date) {
+    return await this.trxRepo.findAll({ outletId, page, limit, startDate, endDate });
   }
 
   async getTransactionDetail(id: number) {

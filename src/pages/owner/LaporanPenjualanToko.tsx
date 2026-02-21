@@ -1,19 +1,77 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { Filter, ChevronDown, RotateCcw, Share } from 'lucide-react';
+import { apiClient } from '../../api/client';
 
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 const LaporanPenjualanToko = () => {
-  // Mock Data for Summary Cards
-  const summaryStats = [
-    { title: 'Total Penjualan', value: 'Rp 14.250.000', isCurrency: true },
-    { title: 'Produk Terjual', value: '840 Item', isCurrency: false },
-    { title: 'Transaksi Sukses', value: '312', isCurrency: false },
-    { title: 'Rata-rata Harian', value: 'Rp 450.000', isCurrency: true },
-  ];
+  const [summaryStats, setSummaryStats] = useState<any[]>([]);
+  const [categorySales, setCategorySales] = useState<any[]>([]);
+  const [productSales, setProductSales] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
+  const [filterLabel, setFilterLabel] = useState('Semua Waktu');
 
+  useEffect(() => {
+    const fetchSalesData = async () => {
+      try {
+        setLoading(true);
+        const [categories, products] = await Promise.all([
+          apiClient.getSalesByCategory(dateRange.start, dateRange.end),
+          apiClient.getSalesByProduct(dateRange.start, dateRange.end)
+        ]);
 
+        setCategorySales(categories);
+        setProductSales(products);
 
+        // Aggregate stats
+        const totalGross = products.reduce((acc: number, curr: any) => acc + Number(curr.gross), 0);
+        const totalSold = products.reduce((acc: number, curr: any) => acc + Number(curr.sold), 0);
+        
+        // Count distinct successful transactions? 
+        // For simplicity, we'll re-use the financial summary for these specific overall stats
+        const financialSummary = await apiClient.getFinancialSummary(dateRange.start, dateRange.end);
+        const totalTrx = financialSummary.reduce((acc: number, curr: any) => acc + Number(curr.totalTransaksi), 0);
+        const avgDaily = totalTrx > 0 ? totalGross / financialSummary.length : 0;
 
+        setSummaryStats([
+          { title: 'Total Penjualan', value: formatCurrency(totalGross), isCurrency: true },
+          { title: 'Produk Terjual', value: `${totalSold} Item`, isCurrency: false },
+          { title: 'Transaksi Sukses', value: totalTrx.toLocaleString(), isCurrency: false },
+          { title: 'Rata-rata Harian', value: formatCurrency(avgDaily), isCurrency: true },
+        ]);
+
+      } catch (err) {
+        console.error("Gagal memuat laporan penjualan:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSalesData();
+  }, [dateRange]);
+
+  const filteredProducts = productSales.filter(p => 
+    p.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading && summaryStats.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FE4E10]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -25,7 +83,6 @@ const LaporanPenjualanToko = () => {
 
       {/* 2. Filter & Action Bar */}
       <div className="flex flex-wrap items-center gap-4">
-        {/* Filter Group */}
         <div className="flex items-center gap-3">
           <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2.5 text-[#202224] text-sm font-medium hover:bg-gray-50">
             <Filter size={18} />
@@ -33,19 +90,59 @@ const LaporanPenjualanToko = () => {
           </button>
           
           <div className="relative">
-            <button className="flex items-center gap-8 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2.5 text-[#202224] text-sm font-medium hover:bg-gray-50 min-w-[140px] justify-between">
-              Minggu ini
+            <button 
+              onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
+              className="flex items-center gap-8 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2.5 text-[#202224] text-sm font-medium hover:bg-gray-50 min-w-[160px] justify-between"
+            >
+              {filterLabel}
               <ChevronDown size={16} />
             </button>
+
+            {isDateDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-[#EAEAEA] rounded-xl shadow-xl z-20 py-2">
+                {[
+                  { label: 'Semua Waktu', range: { start: '', end: '' } },
+                  { label: 'Hari Ini', range: { 
+                    start: new Date().toISOString().split('T')[0], 
+                    end: new Date().toISOString().split('T')[0] 
+                  } },
+                  { label: 'Minggu Ini', range: { 
+                    start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0], 
+                    end: new Date().toISOString().split('T')[0] 
+                  } },
+                  { label: 'Bulan Ini', range: { 
+                    start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0], 
+                    end: new Date().toISOString().split('T')[0] 
+                  } },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={() => {
+                      setDateRange(item.range);
+                      setFilterLabel(item.label);
+                      setIsDateDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <button className="flex items-center gap-2 text-[#FE4E10] text-sm font-medium hover:text-[#e0430d] px-2">
+          <button 
+            onClick={() => {
+              setDateRange({ start: '', end: '' });
+              setFilterLabel('Semua Waktu');
+            }}
+            className="flex items-center gap-2 text-[#FE4E10] text-sm font-medium hover:text-[#e0430d] px-2"
+          >
             <RotateCcw size={16} />
             Reset Filter
           </button>
         </div>
 
-        {/* Action Button */}
         <div className="ml-auto">
           <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2.5 text-[#202224] text-sm font-medium hover:bg-gray-50">
             <Share size={18} />
@@ -67,15 +164,13 @@ const LaporanPenjualanToko = () => {
         ))}
       </div>
 
-
-
       {/* 5. Category Sales Table */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h3 className="text-xl font-bold text-[#202224]">Penjualan per Kategori</h3>
           <div className="flex items-center gap-2">
             <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2 text-[#202224] text-sm font-medium hover:bg-gray-50">
-              <span className="text-[#565656]">01/11/2026 - 01/18/2026</span>
+              <span className="text-[#565656]">Data 30 Hari Terakhir</span>
             </button>
             <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2 text-[#202224] text-sm font-medium hover:bg-gray-50">
               <Share size={16} />
@@ -84,18 +179,6 @@ const LaporanPenjualanToko = () => {
           </div>
         </div>
         
-        {/* Summary Row for Categories */}
-        <div className="grid grid-cols-2 bg-white rounded-xl border border-[#F5F6FA] mb-6 divide-x divide-[#F5F6FA]">
-          <div className="p-4 text-center">
-            <p className="text-[#565656] text-sm mb-1">Produk Terjual</p>
-            <p className="text-[#202224] text-lg font-bold">718</p>
-          </div>
-          <div className="p-4 text-center">
-            <p className="text-[#565656] text-sm mb-1">Total Penjualan Kotor</p>
-            <p className="text-[#202224] text-lg font-bold">Rp 6.040.000</p>
-          </div>
-        </div>
-
         <div className="overflow-x-auto rounded-xl border border-[#F5F6FA]">
           <table className="w-full">
             <thead>
@@ -106,18 +189,12 @@ const LaporanPenjualanToko = () => {
               </tr>
             </thead>
             <tbody>
-              {[
-                { category: 'Minuman Dingin', sold: 330, gross: 2400000 },
-                { category: 'Minuman Panas - Kopi', sold: 150, gross: 1270000 },
-                { category: 'Minuman Panas - Non Kopi', sold: 120, gross: 775000 },
-                { category: 'Jagung', sold: 75, gross: 915000 },
-                { category: 'Roti', sold: 68, gross: 680000 },
-              ].map((item, index) => (
+              {categorySales.map((item, index) => (
                 <tr key={index} className="border-b border-[#F5F6FA] hover:bg-gray-50 transition-colors last:border-b-0">
                   <td className="py-4 px-6 text-sm text-[#565656] font-medium">{item.category}</td>
                   <td className="py-4 px-6 text-sm text-[#565656] font-medium text-center">{item.sold}</td>
                   <td className="py-4 px-6 text-sm text-[#565656] font-medium text-right">
-                    Rp {item.gross.toLocaleString('id-ID')}
+                    {formatCurrency(item.gross)}
                   </td>
                 </tr>
               ))}
@@ -135,6 +212,8 @@ const LaporanPenjualanToko = () => {
                 <input 
                   type="text" 
                   placeholder="Cari Produk" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-[#D5D5D5] rounded-lg text-sm text-[#202224] focus:outline-none focus:border-[#FE4E10] w-[200px]"
                 />
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9da0a5]">
@@ -144,24 +223,12 @@ const LaporanPenjualanToko = () => {
                 </div>
              </div>
              <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2 text-[#202224] text-sm font-medium hover:bg-gray-50">
-              <span className="text-[#565656]">01/11/2026 - 01/18/2026</span>
+              <span className="text-[#565656]">Data 30 Hari Terakhir</span>
             </button>
             <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2 text-[#202224] text-sm font-medium hover:bg-gray-50">
               <Share size={16} />
               Export
             </button>
-          </div>
-        </div>
-
-         {/* Summary Row for Products */}
-        <div className="grid grid-cols-2 bg-white rounded-xl border border-[#F5F6FA] mb-6 divide-x divide-[#F5F6FA]">
-          <div className="p-4 text-center">
-            <p className="text-[#565656] text-sm mb-1">Produk Terjual</p>
-            <p className="text-[#202224] text-lg font-bold">718</p>
-          </div>
-          <div className="p-4 text-center">
-            <p className="text-[#565656] text-sm mb-1">Total Penjualan Kotor</p>
-            <p className="text-[#202224] text-lg font-bold">Rp 6.482.000</p>
           </div>
         </div>
 
@@ -177,20 +244,14 @@ const LaporanPenjualanToko = () => {
               </tr>
             </thead>
             <tbody>
-              {[
-                { id: 1, product: 'Es Lemon Teh', category: 'Minuman Dingin', sold: 120, gross: 600000 },
-                { id: 2, product: 'Es Teh', category: 'Minuman Dingin', sold: 40, gross: 280000 },
-                { id: 3, product: 'Kopi Susu Gula Aren', category: 'Minuman Panas - Kopi', sold: 85, gross: 850000 },
-                { id: 4, product: 'Jagung Bakar Pedas', category: 'Jagung', sold: 45, gross: 540000 },
-                { id: 5, product: 'Roti Bakar Coklat', category: 'Roti', sold: 35, gross: 350000 },
-              ].map((item, index) => (
+              {filteredProducts.map((item, index) => (
                 <tr key={index} className="border-b border-[#F5F6FA] hover:bg-gray-50 transition-colors last:border-b-0">
-                  <td className="py-4 px-6 text-sm text-[#565656] font-medium">{item.id}.</td>
+                  <td className="py-4 px-6 text-sm text-[#565656] font-medium">{index + 1}.</td>
                   <td className="py-4 px-6 text-sm text-[#565656] font-medium">{item.product}</td>
                   <td className="py-4 px-6 text-sm text-[#565656] font-medium">{item.category}</td>
                   <td className="py-4 px-6 text-sm text-[#565656] font-medium text-center">{item.sold}</td>
                   <td className="py-4 px-6 text-sm text-[#565656] font-medium text-right">
-                    Rp {item.gross.toLocaleString('id-ID')}
+                    {formatCurrency(item.gross)}
                   </td>
                 </tr>
               ))}

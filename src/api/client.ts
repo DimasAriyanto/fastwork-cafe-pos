@@ -397,6 +397,70 @@ class ApiClient {
     throw new Error(response.error || 'Failed to delete outlet');
   }
 
+  // ============= CATEGORY ENDPOINTS =============
+
+  async getCategories() {
+    const response = await this.request<ApiResponse>('/categories?limit=100', { method: 'GET' });
+    if (response.data) return response.data;
+    throw new Error(response.error || 'Failed to fetch categories');
+  }
+
+  async createCategory(name: string) {
+    const response = await this.request<ApiResponse>('/categories', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Failed to create category');
+  }
+
+  async updateCategory(id: number, name: string) {
+    const response = await this.request<ApiResponse>(`/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name }),
+    });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Failed to update category');
+  }
+
+  async deleteCategory(id: number) {
+    const response = await this.request<ApiResponse>(`/categories/${id}`, { method: 'DELETE' });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Failed to delete category');
+  }
+
+  // ============= TOPPING ENDPOINTS =============
+
+  async getToppings() {
+    const response = await this.request<ApiResponse>('/toppings', { method: 'GET' });
+    if (response.data) return response.data;
+    throw new Error(response.error || 'Failed to fetch toppings');
+  }
+
+  async createTopping(data: { name: string; price: number }) {
+    const response = await this.request<ApiResponse>('/toppings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Failed to create topping');
+  }
+
+  async updateTopping(id: number, data: { name?: string; price?: number; isAvailable?: boolean }) {
+    const response = await this.request<ApiResponse>(`/toppings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Failed to update topping');
+  }
+
+  async deleteTopping(id: number) {
+    const response = await this.request<ApiResponse>(`/toppings/${id}`, { method: 'DELETE' });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Failed to delete topping');
+  }
+
   // ============= EMPLOYEE ENDPOINTS =============
 
   /**
@@ -557,20 +621,79 @@ class ApiClient {
     throw new Error(response.error || 'Failed to fetch menus');
   }
 
-  /**
-   * Get all categories
-   */
-  async getCategories() {
-    const response = await this.request<ApiResponse>('/categories', {
-      method: 'GET',
+  // == Transaction / Checkout Methods ==
+
+  async createOrder(data: {
+    customerName?: string;
+    orderType?: string;
+    notes?: string;
+    items: Array<{ menuId: number; variantId?: number; qty: number; price: number; toppings?: { toppingId: number; price: number }[] }>;
+  }) {
+    const response = await this.request<ApiResponse>('/transactions/order', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
-
-    if (response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.error || 'Failed to fetch categories');
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Gagal membuat order');
   }
+
+  async payOrder(transactionId: number, data: { paymentMethod: string; paidAmount: number }) {
+    const response = await this.request<ApiResponse>(`/transactions/${transactionId}/pay`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Gagal memproses pembayaran');
+  }
+
+  async getUnpaidOrders() {
+    const response = await this.request<ApiResponse>('/transactions/unpaid', { method: 'GET' });
+    if (response.success) return response.data ?? [];
+    throw new Error(response.error || 'Gagal memuat pesanan belum dibayar');
+  }
+
+  async getTransactionDetail(id: number) {
+    const response = await this.request<ApiResponse>(`/transactions/${id}`, { method: 'GET' });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Gagal memuat detail transaksi');
+  }
+
+  async getTransactions(options?: { page?: number; limit?: number; startDate?: string; endDate?: string }) {
+    const params = new URLSearchParams();
+    if (options?.page) params.append('page', String(options.page));
+    if (options?.limit) params.append('limit', String(options.limit));
+    if (options?.startDate) params.append('startDate', options.startDate);
+    if (options?.endDate) params.append('endDate', options.endDate);
+
+    const response = await this.request<ApiResponse>(`/transactions?${params.toString()}`, { method: 'GET' });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Gagal mengambil daftar transaksi');
+  }
+
+  async createMenu(data: any) {
+    const response = await this.request<ApiResponse>('/menus', {
+      method: 'POST',
+      body: data instanceof FormData ? data : JSON.stringify(data),
+    });
+    if (response.success) return response.data || (response as any).menu;
+    throw new Error(response.error || response.message || 'Failed to create menu');
+  }
+
+  async updateMenu(id: number, data: any) {
+    const response = await this.request<ApiResponse>(`/menus/${id}`, {
+      method: 'PUT',
+      body: data instanceof FormData ? data : JSON.stringify(data),
+    });
+    if (response.success) return response.data || (response as any).menu;
+    throw new Error(response.error || response.message || 'Failed to update menu');
+  }
+
+  async deleteMenu(id: number) {
+    const response = await this.request<ApiResponse>(`/menus/${id}`, { method: 'DELETE' });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Failed to delete menu');
+  }
+
 
   /**
    * Verify discount code
@@ -594,6 +717,41 @@ class ApiClient {
     if (!path) return '';
     if (path.startsWith('http')) return path;
     return `${BASE_URL}${path}`;
+  }
+
+  // == Report Methods ==
+
+  async getDashboardStats() {
+    const response = await this.request<ApiResponse>('/reports/dashboard-stats', { method: 'GET' });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Gagal mengambil stats dashboard');
+  }
+
+  async getRevenueGraph(type: 'monthly' | 'daily' = 'daily') {
+    const response = await this.request<ApiResponse>(`/reports/revenue-graph?type=${type}`, { method: 'GET' });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Gagal mengambil grafik pendapatan');
+  }
+
+  async getFinancialSummary(start?: string, end?: string) {
+    const query = start && end ? `?start=${start}&end=${end}` : '';
+    const response = await this.request<ApiResponse>(`/reports/financial-summary${query}`, { method: 'GET' });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Gagal mengambil laporan keuangan');
+  }
+
+  async getSalesByCategory(start?: string, end?: string) {
+    const query = start && end ? `?start=${start}&end=${end}` : '';
+    const response = await this.request<ApiResponse>(`/reports/sales-category${query}`, { method: 'GET' });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Gagal mengambil laporan penjualan kategori');
+  }
+
+  async getSalesByProduct(start?: string, end?: string) {
+    const query = start && end ? `?start=${start}&end=${end}` : '';
+    const response = await this.request<ApiResponse>(`/reports/sales-product${query}`, { method: 'GET' });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Gagal mengambil laporan penjualan produk');
   }
 }
 

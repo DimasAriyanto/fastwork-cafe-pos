@@ -110,7 +110,7 @@ export class EmployeeRepository {
   }
 
   async findByUserId(userId: number) {
-    const [employee] = await db.select().from(employees).where(eq(employees.id, userId)).limit(1);
+    const [employee] = await db.select().from(employees).where(eq(employees.userId, userId)).limit(1);
     return employee;
   }
 

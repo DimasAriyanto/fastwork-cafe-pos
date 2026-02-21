@@ -111,29 +111,50 @@ export class MenuController {
 
   /**
    * POST /menus
-   * Membuat menu baru
+   * Membuat menu baru dengan dukungan upload gambar
    */
   async create(c: Context) {
     try {
-      const body = await c.req.json<CreateMenuRequest>();
+      const body = await c.req.parseBody();
       const user = c.get('user') as User; 
 
+      const name = String(body['name']);
+      const categoryId = parseInt(body['categoryId'] as string, 10);
+      const price = parseInt(body['price'] as string, 10);
+      const description = body['description'] ? String(body['description']) : undefined;
+      const currentStock = body['currentStock'] ? parseInt(body['currentStock'] as string, 10) : 0;
+      const photo = body['image'] instanceof File ? body['image'] : undefined;
+
       // Validation
-      if (!body.name || !body.categoryId || !body.price) {
+      if (!name || isNaN(categoryId) || isNaN(price)) {
         return c.json({ 
           success: false, 
           error: 'Missing required fields: name, categoryId, price' 
         }, 400);
       }
 
+      // Handle variants if any (sent as JSON string in FormData)
+      let variants = [];
+      if (body['variants']) {
+        try {
+          variants = JSON.parse(String(body['variants']));
+        } catch (e) {
+          console.error("Gagal parse variants:", e);
+        }
+      }
+
       const data = { 
-        ...body, 
+        name,
+        categoryId,
+        price,
+        description,
+        currentStock,
+        variants,
         createdBy: user?.id,
-        // Default ke Outlet 1 (Pusat) jika tidak ada di user
         outletId: user?.outletId || 1 
       };
 
-      const menu = await this.service.createMenu(data);
+      const menu = await this.service.createMenu(data, photo);
       
       return c.json({ 
         success: true, 
@@ -151,7 +172,7 @@ export class MenuController {
 
   /**
    * PUT /menus/:id
-   * Update menu berdasarkan ID
+   * Update menu berdasarkan ID dengan dukungan upload gambar
    */
   async update(c: Context) {
     try {
@@ -164,7 +185,7 @@ export class MenuController {
         }, 400);
       }
 
-      const body = await c.req.json<UpdateMenuRequest>();
+      const body = await c.req.parseBody();
       
       // Check if menu exists
       const existingMenu = await this.service.getMenuById(id);
@@ -175,7 +196,17 @@ export class MenuController {
         }, 404);
       }
 
-      const menu = await this.service.updateMenu(id, body);
+      const updateData: any = {};
+      if (body['name']) updateData.name = String(body['name']);
+      if (body['categoryId']) updateData.categoryId = parseInt(body['categoryId'] as string, 10);
+      if (body['price']) updateData.price = parseInt(body['price'] as string, 10);
+      if (body['description']) updateData.description = String(body['description']);
+      if (body['isAvailable']) updateData.isAvailable = body['isAvailable'] === 'true';
+      if (body['currentStock']) updateData.currentStock = parseInt(body['currentStock'] as string, 10);
+      
+      const photo = body['image'] instanceof File ? body['image'] : undefined;
+
+      const menu = await this.service.updateMenu(id, updateData, photo);
       
       return c.json({ 
         success: true, 

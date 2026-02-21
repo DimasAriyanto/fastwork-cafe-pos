@@ -1,4 +1,5 @@
-import { TrendingUp, ShoppingBag, Users, DollarSign, Calendar, TrendingDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { TrendingUp, ShoppingBag, DollarSign, Calendar, TrendingDown } from 'lucide-react';
 import { 
   AreaChart, 
   Area, 
@@ -11,80 +12,98 @@ import {
   Bar,
   Cell
 } from 'recharts';
+import { apiClient } from '../../api/client';
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 const Dashboard = () => {
-  // Mock Data for Revenue Line Chart
-  const revenueData = [
-    { name: 'Jan', value: 10000 },
-    { name: 'Feb', value: 35000 },
-    { name: 'Mar', value: 25000 },
-    { name: 'Apr', value: 55000 },
-    { name: 'May', value: 45000 },
-    { name: 'Jun', value: 75000 },
-    { name: 'Jul', value: 65000 },
-    { name: 'Aug', value: 85000 },
-    { name: 'Sep', value: 70000 },
-    { name: 'Oct', value: 95000 },
-    { name: 'Nov', value: 85000 },
-    { name: 'Dec', value: 110000 },
-  ];
+  const [stats, setStats] = useState<any[]>([]);
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [dailyData, setDailyData] = useState<any[]>([]);
+  const [bestSelling, setBestSelling] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [graphType, setGraphType] = useState<'monthly' | 'daily'>('monthly');
 
-  // Mock Data for Daily Revenue Bar Chart
-  const dailyData = [
-    { name: 'Mon', value: 4000 },
-    { name: 'Tue', value: 6000 },
-    { name: 'Wed', value: 3000 },
-    { name: 'Thu', value: 7500 },
-    { name: 'Fri', value: 5000 },
-    { name: 'Sat', value: 9000 },
-    { name: 'Sun', value: 7000 },
-  ];
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        // 1. Fetch Stats
+        const statsRes = await apiClient.getDashboardStats();
+        
+        const mappedStats = [
+          { 
+              title: 'Total Pendapatan', 
+              value: formatCurrency(statsRes.totalRevenue), 
+              icon: DollarSign, 
+              iconColor: 'text-[#8280FF]', 
+              iconBg: 'bg-[#8280FF]/20', 
+              trend: statsRes.trend.revenue, 
+              isUp: true 
+          },
+          { 
+              title: 'Total Modal', 
+              value: formatCurrency(statsRes.totalModal), 
+              icon: ShoppingBag, 
+              iconColor: 'text-[#FEC53D]', 
+              iconBg: 'bg-[#FEC53D]/20', 
+              trend: 'Stabil', 
+              isUp: true 
+          },
+          { 
+              title: 'Laba Bersih', 
+              value: formatCurrency(statsRes.netProfit), 
+              icon: TrendingUp, 
+              iconColor: 'text-[#4AD991]', 
+              iconBg: 'bg-[#4AD991]/20', 
+              trend: statsRes.trend.revenue, 
+              isUp: true 
+          },
+          { 
+              title: 'Total Transaksi', 
+              value: statsRes.totalTransactions.toLocaleString(), 
+              icon: Calendar, 
+              iconColor: 'text-[#FF9066]', 
+              iconBg: 'bg-[#FF9066]/20', 
+              trend: statsRes.trend.transactions, 
+              isUp: true 
+          },
+        ];
+        setStats(mappedStats);
+        setBestSelling(statsRes.bestSelling);
 
-  const stats = [
-    { 
-        title: 'Total Pendapatan', 
-        value: 'Rp 650.000', 
-        icon: Users, 
-        iconColor: 'text-[#8280FF]', 
-        iconBg: 'bg-[#8280FF]/20', 
-        trend: '8.5% Naik dari kemarin', 
-        isUp: true 
-    },
-    { 
-        title: 'Total Modal', 
-        value: 'Rp 425.000', 
-        icon: ShoppingBag, 
-        iconColor: 'text-[#FEC53D]', 
-        iconBg: 'bg-[#FEC53D]/20', 
-        trend: '1.3% Naik dari minggu lalu', 
-        isUp: true 
-    },
-    { 
-        title: 'Laba Bersih', 
-        value: 'Rp 500.000', 
-        icon: DollarSign, 
-        iconColor: 'text-[#4AD991]', 
-        iconBg: 'bg-[#4AD991]/20', 
-        trend: '4.3% Turun dari kemarin', 
-        isUp: false 
-    },
-    { 
-        title: 'Total Transaksi', 
-        value: '1,420', 
-        icon: Calendar, 
-        iconColor: 'text-[#FF9066]', 
-        iconBg: 'bg-[#FF9066]/20', 
-        trend: '1.8% Naik dari kemarin', 
-        isUp: true 
-    },
-  ];
+        // 2. Fetch Graph Data
+        const graphRes = await apiClient.getRevenueGraph(graphType);
+        setRevenueData(graphRes);
 
-  const bestSelling = [
-    { name: 'Es Coklat', price: 'Rp.12.000', orders: 1200, image: '/images/menu/gambar-coklat.jpg' },
-    { name: 'Roti Maryam', price: 'Rp.15.000', orders: 950, image: '/images/menu/gambar-roti-maryam.jpg' },
-    { name: 'Es Matcha', price: 'Rp.17.000', orders: 800, image: '/images/menu/gambar-es-matcha.jpg' },
-    { name: 'Jagoeng Bakar', price: 'Rp.18.000', orders: 600, image: '/images/menu/gambar-jagung-bakar.jpg' },
-  ];
+        // 3. Daily Customers (Mock/Placeholder for now, or use daily revenue)
+        const dailyRes = await apiClient.getRevenueGraph('daily');
+        setDailyData(dailyRes.slice(-7)); // Last 7 days
+
+      } catch (err) {
+        console.error("Gagal memuat data dashboard:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [graphType]);
+
+  if (loading && stats.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FE4E10]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -121,9 +140,13 @@ const Dashboard = () => {
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA] flex flex-col min-h-[500px]">
             <div className="flex items-center justify-between mb-6">
                <h3 className="text-xl font-bold text-[#202224]">Grafik Pendapatan</h3>
-               <select className="bg-[#FCFDFD] border border-[#D5D5D5] text-[#202224] text-sm rounded-lg px-3 py-2 outline-none focus:border-[#FE4E10]">
-                  <option>Tahun Ini</option>
-                  <option>2024</option>
+               <select 
+                value={graphType}
+                onChange={(e) => setGraphType(e.target.value as any)}
+                className="bg-[#FCFDFD] border border-[#D5D5D5] text-[#202224] text-sm rounded-lg px-3 py-2 outline-none focus:border-[#FE4E10]"
+               >
+                  <option value="monthly">Tahun Ini</option>
+                  <option value="daily">Minggu Ini</option>
                </select>
             </div>
             
@@ -215,20 +238,20 @@ const Dashboard = () => {
                         <div className="w-12 h-12 flex items-center justify-center font-bold text-[#565656] bg-gray-50 rounded-lg">
                            #{idx + 1}
                         </div>
-                        <div className="w-12 h-12 bg-gray-100 rounded-xl shrink-0 overflow-hidden">
-                           <img 
-                              src={item.image}
-                              alt={item.name} 
-                              className="w-full h-full object-cover" 
-                           />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                           <h4 className="font-bold text-[#202224] text-sm truncate">{item.name}</h4>
-                           <p className="text-xs text-[#565656]">{item.price}</p>
-                        </div>
-                        <div className="text-[#202224] text-sm font-bold bg-[#F5F6FA] px-2 py-1 rounded-lg">
-                           {item.orders}
-                        </div>
+                         <div className="w-12 h-12 bg-gray-100 rounded-xl shrink-0 overflow-hidden">
+                            <img 
+                               src={apiClient.getImageUrl(item.image)}
+                               alt={item.menuName} 
+                               className="w-full h-full object-cover" 
+                            />
+                         </div>
+                         <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-[#202224] text-sm truncate">{item.menuName}</h4>
+                            <p className="text-xs text-[#565656]">{formatCurrency(item.price)}</p>
+                         </div>
+                         <div className="text-[#202224] text-sm font-bold bg-[#F5F6FA] px-2 py-1 rounded-lg">
+                            {item.qty} terjual
+                         </div>
                      </div>
                   ))}
                </div>

@@ -67,7 +67,7 @@ export default function PaymentSuccessModal({
                 </p>
 
                 <div className="text-[48px] font-semibold text-[#1F2937] mb-10">
-                    Rp {transaction.totalPrice.toLocaleString('id-ID')}
+                    Rp { (transaction.totalPrice || 0).toLocaleString('id-ID') }
                 </div>
 
                 <div className="w-full grid grid-cols-2 gap-8 mb-8 px-4">
@@ -82,7 +82,7 @@ export default function PaymentSuccessModal({
                             {transaction.paymentMethod === "QRIS" ? "Kembali" : "Kembalian"}
                         </span>
                         <span className="text-[#1F2937] text-[28px] font-semibold">
-                            Rp {transaction.paymentMethod === "QRIS" ? "0" : (transaction.change?.toLocaleString('id-ID') || "0")}
+                            Rp {transaction.paymentMethod === "QRIS" ? "0" : ((transaction.change || 0).toLocaleString('id-ID'))}
                         </span>
                     </div>
 
@@ -114,17 +114,17 @@ export default function PaymentSuccessModal({
                     <div className="border-t border-gray-200 pt-4 space-y-2">
                         <div className="flex justify-between text-sm">
                             <span className="text-gray-500">Sub Total</span>
-                            <span className="font-medium text-gray-800">Rp {transaction.subtotal.toLocaleString('id-ID')}</span>
+                            <span className="font-medium text-gray-800">Rp {(transaction.subtotal || 0).toLocaleString('id-ID')}</span>
                         </div>
                         {(transaction.discount || 0) > 0 && (
                             <div className="flex justify-between text-sm text-orange-600 italic">
                                 <span>Potongan ({transaction.discount}%)</span>
-                                <span className="font-medium">- Rp {(transaction.subtotal * (transaction.discount || 0) / 100).toLocaleString('id-ID')}</span>
+                                <span className="font-medium">- Rp {((transaction.subtotal || 0) * (transaction.discount || 0) / 100).toLocaleString('id-ID')}</span>
                             </div>
                         )}
                         <div className="flex justify-between text-sm">
                             <span className="text-gray-500">Pajak (10%)</span>
-                            <span className="font-medium text-gray-800">Rp {transaction.tax.toLocaleString('id-ID')}</span>
+                            <span className="font-medium text-gray-800">Rp {(transaction.tax || 0).toLocaleString('id-ID')}</span>
                         </div>
                     </div>
                 </div>

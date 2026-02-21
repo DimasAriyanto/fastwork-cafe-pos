@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Filter, ChevronDown, RotateCcw, Share, X } from 'lucide-react';
 import {
   LineChart,
@@ -10,94 +10,115 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { apiClient } from '../../api/client';
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 const LaporanKeuanganToko = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
+  const [selectedDayTransactions, setSelectedDayTransactions] = useState<any[]>([]);
+  const [summaryStats, setSummaryStats] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
+  const [filterLabel, setFilterLabel] = useState('Semua Waktu');
 
-  const handleViewDetail = (item: any) => {
-    setSelectedTransaction(item);
-    setIsDetailOpen(true);
+  useEffect(() => {
+    const fetchFinancialData = async () => {
+      try {
+        setLoading(true);
+        const data = await apiClient.getFinancialSummary(dateRange.start, dateRange.end);
+        
+        // Mapped for the table and chart
+        setTransactions(data);
+        setChartData(data.map((d: any) => ({
+          name: d.tanggal,
+          Pendapatan: d.pendapatan,
+          Laba: d.laba
+        })).reverse()); // Reverse to show chronological order in chart
+
+        // Calculate aggregate for summary cards
+        const totalPendapatan = data.reduce((acc: number, curr: any) => acc + Number(curr.pendapatan), 0);
+        const totalLaba = data.reduce((acc: number, curr: any) => acc + Number(curr.laba), 0);
+        const totalTransaksi = data.reduce((acc: number, curr: any) => acc + Number(curr.totalTransaksi), 0);
+        const totalMenu = data.reduce((acc: number, curr: any) => acc + Number(curr.totalMenu), 0);
+
+        setSummaryStats([
+          { title: 'Total Pendapatan', value: formatCurrency(totalPendapatan), isCurrency: true },
+          { title: 'Laba Bersih', value: formatCurrency(totalLaba), isCurrency: true },
+          { title: 'Total Transaksi', value: totalTransaksi.toLocaleString(), isCurrency: false },
+          { title: 'Total Menu Terjual', value: `${totalMenu} Menu`, isCurrency: false },
+        ]);
+
+      } catch (err) {
+        console.error("Gagal memuat laporan keuangan:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFinancialData();
+  }, [dateRange]);
+
+  const handleViewDetail = async (item: any) => {
+    try {
+      setIsDetailOpen(true);
+      // item.tanggal is in 'dd/mm/yy'
+      const [day, month, yearShort] = item.tanggal.split('/');
+      const year = `20${yearShort}`;
+      const startDate = `${year}-${month}-${day}T00:00:00Z`;
+      const endDate = `${year}-${month}-${day}T23:59:59Z`;
+
+      const data = await apiClient.getTransactions({ startDate, endDate, limit: 100 });
+      
+      // We need to fetch item details for each transaction if not included?
+      // Actually, getTransactions (findAll) doesn't include items by default.
+      // But we can map it to show headers first, or fetch details in parallel.
+      // For now, let's fetch details for each to get the items list.
+      const detailedTransactions = await Promise.all(
+        data.map(async (trx: any) => {
+          const detail = await apiClient.getTransactionDetail(trx.id);
+          return {
+            id: trx.id,
+            waktu: new Date(trx.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+            kasir: trx.cashierName || 'System',
+            metode: trx.paymentMethod || 'Tunai',
+            total: trx.totalPrice,
+            items: detail.items.map((it: any) => ({
+              name: it.menuName,
+              qty: it.qty
+            }))
+          };
+        })
+      );
+
+      setSelectedDayTransactions(detailedTransactions);
+    } catch (err) {
+      console.error("Gagal mengambil detail transaksi:", err);
+    }
   };
 
   const handleCloseDetail = () => {
     setIsDetailOpen(false);
-    setSelectedTransaction(null);
+    setSelectedDayTransactions([]);
   };
-  // Mock Data for Summary Cards
-  const summaryStats = [
-    { title: 'Total Pendapatan', value: 'Rp 9.617.589', isCurrency: true },
-    { title: 'Laba Bersih', value: 'Rp 4.221.723', isCurrency: true },
-    { title: 'Total Transaksi', value: '165', isCurrency: false },
-    { title: 'Total Menu Terjual', value: '431 Menu', isCurrency: false },
-  ];
 
-  // Mock Data for Chart
-  const chartData = [
-    { name: '25/01/26', Pendapatan: 950000, Laba: 400000 },
-    { name: '26/01/26', Pendapatan: 1800000, Laba: 900000 },
-    { name: '27/01/26', Pendapatan: 1400000, Laba: 700000 },
-    { name: '28/01/26', Pendapatan: 1350000, Laba: 1100000 },
-    { name: '29/01/26', Pendapatan: 1450000, Laba: 750000 },
-    { name: '30/01/26', Pendapatan: 2100000, Laba: 1350000 },
-    { name: '31/01/26', Pendapatan: 1150000, Laba: 750000 },
-  ];
-
-  // Mock Data for Table
-  const transactions = [
-    {
-      tanggal: '25/01/26',
-      totalTransaksi: 24,
-      totalMenu: 48,
-      pendapatan: 'Rp 1.802.931',
-      laba: 'Rp 906.580',
-    },
-    {
-      tanggal: '26/01/26',
-      totalTransaksi: 37,
-      totalMenu: 74,
-      pendapatan: 'Rp 1.340.965',
-      laba: 'Rp 491.504',
-    },
-    {
-      tanggal: '27/01/26',
-      totalTransaksi: 15,
-      totalMenu: 30,
-      pendapatan: 'Rp 856.793',
-      laba: 'Rp 470.339',
-    },
-    {
-      tanggal: '28/01/26',
-      totalTransaksi: 33,
-      totalMenu: 99,
-      pendapatan: 'Rp 922.821',
-      laba: 'Rp 398.701',
-    },
-    {
-      tanggal: '29/01/26',
-      totalTransaksi: 12,
-      totalMenu: 48,
-      pendapatan: 'Rp 1.941.471',
-      laba: 'Rp 697.584',
-    },
-    {
-      tanggal: '30/01/26',
-      totalTransaksi: 26,
-      totalMenu: 78,
-      pendapatan: 'Rp 556.637',
-      laba: 'Rp 195.320',
-    },
-    {
-      tanggal: '31/01/26',
-      totalTransaksi: 18,
-      totalMenu: 54,
-      pendapatan: 'Rp 2.196.025',
-      laba: 'Rp 1.61.695',
-    },
-  ];
-
-
+  if (loading && transactions.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FE4E10]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -107,27 +128,67 @@ const LaporanKeuanganToko = () => {
         <p className="text-[#565656] mt-1">Keuangan Toko</p>
       </div>
 
-      {/* 2. Filter & Action Bar */}
       <div className="flex flex-wrap items-center gap-4">
-        {/* Filter Group */}
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2.5 text-[#202224] text-sm font-medium hover:bg-gray-50">
+        {/* Filter By */}
+        <button className="flex items-center gap-2 px-4 py-2 bg-white border border-[#EAEAEA] rounded-lg text-[#202224] hover:bg-gray-50 transition-colors">
             <Filter size={18} />
-            Filter By
-          </button>
-          
-          <div className="relative">
-            <button className="flex items-center gap-8 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2.5 text-[#202224] text-sm font-medium hover:bg-gray-50 min-w-[140px] justify-between">
-              Minggu ini
-              <ChevronDown size={16} />
-            </button>
-          </div>
+            <span className="text-sm font-medium">Filter By</span>
+        </button>
 
-          <button className="flex items-center gap-2 text-[#FE4E10] text-sm font-medium hover:text-[#e0430d] px-2">
-            <RotateCcw size={16} />
-            Reset Filter
-          </button>
+        {/* Date Filter */}
+        <div className="relative">
+            <button 
+                onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
+                className={`flex items-center gap-2 px-4 py-2 bg-white border border-[#EAEAEA] rounded-lg text-[#202224] hover:bg-gray-50 transition-colors min-w-[160px] justify-between`}
+            >
+                <span className="text-sm font-medium">{filterLabel}</span>
+                <ChevronDown size={14} className="text-gray-400" />
+            </button>
+
+            {isDateDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-[#EAEAEA] rounded-xl shadow-xl z-20 py-2">
+                    {[
+                      { label: 'Semua Waktu', range: { start: '', end: '' } },
+                      { label: 'Hari Ini', range: { 
+                        start: new Date().toISOString().split('T')[0], 
+                        end: new Date().toISOString().split('T')[0] 
+                      } },
+                      { label: 'Minggu Ini', range: { 
+                        start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0], 
+                        end: new Date().toISOString().split('T')[0] 
+                      } },
+                      { label: 'Bulan Ini', range: { 
+                        start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0], 
+                        end: new Date().toISOString().split('T')[0] 
+                      } },
+                    ].map((item) => (
+                      <button 
+                          key={item.label}
+                          onClick={() => {
+                            setDateRange(item.range);
+                            setFilterLabel(item.label);
+                            setIsDateDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700`}
+                      >
+                          {item.label}
+                      </button>
+                    ))}
+                </div>
+            )}
         </div>
+
+        {/* Reset */}
+        <button 
+            onClick={() => {
+              setDateRange({ start: '', end: '' });
+              setFilterLabel('Semua Waktu');
+            }}
+            className="flex items-center gap-2 text-[#FE4E10] font-bold text-sm hover:opacity-80 transition-opacity"
+        >
+            <RotateCcw size={18} />
+            Reset Filter
+        </button>
 
         {/* Action Button */}
         <div className="ml-auto">
@@ -173,9 +234,9 @@ const LaporanKeuanganToko = () => {
                 tickLine={false}
                 tick={{ fill: '#565656', fontSize: 12 }}
                 tickFormatter={(value) => {
-                   if (value >= 1000000) return `${value / 1000000}jt`;
-                   if (value >= 1000) return `${value / 1000}rb`;
-                   return value;
+                   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}jt`;
+                   if (value >= 1000) return `${(value / 1000).toFixed(0)}rb`;
+                   return value.toString();
                 }}
               />
               <Tooltip
@@ -185,6 +246,7 @@ const LaporanKeuanganToko = () => {
                   boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                   border: 'none',
                 }}
+                formatter={(value: any) => formatCurrency(Number(value))}
               />
               <Legend 
                 verticalAlign="bottom" 
@@ -195,7 +257,7 @@ const LaporanKeuanganToko = () => {
               <Line
                 type="monotone"
                 dataKey="Pendapatan"
-                stroke="#20C997" // Greenish color from design
+                stroke="#20C997" 
                 strokeWidth={3}
                 dot={{ r: 4, fill: '#20C997', strokeWidth: 0 }}
                 activeDot={{ r: 7 }}
@@ -203,7 +265,7 @@ const LaporanKeuanganToko = () => {
               <Line
                 type="monotone"
                 dataKey="Laba"
-                stroke="#4880FF" // Blueish color
+                stroke="#4880FF" 
                 strokeWidth={3}
                 dot={{ r: 4, fill: '#4880FF', strokeWidth: 0 }}
                 activeDot={{ r: 7 }}
@@ -235,8 +297,8 @@ const LaporanKeuanganToko = () => {
                   <td className="py-4 px-4 text-sm text-[#202224] font-medium">{item.tanggal}</td>
                   <td className="py-4 px-4 text-sm text-[#202224] font-medium text-right">{item.totalTransaksi}</td>
                   <td className="py-4 px-4 text-sm text-[#202224] font-medium text-right">{item.totalMenu}</td>
-                  <td className="py-4 px-4 text-sm text-[#202224] font-medium text-right">{item.pendapatan}</td>
-                  <td className="py-4 px-4 text-sm text-[#202224] font-medium text-right">{item.laba}</td>
+                  <td className="py-4 px-4 text-sm text-[#202224] font-medium text-right">{formatCurrency(item.pendapatan)}</td>
+                  <td className="py-4 px-4 text-sm text-[#202224] font-medium text-right">{formatCurrency(item.laba)}</td>
                   <td className="py-4 px-4 text-center">
                     <button 
                       onClick={() => handleViewDetail(item)}
@@ -252,10 +314,8 @@ const LaporanKeuanganToko = () => {
         </div>
       </div>
 
-
       {/* Detail Modal */}
-    {/* Detail Modal */}
-      {isDetailOpen && selectedTransaction && (
+      {isDetailOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-7xl rounded-2xl shadow-2xl overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh]">
             {/* Header */}
@@ -286,95 +346,39 @@ const LaporanKeuanganToko = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EAEAEA]">
-                  {/* Mock Data for the modal view */}
-                  {[
-                    {
-                      no: 1,
-                      id: "TRX-001",
-                      waktu: "10.45",
-                      kasir: "Andi",
-                      metode: "Tunai",
-                      total: "20.000",
-                      items: [
-                        { name: "Es Coklat Nusantara", qty: 1 },
-                        { name: "Es Teh Tarik", qty: 1 }
-                      ]
-                    },
-                    {
-                      no: 2,
-                      id: "TRX-002",
-                      waktu: "10.50",
-                      kasir: "Andi",
-                      metode: "Tunai",
-                      total: "20.000",
-                      items: [
-                         { name: "Es Coklat Nusantara", qty: 1 },
-                         { name: "Es Teh Tarik", qty: 1 }
-                      ]
-                    },
-                    {
-                      no: 3,
-                      id: "TRX-003",
-                      waktu: "10.55",
-                      kasir: "Andi",
-                      metode: "Tunai",
-                      total: "20.000",
-                      items: [
-                         { name: "Es Coklat Nusantara", qty: 1 },
-                         { name: "Es Teh Tarik", qty: 1 }
-                      ]
-                    },
-                     {
-                      no: 4,
-                      id: "TRX-004",
-                      waktu: "11.05",
-                      kasir: "Andi",
-                      metode: "Tunai",
-                      total: "20.000",
-                      items: [
-                         { name: "Es Coklat Nusantara", qty: 1 },
-                         { name: "Es Teh Tarik", qty: 1 }
-                      ]
-                    },
-                     {
-                      no: 5,
-                      id: "TRX-005",
-                      waktu: "11.15",
-                      kasir: "Andi",
-                      metode: "Tunai",
-                      total: "20.000",
-                      items: [
-                         { name: "Es Coklat Nusantara", qty: 1 },
-                         { name: "Es Teh Tarik", qty: 1 }
-                      ]
-                    }
-                  ].map((row, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-4 px-4 text-sm text-[#202224] align-top">{row.no}</td>
-                      <td className="py-4 px-4 text-sm text-[#202224] font-medium align-top">{row.id}</td>
-                      <td className="py-4 px-4 text-sm text-[#202224] align-top">{row.waktu}</td>
-                      <td className="py-4 px-4 text-sm text-[#202224] align-top">{row.kasir}</td>
-                      <td className="py-4 px-4 text-sm text-[#202224] align-top">{row.metode}</td>
-                      
-                      {/* Nested Menu Items */}
-                      <td className="py-4 px-4 text-sm text-[#202224] align-top">
-                        <div className="flex flex-col gap-2">
-                          {row.items.map((item, i) => (
-                            <span key={i}>{item.name}</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-[#202224] text-center align-top">
-                        <div className="flex flex-col gap-2">
-                           {row.items.map((item, i) => (
-                            <span key={i}>{item.qty}</span>
-                          ))}
-                        </div>
-                      </td>
-
-                      <td className="py-4 px-4 text-sm text-[#202224] text-right font-medium align-top">{row.total}</td>
+                  {selectedDayTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-[#565656]">Data transaksi tidak tersedia</td>
                     </tr>
-                  ))}
+                  ) : (
+                    selectedDayTransactions.map((row, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                        <td className="py-4 px-4 text-sm text-[#202224] align-top">{idx + 1}</td>
+                        <td className="py-4 px-4 text-sm text-[#202224] font-medium align-top">{row.id}</td>
+                        <td className="py-4 px-4 text-sm text-[#202224] align-top">{row.waktu}</td>
+                        <td className="py-4 px-4 text-sm text-[#202224] align-top">{row.kasir}</td>
+                        <td className="py-4 px-4 text-sm text-[#202224] align-top">{row.metode}</td>
+                        
+                        {/* Nested Menu Items */}
+                        <td className="py-4 px-4 text-sm text-[#202224] align-top">
+                          <div className="flex flex-col gap-2">
+                            {row.items.map((item: any, i: number) => (
+                              <span key={i}>{item.name}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-sm text-[#202224] text-center align-top">
+                          <div className="flex flex-col gap-2">
+                             {row.items.map((item: any, i: number) => (
+                              <span key={i}>{item.qty}</span>
+                            ))}
+                          </div>
+                        </td>
+
+                        <td className="py-4 px-4 text-sm text-[#202224] text-right font-medium align-top">{formatCurrency(row.total)}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

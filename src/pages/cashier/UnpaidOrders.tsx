@@ -9,6 +9,7 @@ import QRISPaymentModal from "../../components/cashier/modals/QRISPaymentModal";
 import PaymentSuccessModal from "../../components/cashier/modals/PaymentSuccessModal";
 import AddMenuModal from "../../components/cashier/modals/AddMenuModal";
 import type { Product, PaymentMethod, Transaction, UnpaidOrder } from "../../types/cashier";
+import { apiClient } from "../../api/client";
 
 // Hooks
 import { usePayment } from "../../hooks/usePayment";
@@ -21,6 +22,7 @@ export default function UnpaidOrders() {
     const { isDesktop } = useResponsive();
     const [localSearch, setLocalSearch] = useState("");
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+    const [fetchedDetails, setFetchedDetails] = useState<Record<string, UnpaidOrder>>({});
     const [paymentOption, setPaymentOption] = useState<PaymentMethod>("CASH");
     const [showAddMenu, setShowAddMenu] = useState(false);
     const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" });
@@ -68,15 +70,42 @@ export default function UnpaidOrders() {
         });
     }, [unpaidOrders, localSearch, dateRange]);
 
-    const selectedOrder = useMemo(() =>
-        unpaidOrders.find(o => o.id === selectedOrderId),
-        [unpaidOrders, selectedOrderId]);
+    const selectedOrder = useMemo(() => {
+        if (!selectedOrderId) return null;
+        return fetchedDetails[selectedOrderId] || unpaidOrders.find(o => o.id === selectedOrderId);
+    }, [unpaidOrders, selectedOrderId, fetchedDetails]);
 
     // Selection handler for responsiveness
-    const handleOrderSelect = (id: string) => {
+    const handleOrderSelect = async (id: string) => {
         setSelectedOrderId(id);
         if (!isDesktop) {
             setIsRightPanelOpen(true);
+        }
+
+        if (!fetchedDetails[id]) {
+            try {
+                const detail = await apiClient.getTransactionDetail(Number(id));
+                setFetchedDetails(prev => ({
+                    ...prev,
+                    [id]: {
+                        ...detail,
+                        id: String(detail.id),
+                        date: detail.createdAt,
+                        tax: detail.taxAmount,
+                        customerName: detail.customerName || detail.notes || "Pelanggan",
+                        status: "unpaid",
+                        items: (detail.items || []).map((item: any) => ({
+                            name: item.name, // contains combined "Name (Variant)"
+                            qty: item.qty,
+                            price: item.price,
+                            variant: undefined, // avoid redundant "Rasa: ..." display
+                            note: undefined // item-level notes not supported in schema
+                        }))
+                    } as UnpaidOrder
+                }));
+            } catch (err) {
+                console.error("Gagal memuat detail pesanan:", id, err);
+            }
         }
     };
 
@@ -459,21 +488,21 @@ export default function UnpaidOrders() {
                                 <div className="bg-gray-50 rounded-xl p-4 mb-4">
                                     <div className="flex justify-between text-sm mb-2">
                                         <span className="text-gray-500">Sub Total</span>
-                                        <span className="font-medium">Rp{selectedOrder.subtotal.toLocaleString('id-ID')}</span>
+                                        <span className="font-medium">Rp{(selectedOrder.subtotal || 0).toLocaleString('id-ID')}</span>
                                     </div>
                                     {(selectedOrder.discount || 0) > 0 && (
                                         <div className="flex justify-between text-sm mb-2 text-orange-500 italic">
                                             <span className="text-gray-500">Potongan ({selectedOrder.discount}%)</span>
-                                            <span className="font-medium">- Rp{(selectedOrder.subtotal * (selectedOrder.discount || 0) / 100).toLocaleString('id-ID')}</span>
+                                            <span className="font-medium">- Rp{((selectedOrder.subtotal || 0) * (selectedOrder.discount || 0) / 100).toLocaleString('id-ID')}</span>
                                         </div>
                                     )}
                                     <div className="flex justify-between text-sm mb-4">
                                         <span className="text-gray-500">Pajak (10%)</span>
-                                        <span className="font-medium">Rp{selectedOrder.tax.toLocaleString('id-ID')}</span>
+                                        <span className="font-medium">Rp{(selectedOrder.tax || 0).toLocaleString('id-ID')}</span>
                                     </div>
                                     <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
                                         <span>Total</span>
-                                        <span>Rp{selectedOrder.totalPrice.toLocaleString('id-ID')}</span>
+                                        <span>Rp{(selectedOrder.totalPrice || 0).toLocaleString('id-ID')}</span>
                                     </div>
                                 </div>
 
