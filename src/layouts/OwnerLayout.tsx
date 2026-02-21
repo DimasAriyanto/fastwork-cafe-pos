@@ -8,7 +8,16 @@ const OwnerLayout = () => {
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [search, setSearch] = useState("");
   const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -72,6 +81,23 @@ const OwnerLayout = () => {
   const toggleSubmenu = (key: string) => {
     setOpenSubmenu(openSubmenu === key ? null : key);
   };
+
+  // Get Current Page Title
+  const getCurrentPageTitle = () => {
+    for (const item of navItems) {
+      if (item.path === location.pathname) return item.label;
+      if (item.children) {
+        const activeChild = item.children.find(child => child.path === location.pathname);
+        if (activeChild) return activeChild.label;
+      }
+    }
+    return 'Dashboard';
+  };
+
+  // Reset search when page changes
+  useEffect(() => {
+    setSearch("");
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-[#F5F6FA] flex font-sans">
@@ -199,7 +225,7 @@ const OwnerLayout = () => {
 
               {/* Header Title */}
               <h1 className="text-2xl font-bold text-[#202224] hidden sm:block">
-                {navItems.find(item => item.path === location.pathname)?.label || 'Dashboard'}
+                {getCurrentPageTitle()}
               </h1>
           </div>
 
@@ -211,7 +237,9 @@ const OwnerLayout = () => {
                 </div>
                 <input 
                   type="text" 
-                  placeholder="Search here..." 
+                  placeholder="Cari data..." 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-[#F5F6FA] rounded-full border-none focus:ring-2 focus:ring-[#FE4E10]/20 outline-none text-sm text-[#202224] placeholder-[#A0A0A0]"
                 />
              </div>
@@ -230,39 +258,33 @@ const OwnerLayout = () => {
                   </div>
                   <div className="text-left hidden sm:block">
                     <p className="text-sm font-bold text-[#202224] leading-tight flex items-center gap-1">
-                      Haji Dodo 
+                      {user?.name || user?.username || "Admin"} 
                       <ChevronDown 
                         size={14} 
                         className={`transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} 
                       />
                     </p>
-                    <p className="text-xs text-[#5C5C5C] font-medium mt-0.5">Admin</p>
+                    <p className="text-xs text-[#5C5C5C] font-medium mt-0.5">{user?.role || "Owner"}</p>
                   </div>
                 </button>
 
-                {/* Dropdown Menu */}
-                <div 
-                  className={`absolute right-0 top-full mt-3 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 origin-top-right transition-all duration-200 ease-in-out ${
-                    isProfileOpen 
-                      ? 'opacity-100 visible translate-y-0 scale-100' 
-                      : 'opacity-0 invisible -translate-y-2 scale-95'
-                  }`}
-                >
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-[#5C5C5C] hover:bg-red-50 hover:text-red-500 transition-colors"
-                  >
-                    <LogOut size={16} />
-                    Log out
-                  </button>
-                </div>
+                {/* Dropdown Menu - User Info & Option could be here, but sidebar logout is preferred */}
+                {isProfileOpen && (
+                  <div className="absolute right-0 top-full mt-3 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-3 px-4 z-50 origin-top-right transition-all animate-in fade-in zoom-in-95">
+                    <div className="pb-3 border-b border-gray-100 mb-2">
+                       <p className="text-xs text-gray-400 font-medium mb-1">Logged in as</p>
+                       <p className="text-sm font-bold text-[#202224] truncate">{user?.email || user?.username}</p>
+                    </div>
+                    <p className="text-[11px] text-[#5C5C5C]">Gunakan menu di sidebar untuk keluar dari sistem.</p>
+                  </div>
+                )}
              </div>
           </div>
         </header>
 
         {/* Content Area */}
         <main className="flex-1 overflow-auto p-6 lg:p-8 bg-[#F5F6FA]">
-          <Outlet />
+          <Outlet context={{ search, setSearch }} />
         </main>
       </div>
     </div>

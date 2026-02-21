@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Filter, ChevronDown, RotateCcw, Share } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { exportToCSV } from '../../utils/csvExport';
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -64,6 +65,21 @@ const LaporanPenjualanToko = () => {
     p.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleExportSummary = () => {
+    const headers = { title: 'Statistik', value: 'Nilai' };
+    exportToCSV(summaryStats, headers, 'ringkasan_penjualan');
+  };
+
+  const handleExportCategory = () => {
+    const headers = { category: 'Kategori', sold: 'Terjual', gross: 'Penjualan Kotor' };
+    exportToCSV(categorySales, headers, 'penjualan_per_kategori');
+  };
+
+  const handleExportProduct = () => {
+    const headers = { product: 'Produk', category: 'Kategori', sold: 'Terjual', gross: 'Penjualan Kotor' };
+    exportToCSV(filteredProducts, headers, 'penjualan_per_produk');
+  };
 
   if (loading && summaryStats.length === 0) {
     return (
@@ -144,7 +160,10 @@ const LaporanPenjualanToko = () => {
         </div>
 
         <div className="ml-auto">
-          <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2.5 text-[#202224] text-sm font-medium hover:bg-gray-50">
+          <button 
+            onClick={handleExportSummary}
+            className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2.5 text-[#202224] text-sm font-medium hover:bg-gray-50"
+          >
             <Share size={18} />
             Export
           </button>
@@ -172,7 +191,10 @@ const LaporanPenjualanToko = () => {
             <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2 text-[#202224] text-sm font-medium hover:bg-gray-50">
               <span className="text-[#565656]">Data 30 Hari Terakhir</span>
             </button>
-            <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2 text-[#202224] text-sm font-medium hover:bg-gray-50">
+            <button 
+              onClick={handleExportCategory}
+              className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2 text-[#202224] text-sm font-medium hover:bg-gray-50"
+            >
               <Share size={16} />
               Export
             </button>
@@ -225,7 +247,10 @@ const LaporanPenjualanToko = () => {
              <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2 text-[#202224] text-sm font-medium hover:bg-gray-50">
               <span className="text-[#565656]">Data 30 Hari Terakhir</span>
             </button>
-            <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2 text-[#202224] text-sm font-medium hover:bg-gray-50">
+            <button 
+              onClick={handleExportProduct}
+              className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2 text-[#202224] text-sm font-medium hover:bg-gray-50"
+            >
               <Share size={16} />
               Export
             </button>

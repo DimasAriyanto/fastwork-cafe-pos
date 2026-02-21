@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Filter, RotateCcw, Download, X, Loader2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { exportToCSV } from '../../utils/csvExport';
 
 interface TransactionItem {
   id: number;
@@ -126,6 +127,35 @@ const DataTransaksi = () => {
       setSelectedDate(null);
   };
 
+  const handleExportData = () => {
+    const headers = {
+      id: 'ID Transaksi',
+      createdAt: 'Tanggal',
+      employeeName: 'Kasir',
+      customerName: 'Pelanggan',
+      paymentMethod: 'Metode Pembayaran',
+      totalItems: 'Total Item',
+      totalPrice: 'Total Harga',
+      subtotal: 'Subtotal',
+      taxAmount: 'Pajak',
+      paidAmount: 'Diterima',
+      changeAmount: 'Kembalian'
+    };
+
+    // Prepare data for export
+    const dataToExport = filteredTransactions.map(t => ({
+      ...t,
+      createdAt: formatDate(t.createdAt),
+      totalPrice: Number(t.totalPrice),
+      subtotal: Number(t.subtotal),
+      taxAmount: Number(t.taxAmount),
+      paidAmount: Number(t.paidAmount),
+      changeAmount: Number(t.changeAmount)
+    }));
+
+    exportToCSV(dataToExport, headers, 'data_transaksi');
+  };
+
   return (
     <div className="space-y-8 font-sans relative">
       {/* Header */}
@@ -181,9 +211,12 @@ const DataTransaksi = () => {
             Reset Filter
         </button>
 
-        {/* Export Button (Optional, can be added if backend supports) */}
+        {/* Export Button */}
         <div className="flex-1" />
-        <button className="flex items-center gap-2 px-6 py-2.5 bg-white border border-[#EAEAEA] rounded-xl text-[#202224] font-bold hover:bg-gray-50 transition-all shadow-sm">
+        <button 
+          onClick={handleExportData}
+          className="flex items-center gap-2 px-6 py-2.5 bg-white border border-[#EAEAEA] rounded-xl text-[#202224] font-bold hover:bg-gray-50 transition-all shadow-sm"
+        >
             <Download size={18} />
             Export Data
         </button>

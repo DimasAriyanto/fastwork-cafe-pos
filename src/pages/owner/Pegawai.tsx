@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Plus, Pencil, Trash2, X, Upload } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
@@ -11,10 +12,21 @@ interface Employee {
 }
 
 const OwnerPegawai = () => {
+  const { search } = useOutletContext<{ search: string }>();
   // Main Employee State
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Filtered employees based on global search
+  const filteredEmployees = React.useMemo(() => {
+    if (!search) return employees;
+    const s = search.toLowerCase();
+    return employees.filter(emp => 
+      emp.name.toLowerCase().includes(s) || 
+      emp.position.toLowerCase().includes(s)
+    );
+  }, [employees, search]);
 
   // Add Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -233,7 +245,7 @@ const OwnerPegawai = () => {
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F5F5F5]">
-                {employees.map((employee, index) => (
+                {filteredEmployees.map((employee, index) => (
                     <tr key={employee.id} className="hover:bg-[#FDFDFD] transition-colors">
                     <td className="px-6 py-4 font-semibold text-[#202224]">{index + 1}</td>
                     <td className="px-6 py-4">

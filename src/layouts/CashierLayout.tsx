@@ -29,6 +29,7 @@ export default function CashierLayout() {
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [search, setSearch] = useState("");
+  const [user, setUser] = useState<any>(null);
   const { isDesktop, isMobile } = useResponsive();
 
   // API-backed state
@@ -78,7 +79,13 @@ export default function CashierLayout() {
     }
   }, []);
 
-  useEffect(() => { refreshData(); }, [refreshData]);
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    refreshData();
+  }, [refreshData]);
 
   const addTransaction = (transaction: Transaction) => {
     setTransactions(prev => [transaction, ...prev]);
@@ -208,8 +215,8 @@ export default function CashierLayout() {
                 className="w-10 h-10 rounded-xl object-cover"
               />
               <div>
-                <div className="font-bold text-gray-900 text-sm">Broicad</div>
-                <div className="text-[10px] text-gray-400 font-medium">10:00 Am - 22:00 Pm</div>
+                <div className="font-bold text-gray-900 text-sm truncate max-w-[150px]">{user?.name || user?.username || "Cashier"}</div>
+                <div className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">{user?.role || "Kasir"}</div>
               </div>
             </div>
           </div>
@@ -321,14 +328,6 @@ export default function CashierLayout() {
                     )}
                   </>
                 )}
-
-                <button
-                  onClick={handleLogout}
-                  className="px-3 sm:px-5 py-2 sm:py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition font-semibold flex items-center gap-2 text-xs sm:text-sm shadow-sm shrink-0"
-                >
-                  <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
-                  <span>Tutup Kasir</span>
-                </button>
               </div>
             </div>
           </header>

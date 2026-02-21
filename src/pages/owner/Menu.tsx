@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import AddMenuModal from '../../components/owner/AddMenuModal';
 import EditMenuModal from '../../components/owner/EditMenuModal';
 import {
@@ -15,6 +16,7 @@ import {
 import { apiClient } from '../../api/client';
 
 const OwnerMenu = () => {
+  const { search } = useOutletContext<{ search: string }>();
   const [menus, setMenus] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +42,8 @@ const OwnerMenu = () => {
     try {
       const params: any = { page: currentPage, limit };
       if (filterCategoryId) params.categoryId = filterCategoryId;
+      if (search) params.search = search; // Add search param
+
       const data = await apiClient.getMenus(params);
       // data can be paginated
       if (Array.isArray(data)) {
@@ -55,9 +59,14 @@ const OwnerMenu = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, filterCategoryId]);
+  }, [currentPage, filterCategoryId, search]);
 
   useEffect(() => { fetchMenus(); }, [fetchMenus]);
+
+  // Handle Search Debounce & Reset Page
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
 
   useEffect(() => {
     apiClient.getCategories().then((data: any) => {

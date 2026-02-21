@@ -138,6 +138,14 @@ class ApiClient {
         throw new Error('Session expired. Please login again.');
       }
 
+      // Jika 403 Forbidden dan bukan di login, kemungkinan besar token valid tapi payload salah (state mismatch)
+      // Kita redirect ke login agar user dapat token baru yang fresh
+      if (response.status === 403 && endpoint !== '/auth/login') {
+        this.clearTokens();
+        window.location.href = '/login';
+        throw new Error('Access denied. Please login again.');
+      }
+
       if (!response.ok) {
         const error: ApiResponse = await response.json().catch(() => ({
           error: response.statusText,

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Filter, ChevronDown, RotateCcw, Share, X } from 'lucide-react';
+import { exportToCSV } from '../../utils/csvExport';
 import {
   LineChart,
   Line,
@@ -112,6 +113,17 @@ const LaporanKeuanganToko = () => {
     setSelectedDayTransactions([]);
   };
 
+  const handleExportFinancial = () => {
+    const headers = { 
+      tanggal: 'Tanggal', 
+      totalTransaksi: 'Total Transaksi',
+      totalMenu: 'Total Menu Terjual',
+      pendapatan: 'Pendapatan Kotor',
+      laba: 'Laba Bersih'
+    };
+    exportToCSV(transactions, headers, 'laporan_keuangan_harian');
+  };
+
   if (loading && transactions.length === 0) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">
@@ -192,7 +204,10 @@ const LaporanKeuanganToko = () => {
 
         {/* Action Button */}
         <div className="ml-auto">
-          <button className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2.5 text-[#202224] text-sm font-medium hover:bg-gray-50">
+          <button 
+            onClick={handleExportFinancial}
+            className="flex items-center gap-2 bg-white border border-[#D5D5D5] rounded-lg px-4 py-2.5 text-[#202224] text-sm font-medium hover:bg-gray-50"
+          >
             <Share size={18} />
             Export
           </button>
