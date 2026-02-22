@@ -76,6 +76,7 @@ export class AuthService {
         email: user.email,
         roleId: user.roleId,
         role: roleName, // Sudah uppercase (OWNER/CASHIER)
+        imagePath: employee?.imagePath || user.photo,
       },
     };
   }
@@ -146,6 +147,7 @@ export class AuthService {
         email: user.email,
         roleId: user.roleId,
         role: roleName.toUpperCase(),
+        imagePath: employee?.imagePath || user.photo,
       },
     };
   }
@@ -161,6 +163,9 @@ export class AuthService {
     const role = await this.roleRepository.findById(user.roleId);
     const roleName = role?.name || 'user'; // Default kalo gak ketemu
 
+    // Get employee info for imagePath
+    const employee = await this.employeeRepository.findByUserId(user.id);
+
     return {
       id: user.id,
       username: user.username,
@@ -168,6 +173,7 @@ export class AuthService {
       email: user.email,
       roleId: user.roleId,
       roleName: roleName.toUpperCase(), // 👈 PENTING: Kembalikan ini biar Frontend tau
+      imagePath: employee?.imagePath || user.photo,
     };
   }
 
@@ -216,6 +222,7 @@ export class AuthService {
           email: user.email,
           roleId: user.roleId,
           role: roleName,
+          imagePath: employee?.imagePath || user.photo,
         },
       };
     } catch (error) {

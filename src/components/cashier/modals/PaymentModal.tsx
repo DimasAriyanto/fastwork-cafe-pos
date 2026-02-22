@@ -8,6 +8,8 @@ type PaymentModalProps = {
     subtotal: number;
     tax: number;
     total: number;
+    taxRate?: number;
+    taxDetails?: { name: string; amount: number; percentage: number }[];
     discount?: number;
     onPaymentSuccess: (
         paidAmount: number,
@@ -24,6 +26,8 @@ export default function PaymentModal({
     subtotal,
     tax,
     total,
+    taxRate = 0.1,
+    taxDetails,
     discount,
     onPaymentSuccess,
 }: PaymentModalProps) {
@@ -113,6 +117,12 @@ export default function PaymentModal({
                                             <p className="text-sm text-gray-500">Rasa: {item.variant}</p>
                                         )}
 
+                                        {item.toppings && item.toppings.length > 0 && (
+                                            <p className="text-sm text-gray-500">
+                                                Tambahan: {item.toppings.map(t => `${t.name} (Rp${t.price.toLocaleString("id-ID")})`).join(", ")}
+                                            </p>
+                                        )}
+
                                         {item.note && (
                                             <p className="text-sm italic text-gray-500">
                                                 Catatan: {item.note}
@@ -143,12 +153,23 @@ export default function PaymentModal({
                                     </div>
                                 )}
 
-                                <div className="flex justify-between text-lg">
-                                    <span className="text-gray-500">Pajak (10%)</span>
-                                    <span className="font-semibold">
-                                        Rp.{tax.toLocaleString("id-ID")},00
-                                    </span>
-                                </div>
+                                {taxDetails && taxDetails.length > 0 ? (
+                                    taxDetails.map((t, idx) => (
+                                        <div key={idx} className="flex justify-between text-lg">
+                                            <span className="text-gray-500">{t.name} ({t.percentage}%)</span>
+                                            <span className="font-semibold">
+                                                Rp.{t.amount.toLocaleString("id-ID")},00
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="flex justify-between text-lg">
+                                        <span className="text-gray-500">Pajak ({(taxRate * 100).toFixed(0)}%)</span>
+                                        <span className="font-semibold">
+                                            Rp.{tax.toLocaleString("id-ID")},00
+                                        </span>
+                                    </div>
+                                )}
 
                                 <div className="flex justify-between text-xl pt-3">
                                     <span className="font-semibold">Total</span>

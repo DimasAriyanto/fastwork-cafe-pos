@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useOutletContext } from "react-router-dom";
 import { Search, X } from "lucide-react";
@@ -6,6 +6,7 @@ import DateFilter from "../../components/cashier/DateFilter";
 import type { CashierContextType } from "../../layouts/CashierLayout";
 import type { Transaction } from "../../types/cashier";
 import { apiClient } from "../../api/client";
+import { PrintableReceipt } from "../../components/cashier/PrintableReceipt";
 
 // Hooks
 import { usePortalTarget } from "../../hooks/usePortalTarget";
@@ -18,6 +19,7 @@ export default function Riwayat() {
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
   const [fetchedDetails, setFetchedDetails] = useState<Record<string, Transaction>>({});
   const [overlayMode, setOverlayMode] = useState<"print" | "view" | null>(null);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   // Filter State
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" });
@@ -105,6 +107,12 @@ export default function Riwayat() {
   const formatCurrency = (val: number | undefined | null) =>
     "Rp" + (val || 0).toLocaleString("id-ID") + ",00";
 
+  const handlePrintReceipt = () => {
+    if (receiptRef.current) {
+        window.print();
+    }
+  };
+
   // Reusable Receipt Content Render
   const renderReceiptContent = (tx: typeof transactions[0]) => (
     <>
@@ -150,10 +158,19 @@ export default function Riwayat() {
               <span className="font-medium">- {formatCurrency((tx.subtotal || 0) * (tx.discount || 0) / 100)}</span>
             </div>
           )}
-          <div className="flex justify-between">
-            <span className="text-gray-500">Tax(10%)</span>
-            <span className="font-medium text-gray-900">{formatCurrency(tx.tax)}</span>
-          </div>
+          {tx.taxDetails && tx.taxDetails.length > 0 ? (
+            tx.taxDetails.map((td: any, idx: number) => (
+              <div key={idx} className="flex justify-between">
+                <span className="text-gray-500">{td.name}({td.percentage}%)</span>
+                <span className="font-medium text-gray-900">{formatCurrency(td.amount)}</span>
+              </div>
+            ))
+          ) : (
+            <div className="flex justify-between">
+              <span className="text-gray-500">Tax</span>
+              <span className="font-medium text-gray-900">{formatCurrency(tx.taxAmount || tx.tax)}</span>
+            </div>
+          )}
         </div>
         <div className="border-t border-gray-100 mt-3 pt-3">
           <div className="flex justify-between items-center">
@@ -346,7 +363,7 @@ export default function Riwayat() {
             {overlayMode === "print" && (
               <div className="p-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl flex justify-center">
                 <button
-                  onClick={() => window.print()}
+                  onClick={handlePrintReceipt}
                   className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-10 py-2.5 rounded-xl shadow-lg shadow-orange-500/20 active:scale-95 transition-all"
                 >
                   Cetak Sekarang
@@ -355,6 +372,16 @@ export default function Riwayat() {
             )}
           </div>
         </div>
+      )}
+
+      {createPortal(
+        <div className="final-print-container">
+          <div className="text-center py-2 font-mono text-[10px] border-b border-dashed mb-4">--- RECEIPT ---</div>
+          {selectedTx && (
+            <PrintableReceipt ref={receiptRef} transaction={selectedTx} />
+          )}
+        </div>,
+        document.body
       )}
     </>
   );

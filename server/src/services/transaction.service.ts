@@ -1,14 +1,17 @@
 import { TransactionRepository } from '../repositories/transaction.repository';
 import { EmployeeRepository } from '../repositories/employee.repository';
+import { SalesService } from './sales.service';
 import type { CreateTransactionRequest, TransactionResponse } from '../types/index';
 
 export class TransactionService {
   private trxRepo: TransactionRepository;
   private employeeRepo: EmployeeRepository;
+  private salesService: SalesService;
 
   constructor() {
     this.trxRepo = new TransactionRepository();
     this.employeeRepo = new EmployeeRepository();
+    this.salesService = new SalesService();
   }
 
   // Create a pending/unpaid order (checkout from cashier POS)
@@ -87,8 +90,8 @@ export class TransactionService {
       };
     });
 
-    // 👇 INI YANG KEMARIN KURANG: TAMBAHKAN PAJAK 11%
-    const taxRate = 0.11;
+    // 👇 SEKARANG DINAMIS: AMBIL DARI DATABASE
+    const taxRate = await this.salesService.getActiveTaxRate();
     const calculatedTax = Math.round(calculatedSubtotal * taxRate);
     const calculatedGrandTotal = calculatedSubtotal + calculatedTax;
 

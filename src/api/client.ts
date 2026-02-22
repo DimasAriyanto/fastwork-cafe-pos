@@ -15,6 +15,7 @@ export interface AuthResponse {
     email: string;
     role: string;
     roleId: number;
+    imagePath?: string;
   };
   accessToken: string;
   refreshToken: string;
@@ -795,6 +796,13 @@ class ApiClient {
     });
     if (response.success) return response.data;
     throw new Error(response.error || 'Gagal menghapus data pelanggan');
+  }
+
+  // == Sales / Tax Methods ==
+  async getTaxes() {
+    const response = await this.request<ApiResponse>('/sales/taxes', { method: 'GET' });
+    if (response.success) return response.data;
+    throw new Error(response.error || 'Gagal mengambil data pajak');
   }
 }
 

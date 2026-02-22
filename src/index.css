@@ -29,3 +29,36 @@
         background: #CBD5E0;
     }
 }
+
+@media print {
+    body {
+        height: auto !important;
+        overflow: visible !important;
+        margin: 0 !important;
+    }
+
+    /* Hide everything except our print container */
+    body>*:not(.final-print-container) {
+        display: none !important;
+    }
+
+    /* Show and position the receipt container */
+    .final-print-container {
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        background: white !important;
+        visibility: visible !important;
+    }
+}
+
+/* Screen style: hide from view */
+.final-print-container {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    width: 80mm;
+    z-index: -9999;
+}

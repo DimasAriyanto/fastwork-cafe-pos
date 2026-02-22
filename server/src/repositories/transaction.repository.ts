@@ -10,6 +10,7 @@ import {
   users,
   menuVariants,
   employees,
+  taxes,
 } from "../db/schemas/index";
 import { eq, sql, desc, inArray, and, gte, lte } from "drizzle-orm";
 
@@ -149,8 +150,17 @@ export class TransactionRepository {
         return { ...item, unitPrice };
       });
 
-      const taxRate = 0.11;
-      const taxAmount = Math.round(subtotal * taxRate);
+      // Dynamic Tax Logic
+      const activeTaxes = await tx.select().from(taxes).where(eq(taxes.isActive, true));
+      
+      // Calculate tax breakdown
+      const taxDetails = activeTaxes.map(t => ({
+        name: t.name,
+        percentage: parseFloat(t.percentage.toString()),
+        amount: Math.round(subtotal * (parseFloat(t.percentage.toString()) / 100))
+      }));
+
+      const taxAmount = taxDetails.reduce((sum, t) => sum + t.amount, 0);
       const totalPrice = subtotal + taxAmount;
 
       // 1. INSERT header
@@ -160,6 +170,7 @@ export class TransactionRepository {
         subtotal,
         taxAmount,
         totalPrice,
+        taxDetails: JSON.stringify(taxDetails),
         serviceChargeAmount: 0,
         discountAmount: 0,
         status: 'pending',
@@ -330,6 +341,7 @@ export class TransactionRepository {
         notes: transactions.notes,
         customerId: transactions.customerId,
         createdBy: transactions.createdBy,
+        taxDetails: transactions.taxDetails,
         createdAt: transactions.createdAt,
         updatedAt: transactions.updatedAt,
         employeeName: employees.name,
@@ -399,9 +411,16 @@ export class TransactionRepository {
     // Biasanya ambil payment pertama untuk ditampilkan di struk sederhana
     const primaryPayment = paymentInfo[0] || {};
 
+    let parsedTaxDetails = [];
+    try {
+      parsedTaxDetails = trx.taxDetails ? JSON.parse(trx.taxDetails) : [];
+    } catch (e) {
+      console.error("Failed to parse taxDetails:", e);
+    }
+
     return {
       ...trx,
-      // Tambahkan info pembayaran ke root object return agar mudah diakses frontend
+      taxDetails: parsedTaxDetails,
       paymentMethod: primaryPayment.paymentMethod, 
       paidAmount: primaryPayment.amountPaid,
       changeAmount: primaryPayment.changeAmount,

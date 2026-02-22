@@ -101,6 +101,11 @@ export default function PaymentSuccessModal({
                                 {item.variant && (
                                     <div className="text-xs text-gray-500 mb-1">Rasa: {item.variant}</div>
                                 )}
+                                {item.toppings && item.toppings.length > 0 && (
+                                    <div className="text-xs text-gray-500 mb-1">
+                                        Tambahan: {item.toppings.map(t => `${t.name} (Rp${t.price.toLocaleString("id-ID")})`).join(", ")}
+                                    </div>
+                                )}
                                 {item.note && (
                                     <div className="text-xs text-orange-600 bg-orange-50 px-2.5 py-1.5 rounded-lg inline-block font-medium">
                                         Catatan: {item.note}
@@ -122,10 +127,19 @@ export default function PaymentSuccessModal({
                                 <span className="font-medium">- Rp {((transaction.subtotal || 0) * (transaction.discount || 0) / 100).toLocaleString('id-ID')}</span>
                             </div>
                         )}
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Pajak (10%)</span>
-                            <span className="font-medium text-gray-800">Rp {(transaction.tax || 0).toLocaleString('id-ID')}</span>
-                        </div>
+                        {transaction.taxDetails && transaction.taxDetails.length > 0 ? (
+                            transaction.taxDetails.map((t, idx) => (
+                                <div key={idx} className="flex justify-between text-sm">
+                                    <span className="text-gray-500">{t.name} ({t.percentage}%)</span>
+                                    <span className="font-medium text-gray-800">Rp {t.amount.toLocaleString('id-ID')}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Pajak ({((transaction.taxRate || 0.1) * 100).toFixed(0)}%)</span>
+                                <span className="font-medium text-gray-800">Rp {(transaction.tax || 0).toLocaleString('id-ID')}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 

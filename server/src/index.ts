@@ -20,6 +20,7 @@ import { categoryRoutes } from './routes/category.ts';
 import { toppingRoutes } from './routes/topping.ts';
 import { discountRoutes } from './routes/discount.ts';
 import { reportRoutes } from './routes/reports.ts';
+import { salesRoutes } from './routes/sales.ts';
 
 const app = new Hono();
 
@@ -54,6 +55,7 @@ app.route('/api/customers', customerRoutes);
 // ⚠️ FIX: Tambahkan '/' di depan
 app.route('/api/transactions', transactionRoutes); 
 app.route('/api/reports', reportRoutes);
+app.route('/api/sales', salesRoutes);
 
 // Health check
 app.get('/api/health', (c) => {

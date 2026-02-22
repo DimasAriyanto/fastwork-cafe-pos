@@ -22,6 +22,7 @@ export type TransactionItem = {
     qty: number;
     price: number;
     variant?: string;
+    toppings?: { name: string; price: number }[];
     note?: string;
 };
 
@@ -39,6 +40,9 @@ export type Transaction = {
     totalItems?: number;
     subtotal?: number;
     tax?: number;
+    taxAmount?: number;
+    taxRate?: number;
+    taxDetails?: { name: string; amount: number; percentage: number }[];
     totalPrice: number;
     paymentMethod?: PaymentMethod;
     paidAmount?: number;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Coffee, ShoppingCart, FileText, LogOut, Users, Search, ChevronDown, ChevronRight, Circle, Menu, X } from 'lucide-react';
+import { apiClient } from '../api/client';
 
 const OwnerLayout = () => {
   const navigate = useNavigate();
@@ -17,6 +18,21 @@ const OwnerLayout = () => {
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
+
+    // Fetch fresh user data to sync profile picture/name
+    const fetchUser = async () => {
+      try {
+        const userData = await apiClient.getMe();
+        if (userData) {
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+      } catch (error) {
+        console.error("Failed to fetch user data:", error);
+      }
+    };
+    
+    fetchUser();
   }, []);
 
   useEffect(() => {
@@ -34,7 +50,6 @@ const OwnerLayout = () => {
 
   const handleLogout = async () => {
     try {
-        const { apiClient } = await import("../api/client");
         await apiClient.logout();
     } catch (error) {
         console.error("Logout error:", error);
@@ -255,7 +270,11 @@ const OwnerLayout = () => {
                   className="flex items-center gap-4 focus:outline-none group appearance-none select-none"
                 >
                   <div className="w-12 h-12 bg-gray-200 rounded-xl overflow-hidden shadow-sm relative shrink-0 transition-transform duration-200 group-hover:scale-105">
-                    <img src="/public/images/menu/ronaldo.jpg" alt="Admin" className="w-full h-full object-cover" />
+                    <img 
+                      src={user?.imagePath ? apiClient.getImageUrl(user.imagePath) : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || user?.username || 'Admin')}&background=random`} 
+                      alt={user?.name || user?.username || 'Admin'} 
+                      className="w-full h-full object-cover" 
+                    />
                   </div>
                   <div className="text-left hidden sm:block">
                     <p className="text-sm font-bold text-[#202224] leading-tight flex items-center gap-1">

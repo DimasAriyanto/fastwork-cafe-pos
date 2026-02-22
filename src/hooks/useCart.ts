@@ -3,6 +3,8 @@ import type { CartItem } from "../types/cashier";
 
 export const useCart = () => {
     const [cart, setCart] = useState<CartItem[]>([]);
+    const [taxRate, setTaxRate] = useState(0.10); // Total rate for compatibility
+    const [taxes, setTaxes] = useState<{ name: string; percentage: number }[]>([]);
 
     // Helpers
     const addToCart = (product: CartItem) => {
@@ -14,7 +16,7 @@ export const useCart = () => {
             const updated = [...prev];
             updated[index] = updatedItem;
             return updated;
-        });
+            });
     };
 
     const removeFromCart = (index: number) => {
@@ -61,7 +63,17 @@ export const useCart = () => {
     }, [subtotal, appliedDiscount]);
 
     const totalAfterDiscount = subtotal - discountAmount;
-    const tax = totalAfterDiscount * 0.10;
+    
+    // Detailed Tax Calculation
+    const taxDetails = useMemo(() => {
+        return taxes.map(t => ({
+            name: t.name,
+            percentage: t.percentage,
+            amount: Math.round(totalAfterDiscount * (t.percentage / 100))
+        }));
+    }, [totalAfterDiscount, taxes]);
+
+    const tax = taxDetails.reduce((sum, t) => sum + t.amount, 0);
     const total = totalAfterDiscount + tax;
 
     // Real discount validation using API
@@ -96,6 +108,11 @@ export const useCart = () => {
         subtotal,
         tax,
         total,
+        taxRate,
+        setTaxRate,
+        taxes,
+        setTaxes,
+        taxDetails,
         appliedDiscount,
         applyDiscountCode,
         removeDiscount,

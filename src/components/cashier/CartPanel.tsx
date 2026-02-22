@@ -19,6 +19,8 @@ type CartPanelProps = {
     subtotal: number;
     tax: number;
     total: number;
+    taxRate?: number;
+    taxDetails?: { name: string; amount: number; percentage: number }[];
     appliedDiscount: { code: string; percentage: number; minSpend: number } | null;
     applyDiscountCode: (code: string) => Promise<{ success: boolean; message: string }>;
     removeDiscount: () => void;
@@ -41,7 +43,9 @@ export default function CartPanel({
     onEditItem,
     subtotal,
     tax,
+    taxDetails,
     total,
+    taxRate = 0.1,
     appliedDiscount,
     applyDiscountCode,
     removeDiscount,
@@ -243,12 +247,23 @@ export default function CartPanel({
                                         </span>
                                     </div>
                                 )}
-                                <div className="flex justify-between items-center text-gray-400">
-                                    <span className="text-base">Pajak (10%)</span>
-                                    <span className="text-base">
-                                        Rp{tax.toLocaleString("id-ID")}
-                                    </span>
-                                </div>
+                                {taxDetails && taxDetails.length > 0 ? (
+                                    taxDetails.map((t, idx) => (
+                                        <div key={idx} className="flex justify-between items-center text-gray-400">
+                                            <span className="text-base">{t.name} ({t.percentage}%)</span>
+                                            <span className="text-base">
+                                                Rp{t.amount.toLocaleString("id-ID")}
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="flex justify-between items-center text-gray-400">
+                                        <span className="text-base">Pajak ({(taxRate * 100).toFixed(0)}%)</span>
+                                        <span className="text-base">
+                                            Rp{tax.toLocaleString("id-ID")}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center mt-1">
                                     <span className="text-lg font-bold text-gray-800">Total</span>
                                     <span className="text-lg font-bold text-gray-800">

@@ -86,6 +86,21 @@ export default function CashierLayout() {
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
+
+    // Fetch fresh user data to sync profile picture/name
+    const fetchUser = async () => {
+      try {
+        const userData = await apiClient.getMe();
+        if (userData) {
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+      } catch (error) {
+        console.error("Failed to fetch user data:", error);
+      }
+    };
+
+    fetchUser();
     refreshData();
   }, [refreshData]);
 
@@ -212,7 +227,7 @@ export default function CashierLayout() {
             <div className="text-xs text-gray-400 mb-3">Kasir</div>
             <div className="flex items-center gap-3">
               <img
-                src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80"
+                src={user?.imagePath ? apiClient.getImageUrl(user.imagePath) : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || user?.username || 'Cashier')}&background=random`}
                 alt="Profile"
                 className="w-10 h-10 rounded-xl object-cover"
               />

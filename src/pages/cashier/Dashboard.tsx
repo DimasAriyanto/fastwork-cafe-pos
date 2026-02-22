@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useOutletContext } from "react-router-dom";
 import { apiClient } from "../../api/client";
@@ -20,9 +20,12 @@ import ProductNoteModal from "../../components/cashier/modals/ProductNoteModal";
 import PaymentModal from "../../components/cashier/modals/PaymentModal";
 import QRISPaymentModal from "../../components/cashier/modals/QRISPaymentModal";
 import PaymentSuccessModal from "../../components/cashier/modals/PaymentSuccessModal";
+import { PrintableReceipt } from "../../components/cashier/PrintableReceipt";
 
 export default function Dashboard() {
   const { search, createOrder, refreshData, setIsRightPanelOpen, setCartCount } = useOutletContext<CashierContextType>();
+  const savedUser = localStorage.getItem('user');
+  const user = savedUser ? JSON.parse(savedUser) : null;
 
   // Local State
   const [categories, setCategories] = useState<{ name: string; icon: string; count: number }[]>([]);
@@ -50,7 +53,7 @@ export default function Dashboard() {
                 name: m.name,
                 category: m.categoryName,
                 price: m.price,
-                image: m.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random`,
+                image: m.image ? apiClient.getImageUrl(m.image) : `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random`,
                 isAvailable: m.isAvailable,
                 variants: m.variants?.map((v: any) => v.name) || [],
                 // Use per-menu toppings from the API response
@@ -62,6 +65,18 @@ export default function Dashboard() {
             }));
 
             setAllProducts(productsData);
+
+            // Fetch Tax Rate
+            const taxResponse = await apiClient.getTaxes();
+            if (taxResponse && taxResponse.totalRate !== undefined) {
+                setTaxRate(Number(taxResponse.totalRate));
+            }
+            if (taxResponse && taxResponse.taxes) {
+                setTaxes(taxResponse.taxes.map((t: any) => ({
+                    name: t.name,
+                    percentage: Number(t.percentage)
+                })));
+            }
 
             // Group categories with counts
             const cats = categoriesDataArr.map((c: any) => ({
@@ -86,7 +101,7 @@ export default function Dashboard() {
   // Hooks
   const {
     cart, addToCart, updateCartItem, removeFromCart, updateQuantity, clearCart,
-    subtotal, tax, total,
+    subtotal, tax, total, taxRate, setTaxRate, setTaxes, taxDetails,
     appliedDiscount, applyDiscountCode, removeDiscount, totalAfterDiscount
   } = useCart();
   const {
@@ -95,11 +110,18 @@ export default function Dashboard() {
     isSuccessModalOpen, openSuccessModal, closeSuccessModal,
     lastTransaction
   } = usePayment();
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   // Sync cartCount to context
   useMemo(() => {
     setCartCount(cart.length);
   }, [cart, setCartCount]);
+
+  const handlePrintReceipt = () => {
+    if (receiptRef.current) {
+        window.print();
+    }
+  };
 
   // Derived Data
   const filteredProducts = useMemo(() => {
@@ -179,15 +201,28 @@ export default function Dashboard() {
       openSuccessModal({
         id: String(transaction.id),
         customerName: customer || "Pelanggan",
-        totalPrice: totalAfterDiscount,
+        totalPrice: total,
         paymentMethod: method,
         paidAmount: paidAmount,
         change: method === "QRIS" ? 0 : change,
         date: new Date().toISOString(),
         subtotal: subtotal,
         tax: tax,
+        taxRate: taxRate,
+        taxDetails: taxDetails,
         discount: appliedDiscount?.percentage || 0,
-        items: cart.map(c => ({ name: c.name, qty: c.qty, price: c.price })) as any
+        cashierName: user?.name || user?.username || "Kasir",
+        items: cart.map(c => ({ 
+          name: c.name, 
+          qty: c.qty, 
+          price: c.price,
+          variant: c.selectedVariant,
+          toppings: (c.selectedToppings || []).map(tName => {
+            const t = (c as any).toppings?.find((top: any) => top.name === tName);
+            return { name: tName, price: t?.price || 0 };
+          }),
+          note: c.note
+        })) as any
       } as any);
 
       clearCart();
@@ -282,6 +317,8 @@ export default function Dashboard() {
               setEditingIndex(index);
             }}
             tax={tax}
+            taxRate={taxRate}
+            taxDetails={taxDetails}
             total={total}
             appliedDiscount={appliedDiscount}
             applyDiscountCode={applyDiscountCode}
@@ -311,18 +348,25 @@ export default function Dashboard() {
           qty: c.qty,
           price: c.price,
           variant: c.selectedVariant,
+          toppings: (c.selectedToppings || []).map(tName => {
+            const t = (c as any).toppings?.find((top: any) => top.name === tName);
+            return { name: tName, price: t?.price || 0 };
+          }),
           note: c.note
         }))}
         subtotal={subtotal}
-        tax={0} // Tax removed in new summary flow
-        total={totalAfterDiscount}
+        tax={tax}
+        taxRate={taxRate}
+        taxDetails={taxDetails}
+        total={total}
+        discount={appliedDiscount?.percentage || 0}
         onPaymentSuccess={(paid, change) => onPaymentConfirm(paid, change, "CASH")}
       />
 
       <QRISPaymentModal
         isOpen={isQRISModalOpen}
         onClose={closeQRISModal}
-        total={totalAfterDiscount}
+        total={total}
         onPaymentConfirm={handleQRISPaymentConfirm}
       />
 
@@ -330,9 +374,19 @@ export default function Dashboard() {
         isOpen={isSuccessModalOpen}
         onClose={closeSuccessModal}
         transaction={lastTransaction}
-        onPrintReceipt={() => alert("Printing receipt...")}
+        onPrintReceipt={handlePrintReceipt}
         onNewOrder={closeSuccessModal}
       />
+
+      {createPortal(
+        <div className="final-print-container">
+          <div className="text-center py-2 border-b border-dashed mb-4">--- RECEIPT ---</div>
+          {lastTransaction && (
+            <PrintableReceipt ref={receiptRef} transaction={lastTransaction} />
+          )}
+        </div>,
+        document.body
+      )}
     </div >
   );
 }

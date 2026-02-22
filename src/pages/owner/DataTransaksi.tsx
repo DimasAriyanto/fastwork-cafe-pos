@@ -1,7 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Filter, RotateCcw, Download, X, Loader2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { exportToCSV } from '../../utils/csvExport';
+import { PrintableReceipt } from '../../components/cashier/PrintableReceipt';
+import type { Transaction as CashierTransaction } from '../../types/cashier';
 
 interface TransactionItem {
   id: number;
@@ -23,6 +26,7 @@ interface Transaction {
   totalPrice: number;
   subtotal: number;
   taxAmount: number;
+  taxDetails?: { name: string; percentage: number; amount: number }[];
   paidAmount: number;
   changeAmount: number;
   items?: TransactionItem[];
@@ -56,6 +60,7 @@ const DataTransaksi = () => {
   /* Date Filter State */
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   const fetchTransactions = async () => {
     setIsLoading(true);
@@ -111,6 +116,10 @@ const DataTransaksi = () => {
   const handleViewReceipt = () => {
     setIsModalOpen(false);
     setIsReceiptOpen(true);
+    // Trigger print dialog
+    setTimeout(() => {
+        window.print();
+    }, 100);
   };
 
   const closeReceipt = () => {
@@ -346,10 +355,19 @@ const DataTransaksi = () => {
                                 <span className="text-gray-400">Subtotal</span>
                                 <span>{formatCurrency(selectedTransaction.subtotal)}</span>
                             </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-400">Pajak (11%)</span>
-                                <span>{formatCurrency(selectedTransaction.taxAmount)}</span>
-                            </div>
+                            {selectedTransaction.taxDetails && selectedTransaction.taxDetails.length > 0 ? (
+                                selectedTransaction.taxDetails.map((td, idx) => (
+                                    <div key={idx} className="flex justify-between text-sm">
+                                        <span className="text-gray-400">{td.name} ({td.percentage}%)</span>
+                                        <span>{formatCurrency(td.amount)}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-400">Pajak</span>
+                                    <span>{formatCurrency(selectedTransaction.taxAmount)}</span>
+                                </div>
+                            )}
                         </div>
                         <div className="pt-4 space-y-4">
                             <div className="flex justify-between items-center">
@@ -434,10 +452,19 @@ const DataTransaksi = () => {
                             <span>Subtotal</span>
                             <span>{formatCurrency(selectedTransaction.subtotal)}</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span>Tax (11%)</span>
-                            <span>{formatCurrency(selectedTransaction.taxAmount)}</span>
-                        </div>
+                        {selectedTransaction.taxDetails && selectedTransaction.taxDetails.length > 0 ? (
+                            selectedTransaction.taxDetails.map((td, idx) => (
+                                <div key={idx} className="flex justify-between">
+                                    <span>{td.name} ({td.percentage}%)</span>
+                                    <span>{formatCurrency(td.amount)}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex justify-between">
+                                <span>Tax</span>
+                                <span>{formatCurrency(selectedTransaction.taxAmount)}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between font-black text-sm pt-2">
                             <span>TOTAL</span>
                             <span>{formatCurrency(selectedTransaction.totalPrice)}</span>
@@ -464,6 +491,38 @@ const DataTransaksi = () => {
                     </button>
                 </div>
            </div>
+      )}
+      {createPortal(
+        <div className="final-print-container">
+          <div className="text-center py-2 font-mono text-[10px] border-b border-dashed mb-4">--- RECEIPT ---</div>
+          {selectedTransaction && (
+            <PrintableReceipt 
+                ref={receiptRef} 
+                transaction={{
+                    id: String(selectedTransaction.id),
+                    date: selectedTransaction.createdAt,
+                    customerName: selectedTransaction.customerName || "Pelanggan",
+                    cashierName: selectedTransaction.employeeName,
+                    items: (selectedTransaction.items || []).map(item => ({
+                        name: item.name,
+                        qty: item.qty,
+                        price: item.price,
+                        variant: item.variant
+                    })),
+                    totalItems: selectedTransaction.totalItems,
+                    subtotal: selectedTransaction.subtotal,
+                    taxAmount: selectedTransaction.taxAmount,
+                    taxDetails: selectedTransaction.taxDetails,
+                    totalPrice: selectedTransaction.totalPrice,
+                    paidAmount: selectedTransaction.paidAmount,
+                    change: selectedTransaction.changeAmount,
+                    paymentMethod: selectedTransaction.paymentMethod as any,
+                    serviceType: selectedTransaction.orderType === 'take_away' ? 'Take Away' : 'Dine In'
+                } as CashierTransaction} 
+            />
+          )}
+        </div>,
+        document.body
       )}
     </div>
   );
