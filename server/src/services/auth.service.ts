@@ -172,7 +172,8 @@ export class AuthService {
       name: user.name,
       email: user.email,
       roleId: user.roleId,
-      roleName: roleName.toUpperCase(), // 👈 PENTING: Kembalikan ini biar Frontend tau
+      role: roleName.toUpperCase(), // 👈 Konsisten dengan login
+      roleName: roleName.toUpperCase(), // Tetap ada biar gak breaking change
       imagePath: employee?.imagePath || user.photo,
     };
   }

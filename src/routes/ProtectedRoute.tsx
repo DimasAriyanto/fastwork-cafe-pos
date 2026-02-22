@@ -10,7 +10,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   const token = localStorage.getItem('accessToken');
   const userJson = localStorage.getItem('user');
   const user = userJson ? JSON.parse(userJson) : null;
-  const role = user?.role as Role;
+  const role = (user?.role || user?.roleName) as Role;
 
   if (!token) {
     return <Navigate to="/login" replace />;

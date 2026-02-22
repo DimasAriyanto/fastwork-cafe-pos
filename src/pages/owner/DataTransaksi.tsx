@@ -38,6 +38,9 @@ const formatCurrency = (amount: number) => {
 
 const formatDate = (dateStr: string) => {
   const d = new Date(dateStr);
+  // Kompensasi jika browser otomatis menambah 7 jam (WIB) ke data yang sudah waktu lokal
+  d.setHours(d.getHours() - 7);
+  
   const day = d.getDate().toString().padStart(2, '0');
   const month = (d.getMonth() + 1).toString().padStart(2, '0');
   const year = d.getFullYear();
@@ -90,14 +93,22 @@ const DataTransaksi = () => {
 
   // Extract unique dates for filter
   const uniqueDates = useMemo(() => {
-     const dates = transactions.map(t => t.createdAt.split('T')[0]);
+     const dates = transactions.map(t => {
+       const d = new Date(t.createdAt);
+       d.setHours(d.getHours() - 7); // Kompensasi shift
+       return d.toISOString().split('T')[0];
+     });
      return Array.from(new Set(dates)).sort().reverse();
   }, [transactions]);
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {
     return selectedDate 
-      ? transactions.filter(t => t.createdAt.startsWith(selectedDate))
+      ? transactions.filter(t => {
+          const d = new Date(t.createdAt);
+          d.setHours(d.getHours() - 7); // Kompensasi shift
+          return d.toISOString().split('T')[0] === selectedDate;
+        })
       : transactions;
   }, [transactions, selectedDate]);
 

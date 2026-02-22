@@ -33,6 +33,8 @@ export default function Riwayat() {
       let matchDate = true;
       if (dateRange.start && dateRange.end) {
         const txDate = new Date(t.date);
+        txDate.setHours(txDate.getHours() - 7); // Kompensasi shift agar filter match dengan tampilan
+
         const startDate = new Date(dateRange.start);
         const endDate = new Date(dateRange.end);
 
@@ -43,6 +45,8 @@ export default function Riwayat() {
         matchDate = txDate >= startDate && txDate <= endDate;
       } else if (dateRange.start) {
         const txDate = new Date(t.date);
+        txDate.setHours(txDate.getHours() - 7); // Kompensasi shift
+
         const startDate = new Date(dateRange.start);
         txDate.setHours(0, 0, 0, 0);
         startDate.setHours(0, 0, 0, 0);
@@ -96,12 +100,15 @@ export default function Riwayat() {
   // Format Helpers
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
+    // Kompensasi jika browser otomatis menambah 7 jam (WIB) ke data yang sudah waktu lokal
+    d.setHours(d.getHours() - 7);
+    
     const day = d.getDate().toString().padStart(2, '0');
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
     const year = d.getFullYear();
     const hours = d.getHours().toString().padStart(2, '0');
-    const mins = d.getMinutes().toString().padStart(2, '0');
-    return `${day}/${month}/${year} - ${hours}.${mins}`;
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${day}/${month}/${year} - ${hours}.${minutes}`;
   };
 
   const formatCurrency = (val: number | undefined | null) =>

@@ -19,6 +19,10 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
             if (!dateStr) return "-";
             const d = new Date(dateStr);
             if (isNaN(d.getTime())) return "-";
+
+            // Kompensasi jika browser otomatis menambah 7 jam (WIB) ke data yang sudah waktu lokal
+            d.setHours(d.getHours() - 7);
+
             const day = d.getDate().toString().padStart(2, "0");
             const month = (d.getMonth() + 1).toString().padStart(2, "0");
             const year = d.getFullYear();

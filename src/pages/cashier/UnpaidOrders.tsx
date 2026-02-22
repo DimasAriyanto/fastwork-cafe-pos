@@ -49,6 +49,8 @@ export default function UnpaidOrders() {
             let matchDate = true;
             if (dateRange.start && dateRange.end) {
                 const orderDate = new Date(o.date);
+                orderDate.setHours(orderDate.getHours() - 7); // Kompensasi shift agar filter match dengan tampilan
+
                 const startDate = new Date(dateRange.start);
                 const endDate = new Date(dateRange.end);
 
@@ -60,6 +62,8 @@ export default function UnpaidOrders() {
                 matchDate = orderDate >= startDate && orderDate <= endDate;
             } else if (dateRange.start) {
                 const orderDate = new Date(o.date);
+                orderDate.setHours(orderDate.getHours() - 7); // Kompensasi shift
+
                 const startDate = new Date(dateRange.start);
                 orderDate.setHours(0, 0, 0, 0);
                 startDate.setHours(0, 0, 0, 0);
@@ -338,8 +342,18 @@ export default function UnpaidOrders() {
                                             </div>
                                         </div>
                                         <div className="mb-4 text-xs text-gray-500">
-                                            {new Date(order.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })} - {order.serviceType}
-                                            <div className="float-right">{new Date(order.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
+                                            {(() => {
+                                                const d = new Date(order.date);
+                                                d.setHours(d.getHours() - 7);
+                                                return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+                                            })()} - {order.serviceType}
+                                            <div className="float-right">
+                                                {(() => {
+                                                    const d = new Date(order.date);
+                                                    d.setHours(d.getHours() - 7);
+                                                    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                                                })()}
+                                            </div>
                                         </div>
 
                                         <div className="mb-4">
