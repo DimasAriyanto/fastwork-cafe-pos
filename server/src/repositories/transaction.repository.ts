@@ -408,8 +408,16 @@ export class TransactionRepository {
     }));
   }
 
-  async findAll(options: { outletId: number; cashierId?: number; limit?: number; page?: number; startDate?: Date; endDate?: Date }) {
-    const { outletId, cashierId, limit = 20, page = 1, startDate, endDate } = options;
+  async findAll(options: { 
+    outletId: number; 
+    cashierId?: number; 
+    paymentStatus?: string;
+    limit?: number; 
+    page?: number; 
+    startDate?: Date; 
+    endDate?: Date 
+  }) {
+    const { outletId, cashierId, paymentStatus, limit = 20, page = 1, startDate, endDate } = options;
     const offset = (Math.max(page, 1) - 1) * limit;
 
     const data = await db
@@ -434,7 +442,7 @@ export class TransactionRepository {
       .where(and(
         eq(transactions.outletId, outletId),
         cashierId ? eq(transactions.cashierId, cashierId) : sql`1=1`,
-        eq(transactions.paymentStatus, 'paid'),
+        paymentStatus ? eq(transactions.paymentStatus, paymentStatus) : sql`1=1`,
         startDate ? gte(transactions.createdAt, startDate) : sql`1=1`,
         endDate ? lte(transactions.createdAt, endDate) : sql`1=1`
       ))

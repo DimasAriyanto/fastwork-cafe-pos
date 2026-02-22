@@ -18,14 +18,29 @@ export class TransactionController {
       const limit = Number(c.req.query('limit')) || 20;
       const user = c.get('user') as User; 
       const outletId = user?.outletId || 1;
-      const cashierId = user?.cashierId;
       
+      // Role-based filtering
+      const role = user?.role?.toUpperCase();
+      const isCashier = role === 'CASHIER';
+      const cashierId = isCashier ? user?.cashierId : undefined;
+      // For History (Riwayat), cashiers only see THEIR PAID orders.
+      // Admin/Owner see ALL orders (paid/unpaid) from ALL cashiers.
+      const paymentStatus = isCashier ? 'paid' : undefined;
+
       const start = c.req.query('startDate');
       const end = c.req.query('endDate');
       const startDate = start ? new Date(start) : undefined;
       const endDate = end ? new Date(end) : undefined;
 
-      const data = await this.service.getTransactionHistory(outletId, cashierId, page, limit, startDate, endDate);
+      const data = await this.service.getTransactionHistory({
+        outletId,
+        cashierId,
+        paymentStatus,
+        page,
+        limit,
+        startDate,
+        endDate
+      });
 
       return c.json({ success: true, data, meta: { page, limit } });
     } catch (e: any) {
@@ -38,7 +53,11 @@ export class TransactionController {
     try {
       const user = c.get('user') as User;
       const outletId = user?.outletId || 1;
-      const cashierId = user?.cashierId;
+      
+      const role = user?.role?.toUpperCase();
+      const isCashier = role === 'CASHIER';
+      const cashierId = isCashier ? user?.cashierId : undefined;
+
       const data = await this.service.getUnpaidOrders(outletId, cashierId);
       return c.json({ success: true, data });
     } catch (e: any) {

@@ -160,8 +160,16 @@ export class TransactionService {
   }
 
   // ... (Method history & detail tetap sama)
-  async getTransactionHistory(outletId: number, cashierId?: number, page: number = 1, limit: number = 20, startDate?: Date, endDate?: Date) {
-    return await this.trxRepo.findAll({ outletId, cashierId, page, limit, startDate, endDate });
+  async getTransactionHistory(options: {
+    outletId: number;
+    cashierId?: number;
+    paymentStatus?: string;
+    page?: number;
+    limit?: number;
+    startDate?: Date;
+    endDate?: Date;
+  }) {
+    return await this.trxRepo.findAll(options);
   }
 
   async getTransactionDetail(id: number) {
