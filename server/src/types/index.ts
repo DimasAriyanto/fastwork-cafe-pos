@@ -8,6 +8,7 @@ export interface User {
   username: string;
   role: string; // Bisa string aja biar fleksibel
   outletId: number; // Tambahan biar middleware tau outlet mana
+  cashierId?: number; // Employee ID for cashier-scoped queries
 }
 
 export interface AuthState {
@@ -21,6 +22,7 @@ export interface UserContext {
   outletId: number;
   role: string;
   username: string;
+  cashierId?: number;
 }
 
 // =========================================

@@ -185,15 +185,18 @@ export class TransactionRepository {
 
       // 2. INSERT items
       for (const item of mappedItems) {
-        const lineTotal = Number(item.price) * item.qty;
+        // unitPriceIncludingToppings is (base price + toppings)
+        const unitPrice = item.unitPrice; 
+        const lineTotal = unitPrice * item.qty;
+        
         const [itemRes] = await tx.insert(transactionItems).values({
           transactionId,
           menuId: item.menuId,
           variantId: item.variantId || null,
           qty: item.qty,
-          originalPrice: item.price,
-          subTotal: lineTotal,
-          finalPrice: lineTotal,
+          originalPrice: item.price, // Base price
+          subTotal: lineTotal,       // Line total (unit * qty)
+          finalPrice: unitPrice,     // Unit price (base + toppings)
           discountPercentage: 0,
         });
         const transactionItemId = itemRes.insertId;
@@ -209,6 +212,107 @@ export class TransactionRepository {
       }
 
       return transactionId;
+    });
+  }
+
+  // Update a PENDING order (belum dibayar)
+  async updateOrder(transactionId: number, data: CreateOrderParams): Promise<void> {
+    await db.transaction(async (tx) => {
+      // 1. Verify existence and status
+      const [existing] = await tx.select().from(transactions).where(eq(transactions.id, transactionId));
+      if (!existing) throw new Error('Transaksi tidak ditemukan');
+      if (existing.paymentStatus === 'paid') throw new Error('Tidak bisa mengubah transaksi yang sudah lunas');
+
+      // 2. Calculate new subtotal
+      let subtotal = 0;
+      const mappedItems = data.items.map((item) => {
+        const toppingsTotal = item.toppings?.reduce((acc, t) => acc + Number(t.price), 0) || 0;
+        const unitPrice = Number(item.price) + toppingsTotal;
+        subtotal += unitPrice * item.qty;
+        return { ...item, unitPrice };
+      });
+
+      // 3. Dynamic Tax Logic
+      const activeTaxes = await tx.select().from(taxes).where(eq(taxes.isActive, true));
+      const taxDetails = activeTaxes.map(t => ({
+        name: t.name,
+        percentage: parseFloat(t.percentage.toString()),
+        amount: Math.round(subtotal * (parseFloat(t.percentage.toString()) / 100))
+      }));
+      const taxAmount = taxDetails.reduce((sum, t) => sum + t.amount, 0);
+      const totalPrice = subtotal + taxAmount;
+
+      // 4. Update Header
+      await tx.update(transactions)
+        .set({
+          subtotal,
+          taxAmount,
+          totalPrice,
+          taxDetails: JSON.stringify(taxDetails),
+          totalItems: data.items.reduce((acc, curr) => acc + curr.qty, 0),
+          orderType: data.orderType || existing.orderType,
+          notes: data.notes || existing.notes,
+          updatedAt: new Date(),
+        })
+        .where(eq(transactions.id, transactionId));
+
+      // 5. Clear old items and toppings
+      const oldItems = await tx.select({ id: transactionItems.id }).from(transactionItems).where(eq(transactionItems.transactionId, transactionId));
+      const oldItemIds = oldItems.map(i => i.id);
+      
+      if (oldItemIds.length > 0) {
+        await tx.delete(transactionItemToppings).where(inArray(transactionItemToppings.transactionItemId, oldItemIds));
+        await tx.delete(transactionItems).where(eq(transactionItems.transactionId, transactionId));
+      }
+
+      // 6. Insert new items
+      for (const item of mappedItems) {
+        const unitPrice = item.unitPrice;
+        const lineTotal = unitPrice * item.qty;
+        
+        const [itemRes] = await tx.insert(transactionItems).values({
+          transactionId,
+          menuId: item.menuId,
+          variantId: item.variantId || null,
+          qty: item.qty,
+          originalPrice: item.price, // Base price
+          subTotal: lineTotal,       // Line total (unit * qty)
+          finalPrice: unitPrice,     // Unit price (base + toppings)
+          discountPercentage: 0,
+        });
+        const newItemId = itemRes.insertId;
+
+        if (item.toppings && item.toppings.length > 0) {
+          for (const topping of item.toppings) {
+            await tx.insert(transactionItemToppings).values({
+              transactionItemId: newItemId,
+              toppingId: topping.toppingId,
+              price: topping.price,
+            });
+          }
+        }
+      }
+    });
+  }
+
+  // Delete a PENDING order
+  async deleteTransaction(transactionId: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      const [existing] = await tx.select().from(transactions).where(eq(transactions.id, transactionId));
+      if (!existing) throw new Error('Transaksi tidak ditemukan');
+      if (existing.paymentStatus === 'paid') throw new Error('Tidak bisa menghapus transaksi yang sudah lunas');
+
+      // 1. Clear items and toppings
+      const items = await tx.select({ id: transactionItems.id }).from(transactionItems).where(eq(transactionItems.transactionId, transactionId));
+      const itemIds = items.map(i => i.id);
+      
+      if (itemIds.length > 0) {
+        await tx.delete(transactionItemToppings).where(inArray(transactionItemToppings.transactionItemId, itemIds));
+        await tx.delete(transactionItems).where(eq(transactionItems.transactionId, transactionId));
+      }
+
+      // 2. Delete Header
+      await tx.delete(transactions).where(eq(transactions.id, transactionId));
     });
   }
 
@@ -259,8 +363,8 @@ export class TransactionRepository {
   }
 
   // Get unpaid orders
-  async getUnpaidOrders(outletId: number) {
-    return await db.select({
+  async getUnpaidOrders(outletId: number, cashierId?: number) {
+    const orders = await db.select({
       id: transactions.id,
       customerName: transactions.notes,
       subtotal: transactions.subtotal,
@@ -281,12 +385,31 @@ export class TransactionRepository {
     .where(and(
       eq(transactions.outletId, outletId),
       eq(transactions.paymentStatus, 'unpaid'),
+      cashierId ? eq(transactions.cashierId, cashierId) : sql`1=1`,
     ))
     .orderBy(desc(transactions.createdAt));
+
+    if (orders.length === 0) return [];
+
+    const orderIds = orders.map(o => o.id);
+    const allItems = await db.select({
+      transactionId: transactionItems.transactionId,
+      name: menus.name,
+      qty: transactionItems.qty,
+      price: transactionItems.finalPrice,
+    })
+    .from(transactionItems)
+    .leftJoin(menus, eq(transactionItems.menuId, menus.id))
+    .where(inArray(transactionItems.transactionId, orderIds));
+
+    return orders.map(o => ({
+      ...o,
+      items: allItems.filter(i => i.transactionId === o.id)
+    }));
   }
 
-  async findAll(options: { outletId: number; limit?: number; page?: number; startDate?: Date; endDate?: Date }) {
-    const { outletId, limit = 20, page = 1, startDate, endDate } = options;
+  async findAll(options: { outletId: number; cashierId?: number; limit?: number; page?: number; startDate?: Date; endDate?: Date }) {
+    const { outletId, cashierId, limit = 20, page = 1, startDate, endDate } = options;
     const offset = (Math.max(page, 1) - 1) * limit;
 
     const data = await db
@@ -310,6 +433,8 @@ export class TransactionRepository {
       .leftJoin(payments, eq(transactions.id, payments.transactionId))
       .where(and(
         eq(transactions.outletId, outletId),
+        cashierId ? eq(transactions.cashierId, cashierId) : sql`1=1`,
+        eq(transactions.paymentStatus, 'paid'),
         startDate ? gte(transactions.createdAt, startDate) : sql`1=1`,
         endDate ? lte(transactions.createdAt, endDate) : sql`1=1`
       ))
@@ -352,10 +477,12 @@ export class TransactionRepository {
     if (!trx) return null;
 
     // 2. Ambil Items & Toppings (Logic sama seperti sebelumnya)
-    const items = await db.select({ /* ...field item... */ 
+    const items = await db.select({
         id: transactionItems.id,
         menuId: transactionItems.menuId,
+        variantId: transactionItems.variantId,
         qty: transactionItems.qty,
+        originalPrice: transactionItems.originalPrice,
         price: transactionItems.finalPrice,
         subTotal: transactionItems.subTotal,
         name: menus.name,

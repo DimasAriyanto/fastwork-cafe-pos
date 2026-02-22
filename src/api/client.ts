@@ -655,6 +655,23 @@ class ApiClient {
     throw new Error(response.error || response.message || 'Gagal memproses pembayaran');
   }
 
+  async updateTransaction(id: number, data: any) {
+    const response = await this.request<ApiResponse>(`/transactions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Gagal memperbarui transaksi');
+  }
+
+  async deleteTransaction(id: number) {
+    const response = await this.request<ApiResponse>(`/transactions/${id}`, {
+      method: 'DELETE',
+    });
+    if (response.success) return response.data;
+    throw new Error(response.error || response.message || 'Gagal membatalkan pesanan');
+  }
+
   async getUnpaidOrders() {
     const response = await this.request<ApiResponse>('/transactions/unpaid', { method: 'GET' });
     if (response.success) return response.data ?? [];

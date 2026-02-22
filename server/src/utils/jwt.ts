@@ -27,6 +27,7 @@ export interface AccessTokenPayload {
   roleId: number;
   role: string;
   outletId: number;
+  cashierId?: number; // employee id for cashier-scoped filtering
 }
 
 export interface RefreshTokenPayload {

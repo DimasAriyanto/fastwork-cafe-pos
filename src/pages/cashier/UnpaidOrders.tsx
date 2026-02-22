@@ -18,7 +18,7 @@ import { useResponsive } from "../../hooks/useResponsive";
 
 
 export default function UnpaidOrders() {
-    const { unpaidOrders, payUnpaidOrder, updateUnpaidOrder, setIsRightPanelOpen } = useOutletContext<CashierContextType>();
+    const { unpaidOrders, payUnpaidOrder, updateUnpaidOrder, setIsRightPanelOpen, refreshData } = useOutletContext<CashierContextType>();
     const { isDesktop } = useResponsive();
     const [localSearch, setLocalSearch] = useState("");
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -99,11 +99,18 @@ export default function UnpaidOrders() {
                         customerName: detail.customerName || detail.notes || "Pelanggan",
                         status: "unpaid",
                         items: (detail.items || []).map((item: any) => ({
-                            name: item.name, // contains combined "Name (Variant)"
+                            menuId: item.menuId,
+                            variantId: item.variantId,
+                            name: item.name, // name in detail contains name + variant
                             qty: item.qty,
-                            price: item.price,
-                            variant: undefined, // avoid redundant "Rasa: ..." display
-                            note: undefined // item-level notes not supported in schema
+                            price: item.price,            // unit price (base + toppings)
+                            basePrice: item.originalPrice, // base price only
+                            variant: item.variantName,
+                            toppings: (item.toppings || []).map((t: any) => ({
+                                name: t.name,
+                                price: t.price,
+                                toppingId: t.toppingId
+                            }))
                         }))
                     } as UnpaidOrder
                 }));
@@ -128,15 +135,100 @@ export default function UnpaidOrders() {
     // For now, we assume "Simpan" just persists what is there (or any future edits).
     // "Bayar" triggers payment.
 
-    const handlePay = () => {
+    const handleSave = async (silent = false) => {
+        if (!selectedOrder) return;
+        
+        try {
+            const payload = {
+                customerName: selectedOrder.customerName,
+                orderType: selectedOrder.serviceType === 'Take Away' ? 'take_away' : 'dine_in',
+                items: selectedOrder.items.map(item => ({
+                    menuId: item.menuId,
+                    variantId: item.variantId,
+                    qty: item.qty,
+                    // Use basePrice as the price to send to backend (base only).
+                    // Backend will add topping prices from the toppings array.
+                    price: item.basePrice ?? item.price,
+                    toppings: (item.toppings || []).map(t => ({
+                        toppingId: t.toppingId,
+                        price: t.price
+                    }))
+                }))
+            };
+
+            await apiClient.updateTransaction(Number(selectedOrder.id), payload);
+            setIsEditingName(false);
+            // Refresh local state by re-fetching details to ensure consistency
+            const freshDetail = await apiClient.getTransactionDetail(Number(selectedOrder.id));
+            setFetchedDetails(prev => ({
+                ...prev,
+                [selectedOrder.id]: {
+                    ...freshDetail,
+                    id: String(freshDetail.id),
+                    date: freshDetail.createdAt,
+                    tax: freshDetail.taxAmount,
+                    customerName: freshDetail.customerName || freshDetail.notes || "Pelanggan",
+                    status: "unpaid",
+                    items: (freshDetail.items || []).map((i: any) => ({
+                        menuId: i.menuId,
+                        variantId: i.variantId,
+                        name: i.name,
+                        qty: i.qty,
+                        price: i.price,            // unit price (base + toppings)
+                        basePrice: i.originalPrice, // base price only
+                        variant: i.variantName,
+                        toppings: (i.toppings || []).map((t: any) => ({
+                            name: t.name,
+                            price: t.price,
+                            toppingId: t.toppingId
+                        }))
+                    }))
+                } as UnpaidOrder
+            }));
+            
+            if (!silent) {
+                alert("Perubahan disimpan!");
+            }
+        } catch (err: any) {
+            alert(err.message || "Gagal menyimpan perubahan");
+        }
+    };
+
+    const handleCancelOrder = async () => {
+        if (!selectedOrder) return;
+        
+        if (!confirm("Apakah Anda yakin ingin membatalkan pesanan ini?")) return;
+
+        try {
+            await apiClient.deleteTransaction(Number(selectedOrder.id));
+            alert("Pesanan berhasil dibatalkan!");
+            
+            // Refresh from context
+            refreshData();
+            
+            // Reset selection
+            setSelectedOrderId(null);
+            setIsRightPanelOpen(false);
+        } catch (err: any) {
+            alert(err.message || "Gagal membatalkan pesanan");
+        }
+    };
+
+    const handlePay = async () => {
         if (!selectedOrder) return;
 
-        if (paymentOption === "CASH") {
-            openPaymentModal();
-        } else if (paymentOption === "QRIS") {
-            openQRISModal();
+        // Sync any changes before payment
+        try {
+            await handleSave(true);
+            
+            if (paymentOption === "CASH") {
+                openPaymentModal();
+            } else if (paymentOption === "QRIS") {
+                openQRISModal();
+            }
+        } catch (err) {
+            // Error already handled in handleSave
         }
-
     };
 
     const handlePaymentSuccess = (paidAmount: number, change: number, method: PaymentMethod) => {
@@ -177,19 +269,13 @@ export default function UnpaidOrders() {
         setIsEditingName(false);
     };
 
-    const handleSave = () => {
-        // Logic to save changes would go here if items were editable
-        // For name edit, we use handleSaveName
-        setIsEditingName(false);
-        alert("Perubahan disimpan!");
-        setSelectedOrderId(null);
-        setIsRightPanelOpen(false); // Close drawer
-    };
-
     const handleAddProduct = (product: Product) => {
         if (!selectedOrder) return;
 
-        const existingItemIndex = selectedOrder.items.findIndex(item => item.name === product.name);
+        // More precise match including menuId (and potentially variantId if we support it in AddMenuModal)
+        const existingItemIndex = selectedOrder.items.findIndex(item => 
+            item.menuId === product.id && !item.variantId
+        );
         let updatedItems = [...selectedOrder.items];
 
         if (existingItemIndex > -1) {
@@ -199,8 +285,11 @@ export default function UnpaidOrders() {
             };
         } else {
             updatedItems.push({
+                menuId: product.id,
+                variantId: undefined,
                 name: product.name,
                 price: product.price,
+                basePrice: product.price, // same as unit price since no toppings yet
                 qty: 1
             });
         }
@@ -224,11 +313,14 @@ export default function UnpaidOrders() {
         // We keep the modal open so user can add multiple items
     };
 
-    const handleUpdateQty = (itemName: string, delta: number) => {
-        if (!selectedOrder) return;
+    const handleUpdateQty = (menuId: number | undefined, variantId: number | undefined, delta: number) => {
+        if (!selectedOrder || !menuId) return;
 
         const updatedItems = selectedOrder.items.map(item => {
-            if (item.name === itemName) {
+            const isMenuMatch = item.menuId === menuId;
+            const isVariantMatch = item.variantId === variantId;
+            
+            if (isMenuMatch && isVariantMatch) {
                 const newQty = Math.max(0, item.qty + delta);
                 return { ...item, qty: newQty };
             }
@@ -253,10 +345,14 @@ export default function UnpaidOrders() {
         updateUnpaidOrder(updatedOrder);
     };
 
-    const handleDeleteItem = (itemName: string) => {
-        if (!selectedOrder) return;
+    const handleDeleteItem = (menuId: number | undefined, variantId: number | undefined) => {
+        if (!selectedOrder || !menuId) return;
 
-        const updatedItems = selectedOrder.items.filter(item => item.name !== itemName);
+        const updatedItems = selectedOrder.items.filter(item => {
+            const isMenuMatch = item.menuId === menuId;
+            const isVariantMatch = item.variantId === variantId;
+            return !(isMenuMatch && isVariantMatch);
+        });
 
         const newSubtotal = updatedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
         const discountPercent = selectedOrder.discount || 0;
@@ -455,28 +551,34 @@ export default function UnpaidOrders() {
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start">
                                                     <h4 className="font-bold text-sm text-gray-800">{item.name}</h4>
-                                                    <button
-                                                        onClick={() => handleDeleteItem(item.name)}
-                                                        className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                                     <button
+                                                        onClick={() => handleDeleteItem(item.menuId, item.variantId)}
+                                                        className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
+                                                        title="Hapus Menu"
                                                     >
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>
-                                                {item.variant && <p className="text-xs text-gray-500 mb-1">Rasa: {item.variant}</p>}
+                                                 {item.variant && <p className="text-xs text-gray-500 mb-1">Variant: {item.variant}</p>}
+                                                {item.toppings && item.toppings.length > 0 && (
+                                                    <p className="text-[10px] text-gray-400 mb-1">
+                                                        Toppings: {item.toppings.map(t => t.name).join(", ")}
+                                                    </p>
+                                                )}
                                                 <div className="flex justify-between items-end mt-2">
                                                     <span className="text-xs font-medium text-gray-500">Rp{item.price.toLocaleString('id-ID')}</span>
                                                     <div className="flex items-center gap-3">
                                                         <button className="p-1 border rounded text-gray-400 hover:bg-gray-50"><Edit size={12} /></button>
                                                         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2 py-0.5">
                                                             <button
-                                                                onClick={() => handleUpdateQty(item.name, -1)}
+                                                                onClick={() => handleUpdateQty(item.menuId, item.variantId, -1)}
                                                                 className="text-gray-400 hover:text-orange-500"
                                                             >
                                                                 <Minus size={12} />
                                                             </button>
                                                             <span className="text-sm font-medium w-4 text-center">{item.qty}</span>
                                                             <button
-                                                                onClick={() => handleUpdateQty(item.name, 1)}
+                                                                onClick={() => handleUpdateQty(item.menuId, item.variantId, 1)}
                                                                 className="text-gray-400 hover:text-orange-500"
                                                             >
                                                                 <Plus size={12} />
@@ -557,16 +659,22 @@ export default function UnpaidOrders() {
                             </div>
 
                             {/* Bottom Buttons */}
-                            <div className="p-4 border-t border-gray-200 grid grid-cols-2 gap-4 bg-white">
+                            <div className="grid grid-cols-3 gap-3 p-4 border-t border-gray-100 bg-white">
                                 <button
-                                    onClick={handleSave}
-                                    className="py-3 px-4 rounded-xl border border-gray-300 font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                                    onClick={handleCancelOrder}
+                                    className="py-3 px-2 rounded-xl border border-red-200 font-bold text-red-500 hover:bg-red-50 transition-all text-sm"
+                                >
+                                    Batalkan
+                                </button>
+                                <button
+                                    onClick={() => handleSave()}
+                                    className="py-3 px-2 rounded-xl border border-gray-300 font-bold text-gray-700 hover:bg-gray-50 transition-all text-sm"
                                 >
                                     Simpan
                                 </button>
                                 <button
                                     onClick={handlePay}
-                                    className="py-3 px-4 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all transform active:scale-95"
+                                    className="py-3 px-2 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all transform active:scale-95 text-sm"
                                 >
                                     Bayar
                                 </button>

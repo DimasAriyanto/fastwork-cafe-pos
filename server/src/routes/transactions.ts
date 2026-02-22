@@ -11,6 +11,12 @@ transactionRoutes.use('*', authenticateToken);
 // Unpaid orders (pesanan belum dibayar)
 transactionRoutes.get('/unpaid', (c) => controller.getUnpaidOrders(c));
 
+// Update a pending order
+transactionRoutes.patch('/:id', authorizeRole(['ADMIN', 'CASHIER']), (c) => controller.update(c));
+
+// Delete a pending order
+transactionRoutes.delete('/:id', authorizeRole(['ADMIN', 'CASHIER']), (c) => controller.delete(c));
+
 // Pay a pending order
 transactionRoutes.post('/:id/pay', authorizeRole(['ADMIN', 'CASHIER']), (c) => controller.payOrder(c));
 

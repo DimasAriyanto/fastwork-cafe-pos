@@ -42,15 +42,45 @@ export class TransactionService {
     return { transactionId };
   }
 
+  // Update a pending order
+  async updateOrder(transactionId: number, userId: number, outletId: number, data: any) {
+    if (!data.items || data.items.length === 0) {
+      throw new Error('Keranjang belanja kosong.');
+    }
+    
+    // Find employee linked to this user (same logic as createOrder)
+    const allEmployees = await this.employeeRepo.findAll();
+    const emp = allEmployees.find((e: any) => e.userId === userId);
+    const cashierId = emp?.id ?? userId;
+
+    await this.trxRepo.updateOrder(transactionId, {
+      outletId,
+      cashierId,
+      createdBy: userId,
+      customerName: data.customerName,
+      notes: data.notes || data.customerName,
+      orderType: data.orderType || 'dine_in',
+      items: data.items,
+    });
+
+    return { transactionId };
+  }
+
+  // Delete a pending order
+  async deleteTransaction(transactionId: number) {
+    await this.trxRepo.deleteTransaction(transactionId);
+    return { success: true };
+  }
+
   // Pay a pending order
   async payOrder(transactionId: number, userId: number, data: { paymentMethod: string; paidAmount: number }) {
     await this.trxRepo.payOrder(transactionId, data.paymentMethod, data.paidAmount, userId);
     return await this.trxRepo.findById(transactionId);
   }
 
-  // Get all unpaid orders for an outlet
-  async getUnpaidOrders(outletId: number) {
-    return await this.trxRepo.getUnpaidOrders(outletId);
+  // Get all unpaid orders for an outlet (optionally scoped by cashier)
+  async getUnpaidOrders(outletId: number, cashierId?: number) {
+    return await this.trxRepo.getUnpaidOrders(outletId, cashierId);
   }
 
   async createTransaction(
@@ -130,8 +160,8 @@ export class TransactionService {
   }
 
   // ... (Method history & detail tetap sama)
-  async getTransactionHistory(outletId: number, page: number = 1, limit: number = 20, startDate?: Date, endDate?: Date) {
-    return await this.trxRepo.findAll({ outletId, page, limit, startDate, endDate });
+  async getTransactionHistory(outletId: number, cashierId?: number, page: number = 1, limit: number = 20, startDate?: Date, endDate?: Date) {
+    return await this.trxRepo.findAll({ outletId, cashierId, page, limit, startDate, endDate });
   }
 
   async getTransactionDetail(id: number) {

@@ -17,14 +17,15 @@ export class TransactionController {
       const page = Number(c.req.query('page')) || 1;
       const limit = Number(c.req.query('limit')) || 20;
       const user = c.get('user') as User; 
-      const outletId = user?.outletId || 1; 
+      const outletId = user?.outletId || 1;
+      const cashierId = user?.cashierId;
       
       const start = c.req.query('startDate');
       const end = c.req.query('endDate');
       const startDate = start ? new Date(start) : undefined;
       const endDate = end ? new Date(end) : undefined;
 
-      const data = await this.service.getTransactionHistory(outletId, page, limit, startDate, endDate);
+      const data = await this.service.getTransactionHistory(outletId, cashierId, page, limit, startDate, endDate);
 
       return c.json({ success: true, data, meta: { page, limit } });
     } catch (e: any) {
@@ -37,7 +38,8 @@ export class TransactionController {
     try {
       const user = c.get('user') as User;
       const outletId = user?.outletId || 1;
-      const data = await this.service.getUnpaidOrders(outletId);
+      const cashierId = user?.cashierId;
+      const data = await this.service.getUnpaidOrders(outletId, cashierId);
       return c.json({ success: true, data });
     } catch (e: any) {
       return c.json({ success: false, message: e.message }, 500);
@@ -55,6 +57,40 @@ export class TransactionController {
       return c.json({ success: true, message: 'Order berhasil dibuat!', data: result }, 201);
     } catch (e: any) {
       console.error('CreateOrder Error:', e);
+      return c.json({ success: false, message: e.message }, 400);
+    }
+  }
+
+  // UPDATE an existing pending order
+  async update(c: Context) {
+    try {
+      const user = c.get('user') as User;
+      if (!user) return c.json({ success: false, message: 'Unauthorized' }, 401);
+      
+      const id = Number(c.req.param('id'));
+      if (isNaN(id)) return c.json({ success: false, message: 'Invalid ID' }, 400);
+
+      const outletId = user.outletId || 1;
+      const body = await c.req.json();
+      
+      const result = await this.service.updateOrder(id, user.id, outletId, body);
+      return c.json({ success: true, message: 'Order berhasil diupdate!', data: result });
+    } catch (e: any) {
+      console.error('UpdateOrder Error:', e);
+      return c.json({ success: false, message: e.message }, 400);
+    }
+  }
+
+  // DELETE a pending order
+  async delete(c: Context) {
+    try {
+      const id = Number(c.req.param('id'));
+      if (isNaN(id)) return c.json({ success: false, message: 'Invalid ID' }, 400);
+
+      await this.service.deleteTransaction(id);
+      return c.json({ success: true, message: 'Order berhasil dibatalkan!' });
+    } catch (e: any) {
+      console.error('DeleteOrder Error:', e);
       return c.json({ success: false, message: e.message }, 400);
     }
   }

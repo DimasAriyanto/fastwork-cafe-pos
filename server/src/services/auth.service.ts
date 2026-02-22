@@ -53,6 +53,7 @@ export class AuthService {
       roleId: user.roleId,
       role: roleName,
       outletId: outletId,
+      cashierId: employee?.id,
     });
 
     const refreshToken = signRefreshToken({
@@ -124,6 +125,7 @@ export class AuthService {
       roleId: user.roleId,
       role: roleName,
       outletId: outletId,
+      cashierId: employee?.id,
     });
 
     const refreshToken = signRefreshToken({
@@ -212,6 +214,7 @@ export class AuthService {
         roleId: user.roleId,
         role: roleName,
         outletId: outletId,
+        cashierId: employee?.id,
       });
 
       return {

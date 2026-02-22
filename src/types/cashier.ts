@@ -18,11 +18,14 @@ export type CartItem = Product & {
 };
 
 export type TransactionItem = {
+    menuId?: number;
+    variantId?: number;
     name: string;
     qty: number;
-    price: number;
+    price: number; // Unit price (including toppings)
+    basePrice?: number; // Original base price from menu
     variant?: string;
-    toppings?: { name: string; price: number }[];
+    toppings?: { name: string; price: number; toppingId?: number }[];
     note?: string;
 };
 
