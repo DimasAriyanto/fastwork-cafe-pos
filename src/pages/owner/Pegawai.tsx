@@ -182,6 +182,7 @@ const OwnerPegawai = () => {
       await apiClient.updateEmployee(editingId, formData);
       fetchEmployees();
       handleCloseEditModal();
+      window.dispatchEvent(new CustomEvent('userUpdated'));
     } catch (err: any) {
       alert(err.message || "Gagal mengupdate pegawai");
     }

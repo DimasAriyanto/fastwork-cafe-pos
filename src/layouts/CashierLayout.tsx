@@ -87,7 +87,6 @@ export default function CashierLayout() {
       setUser(JSON.parse(savedUser));
     }
 
-    // Fetch fresh user data to sync profile picture/name
     const fetchUser = async () => {
       try {
         const userData = await apiClient.getMe();
@@ -102,6 +101,9 @@ export default function CashierLayout() {
 
     fetchUser();
     refreshData();
+
+    window.addEventListener('userUpdated', fetchUser);
+    return () => window.removeEventListener('userUpdated', fetchUser);
   }, [refreshData]);
 
   const addTransaction = (transaction: Transaction) => {

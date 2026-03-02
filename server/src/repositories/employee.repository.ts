@@ -20,7 +20,8 @@ export class EmployeeRepository {
         email: users.email,
       })
       .from(employees)
-      .leftJoin(users, eq(employees.userId, users.id));
+      .leftJoin(users, eq(employees.userId, users.id))
+      .where(eq(employees.isActive, true));
   }
 
   async findAllWithPagination(options: PaginationOptions = {}) {
@@ -130,7 +131,19 @@ export class EmployeeRepository {
     return await this.findById(id);
   }
 
-  // MySQL Delete Pattern
+  // Soft Delete: set isActive = false
+  async softDelete(id: number) {
+    const dataToDelete = await this.findById(id);
+    if (dataToDelete) {
+      await db
+        .update(employees)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(employees.id, id));
+    }
+    return dataToDelete;
+  }
+
+  // MySQL Delete Pattern (hard delete — tidak dipakai untuk pegawai)
   async delete(id: number) {
     const dataToDelete = await this.findById(id);
     if (dataToDelete) {

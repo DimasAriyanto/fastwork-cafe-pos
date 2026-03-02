@@ -19,7 +19,6 @@ const OwnerLayout = () => {
       setUser(JSON.parse(savedUser));
     }
 
-    // Fetch fresh user data to sync profile picture/name
     const fetchUser = async () => {
       try {
         const userData = await apiClient.getMe();
@@ -31,8 +30,11 @@ const OwnerLayout = () => {
         console.error("Failed to fetch user data:", error);
       }
     };
-    
+
     fetchUser();
+
+    window.addEventListener('userUpdated', fetchUser);
+    return () => window.removeEventListener('userUpdated', fetchUser);
   }, []);
 
   useEffect(() => {

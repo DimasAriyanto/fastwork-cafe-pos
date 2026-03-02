@@ -33,6 +33,11 @@ export class AuthService {
       throw new Error('Invalid password');
     }
 
+    // Cek status akun — soft delete set status = 'inactive'
+    if (user.status !== 'active') {
+      throw new Error('Akun tidak aktif atau telah dihapus');
+    }
+
     // Get role name
     const role = await this.roleRepository.findById(user.roleId);
     if (!role) {

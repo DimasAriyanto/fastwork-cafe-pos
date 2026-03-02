@@ -88,23 +88,21 @@ export class EmployeeService {
       imagePath = await this.saveFile(photo);
     }
 
-    // Update data akun user jika ada
-    if (userData && employee.userId) {
+    // Update data akun user — selalu sinkronkan name ke tabel users
+    if (employee.userId) {
       const userRepo = new (await import('../repositories/user.repository')).UserRepository();
-      const userUpdate: any = {};
-      
-      if (userData.username) userUpdate.username = userData.username;
-      if (userData.email) userUpdate.email = userData.email;
-      
+      const userUpdate: any = { name }; // selalu sync name
+
+      if (userData?.username) userUpdate.username = userData.username;
+      if (userData?.email) userUpdate.email = userData.email;
+
       // Update password hanya jika diisi (tidak kosong)
-      if (userData.password && userData.password.trim() !== "") {
+      if (userData?.password && userData.password.trim() !== "") {
         const bcrypt = await import('bcrypt');
         userUpdate.password = await bcrypt.default.hash(userData.password, 10);
       }
 
-      if (Object.keys(userUpdate).length > 0) {
-        await userRepo.update(employee.userId, userUpdate);
-      }
+      await userRepo.update(employee.userId, userUpdate);
     }
 
     return await this.repo.update(id, { name, position, isActive, imagePath });
@@ -112,12 +110,15 @@ export class EmployeeService {
 
   async delete(id: number) {
     const employee = await this.repo.findById(id);
-    if (employee) {
-        // Hapus file fisik
-        if (employee.imagePath) {
-             try { await unlink(join(process.cwd(), employee.imagePath)); } catch (e) { console.error("Gagal hapus file", e); }
-        }
-        await this.repo.delete(id);
+    if (!employee) return;
+
+    // Soft delete: nonaktifkan pegawai
+    await this.repo.softDelete(id);
+
+    // Nonaktifkan akun user agar tidak bisa login
+    if (employee.userId) {
+      const userRepo = new (await import('../repositories/user.repository')).UserRepository();
+      await userRepo.update(employee.userId, { status: 'inactive' });
     }
   }
 }
