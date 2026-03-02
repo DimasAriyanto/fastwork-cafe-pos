@@ -36,9 +36,11 @@ export class EmployeeService {
 
     let userId = userData?.userId;
 
-    // Jika ada data user (username, email, password), buat user dulu
+    // Jika ada data user (username, password), buat user dulu
     if (userData && !userId) {
-      const { username, email, password } = userData;
+      const { username, password } = userData;
+      // Email di-generate otomatis dari username karena tidak diinput dari form
+      const email = `${username}@cafeepos.local`;
       
       // 1. Cari Role 'cashier'
       const roleRepo = new (await import('../repositories/role.repository')).RoleRepository();
@@ -58,7 +60,6 @@ export class EmployeeService {
         name: name,
         roleId: cashierRole.id,
         status: 'active',
-        outletId: 1 // Default
       });
       
       if (!newUser) throw new Error("Gagal membuat akun user untuk pegawai");

@@ -35,7 +35,6 @@ const OwnerPegawai = () => {
   const [avatar, setAvatar] = useState<File | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -48,7 +47,6 @@ const OwnerPegawai = () => {
   const [editPreviewAvatar, setEditPreviewAvatar] = useState("");
   const [editIsActive, setEditIsActive] = useState(true);
   const [editUsername, setEditUsername] = useState("");
-  const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,7 +80,6 @@ const OwnerPegawai = () => {
     setAvatar(null);
     setIsActive(true);
     setUsername("");
-    setEmail("");
     setPassword("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -96,14 +93,13 @@ const OwnerPegawai = () => {
   };
 
   const handleSubmit = async () => {
-    if (!name.trim() || !position.trim() || !username.trim() || !email.trim() || !password.trim()) return;
+    if (!name.trim() || !position.trim() || !username.trim() || !password.trim()) return;
     
     const formData = new FormData();
     formData.append('name', name);
     formData.append('position', position);
     formData.append('isActive', String(isActive));
     formData.append('username', username);
-    formData.append('email', email);
     formData.append('password', password);
     if (avatar) {
       formData.append('photo', avatar);
@@ -129,7 +125,6 @@ const OwnerPegawai = () => {
     
     // Set Account Data (from join)
     setEditUsername(employee.username || "");
-    setEditEmail(employee.email || "");
     setEditPassword(""); // Reset password field
     
     setIsEditModalOpen(true);
@@ -144,7 +139,6 @@ const OwnerPegawai = () => {
     setEditPreviewAvatar("");
     setEditIsActive(true);
     setEditUsername("");
-    setEditEmail("");
     setEditPassword("");
     if (editFileInputRef.current) {
       editFileInputRef.current.value = "";
@@ -169,7 +163,6 @@ const OwnerPegawai = () => {
     
     // Data Akun
     formData.append('username', editUsername);
-    formData.append('email', editEmail);
     if (editPassword.trim() !== "") {
       formData.append('password', editPassword);
     }
@@ -361,27 +354,15 @@ const OwnerPegawai = () => {
               <div className="pt-4 border-t border-gray-100 space-y-4">
                 <h3 className="text-sm font-bold text-[#FE4E10]">Data Akun Login</h3>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[#202224]">Username *</label>
-                    <input
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="username"
-                      className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[#202224]">Email *</label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="email@example.com"
-                      className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-[#202224]">Username *</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="username"
+                    className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -410,7 +391,7 @@ const OwnerPegawai = () => {
               <div className="flex justify-end pt-2">
                 <button
                   onClick={handleSubmit}
-                  disabled={!name.trim() || !position.trim() || !username.trim() || !email.trim() || !password.trim()}
+                  disabled={!name.trim() || !position.trim() || !username.trim() || !password.trim()}
                   className="px-8 py-3 bg-[#FE4E10] text-white font-bold rounded-xl shadow-lg shadow-[#FE4E10]/30 hover:bg-[#e0450e] disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95"
                 >
                   Kirim
@@ -497,27 +478,15 @@ const OwnerPegawai = () => {
               <div className="pt-4 border-t border-gray-100 space-y-4">
                 <h3 className="text-sm font-bold text-[#FE4E10]">Data Akun Login</h3>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[#202224]">Username *</label>
-                    <input
-                      type="text"
-                      value={editUsername}
-                      onChange={(e) => setEditUsername(e.target.value)}
-                      placeholder="username"
-                      className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[#202224]">Email *</label>
-                    <input
-                      type="email"
-                      value={editEmail}
-                      onChange={(e) => setEditEmail(e.target.value)}
-                      placeholder="email@example.com"
-                      className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-[#202224]">Username *</label>
+                  <input
+                    type="text"
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value)}
+                    placeholder="username"
+                    className="w-full px-4 py-2 text-sm rounded-xl border border-[#EAEAEA] focus:outline-none focus:ring-1 focus:ring-[#FE4E10]"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -547,7 +516,7 @@ const OwnerPegawai = () => {
               <div className="flex justify-end pt-2">
                 <button
                   onClick={handleEditSubmit}
-                  disabled={!editName.trim() || !editPosition.trim() || !editUsername.trim() || !editEmail.trim() || !editingId}
+                  disabled={!editName.trim() || !editPosition.trim() || !editUsername.trim() || !editingId}
                   className="px-8 py-3 bg-[#FE4E10] text-white font-bold rounded-xl shadow-lg shadow-[#FE4E10]/30 hover:bg-[#e0450e] disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95"
                 >
                   Simpan Perubahan
