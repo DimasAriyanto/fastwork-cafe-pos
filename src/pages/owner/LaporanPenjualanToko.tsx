@@ -93,7 +93,7 @@ const LaporanPenjualanToko = () => {
     <div className="space-y-8">
       {/* 1. Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-[#202224]">Laporan Keuangan</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#202224]">Laporan Keuangan</h1>
         <p className="text-[#565656] mt-1">Penjualan Toko</p>
       </div>
 
@@ -178,7 +178,7 @@ const LaporanPenjualanToko = () => {
             className="bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA] flex flex-col justify-center min-h-[140px]"
           >
             <p className="text-[#565656] text-sm font-medium mb-2">{stat.title}</p>
-            <h3 className="text-3xl font-bold text-[#202224]">{stat.value}</h3>
+            <h3 className="text-2xl sm:text-3xl font-bold text-[#202224]">{stat.value}</h3>
           </div>
         ))}
       </div>
@@ -236,7 +236,7 @@ const LaporanPenjualanToko = () => {
                   placeholder="Cari Produk" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-[#D5D5D5] rounded-lg text-sm text-[#202224] focus:outline-none focus:border-[#FE4E10] w-[200px]"
+                  className="pl-10 pr-4 py-2 border border-[#D5D5D5] rounded-lg text-sm text-[#202224] focus:outline-none focus:border-[#FE4E10] w-full sm:w-[200px]"
                 />
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9da0a5]">
                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

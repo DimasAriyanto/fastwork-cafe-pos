@@ -67,7 +67,7 @@ const Login = () => {
       </div>
 
       {/* Right Side - Login Form (Preserved Logic) */}
-      <div className="w-full md:w-1/2 bg-white flex flex-col justify-center items-center p-8 md:p-12">
+      <div className="w-full md:w-1/2 bg-white flex flex-col justify-center items-center p-5 sm:p-8 md:p-12">
         <div className="w-full max-w-[400px]">
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-gray-900 mb-3">Login</h2>

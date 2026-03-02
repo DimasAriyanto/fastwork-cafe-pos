@@ -201,7 +201,7 @@ const OwnerPegawai = () => {
     <div className="space-y-8 font-sans">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-[#202224]">Pegawai</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#202224]">Pegawai</h1>
       </div>
 
       {/* Primary Action */}
@@ -293,7 +293,7 @@ const OwnerPegawai = () => {
       {/* Add Employee Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-[500px] rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-w-[500px] rounded-2xl shadow-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-[#202224]">Tambah Pegawai</h2>
               <button 
@@ -360,7 +360,7 @@ const OwnerPegawai = () => {
               <div className="pt-4 border-t border-gray-100 space-y-4">
                 <h3 className="text-sm font-bold text-[#FE4E10]">Data Akun Login</h3>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-[#202224]">Username *</label>
                     <input
@@ -423,7 +423,7 @@ const OwnerPegawai = () => {
       {/* Edit Employee Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-[500px] rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-w-[500px] rounded-2xl shadow-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-[#202224]">Edit Pegawai</h2>
               <button 
@@ -496,7 +496,7 @@ const OwnerPegawai = () => {
               <div className="pt-4 border-t border-gray-100 space-y-4">
                 <h3 className="text-sm font-bold text-[#FE4E10]">Data Akun Login</h3>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-[#202224]">Username *</label>
                     <input

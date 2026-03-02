@@ -180,7 +180,7 @@ const DataTransaksi = () => {
     <div className="space-y-8 font-sans relative">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-[#202224]">Data Transaksi</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#202224]">Data Transaksi</h1>
       </div>
 
       {/* Filter and Actions Bar */}
@@ -305,7 +305,7 @@ const DataTransaksi = () => {
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
             <div className="relative bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 {/* Modal Header */}
-                <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-[#FDFDFD]">
+                <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-100 flex justify-between items-center bg-[#FDFDFD]">
                     <div>
                         <h2 className="text-xl font-bold text-gray-900">Detail Transaksi</h2>
                         <p className="text-sm text-gray-400 mt-0.5">ID: #{selectedTransaction.id}</p>
@@ -316,9 +316,9 @@ const DataTransaksi = () => {
                 </div>
 
                 {/* Modal Content */}
-                <div className="px-8 py-6 max-h-[70vh] overflow-y-auto">
+                <div className="px-4 sm:px-8 py-4 sm:py-6 max-h-[70vh] overflow-y-auto">
                     {/* Customer & Cashier Info */}
-                    <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                         <div className="bg-gray-50 rounded-2xl p-4">
                             <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Pelanggan</p>
                             <p className="font-bold text-gray-900">{selectedTransaction.customerName || "Pelanggan"}</p>
@@ -402,7 +402,7 @@ const DataTransaksi = () => {
                 </div>
 
                 {/* Modal Footer */}
-                <div className="p-8 bg-gray-50/50 flex gap-4">
+                <div className="p-4 sm:p-8 bg-gray-50/50 flex gap-4">
                     <button 
                         onClick={handleViewReceipt}
                         className="flex-1 py-4 bg-white border border-[#EAEAEA] rounded-2xl font-bold text-gray-900 hover:bg-gray-100 transition-all flex items-center justify-center gap-2"

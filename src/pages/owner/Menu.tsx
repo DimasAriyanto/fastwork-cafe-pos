@@ -109,7 +109,7 @@ const OwnerMenu = () => {
     <div className="space-y-8 font-sans" onClick={() => setIsCategoryOpen(false)}>
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-[#202224]">Menu Makanan</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#202224]">Menu Makanan</h1>
       </div>
 
       {/* Action Bar */}

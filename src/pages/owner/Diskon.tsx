@@ -333,9 +333,9 @@ const OwnerDiskon = () => {
 
       {/* Modal Tambah Diskon */}
       {isOpenTambahDiskonModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity" onClick={handleCloseModal}>
-            <div 
-                className="bg-white w-[550px] rounded-[20px] shadow-2xl overflow-hidden transform transition-all scale-100"
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity" onClick={handleCloseModal}>
+            <div
+                className="bg-white w-full max-w-[550px] rounded-[20px] shadow-2xl overflow-hidden transform transition-all scale-100"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Modal Header */}
@@ -350,7 +350,7 @@ const OwnerDiskon = () => {
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-6 max-h-[80vh] overflow-y-auto">
+                <div className="p-4 sm:p-6 max-h-[80vh] overflow-y-auto">
                     <form className="space-y-4" onSubmit={handleSubmit}>
                         {/* Nama Diskon */}
                         <div className="space-y-1.5">
@@ -470,9 +470,9 @@ const OwnerDiskon = () => {
 
       {/* Modal Edit Diskon */}
       {isOpenEditDiskonModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity" onClick={handleCloseEditModal}>
-            <div 
-                className="bg-white w-[550px] rounded-[20px] shadow-2xl overflow-hidden transform transition-all scale-100"
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity" onClick={handleCloseEditModal}>
+            <div
+                className="bg-white w-full max-w-[550px] rounded-[20px] shadow-2xl overflow-hidden transform transition-all scale-100"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Modal Header */}
@@ -487,7 +487,7 @@ const OwnerDiskon = () => {
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-6 max-h-[80vh] overflow-y-auto">
+                <div className="p-4 sm:p-6 max-h-[80vh] overflow-y-auto">
                     <form className="space-y-4" onSubmit={handleEditSubmit}>
                         {/* Nama Diskon */}
                         <div className="space-y-1.5">

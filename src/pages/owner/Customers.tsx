@@ -112,11 +112,11 @@ const Customers = () => {
   return (
     <div className="space-y-8 font-sans">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-[#202224]">Pelanggan</h1>
-        <button 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#202224]">Pelanggan</h1>
+        <button
           onClick={handleOpenAddModal}
-          className="flex items-center gap-2 px-6 py-2.5 bg-[#FE4E10] text-white rounded-xl shadow-lg shadow-[#FE4E10]/30 hover:bg-[#e0450e] transition-all transform hover:-translate-y-0.5"
+          className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-[#FE4E10] text-white rounded-xl shadow-lg shadow-[#FE4E10]/30 hover:bg-[#e0450e] transition-all transform hover:-translate-y-0.5"
         >
           <Plus size={20} className="stroke-[3]" />
           <span className="font-bold text-sm">Tambah Pelanggan</span>
