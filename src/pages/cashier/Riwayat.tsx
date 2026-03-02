@@ -136,10 +136,6 @@ export default function Riwayat() {
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-500">Nama Pelanggan</span>
-            <span className="font-medium text-gray-900">{tx.customerName}</span>
-          </div>
-          <div className="flex justify-between">
             <span className="text-gray-500">Tanggal Transaksi</span>
             <span className="font-medium text-gray-900 text-right w-32">
               {new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })}, {new Date(tx.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
@@ -233,7 +229,7 @@ export default function Riwayat() {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Riwayat</h1>
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                Daftar transaksi hari ini dengan status, pembayaran, dan pelanggan
+                Daftar transaksi hari ini dengan status dan pembayaran
               </p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 w-full xl:w-auto">
@@ -275,9 +271,6 @@ export default function Riwayat() {
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-bold text-gray-900 text-base sm:text-lg">Order: {tx.id}</h3>
                     <span className="text-gray-500 text-xs sm:text-sm">{formatDate(tx.date)}</span>
-                  </div>
-                  <div className="text-gray-800 font-medium mb-3 text-sm sm:text-base">
-                    {tx.customerName}
                   </div>
                   <div className="flex justify-between items-end gap-2">
                     <div className="text-gray-500 text-xs sm:text-sm">

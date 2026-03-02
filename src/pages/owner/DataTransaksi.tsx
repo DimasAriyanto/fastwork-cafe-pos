@@ -58,7 +58,6 @@ const DataTransaksi = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   /* Receipt State */
-  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   /* Date Filter State */
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
@@ -114,28 +113,18 @@ const DataTransaksi = () => {
 
   const handleViewDetail = async (transaction: Transaction) => {
     setIsModalOpen(true);
-    setIsReceiptOpen(false);
     await fetchTransactionDetail(transaction.id);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setIsReceiptOpen(false);
     setSelectedTransaction(null);
   };
 
   const handleViewReceipt = () => {
-    setIsModalOpen(false);
-    setIsReceiptOpen(true);
-    // Trigger print dialog
     setTimeout(() => {
         window.print();
     }, 100);
-  };
-
-  const closeReceipt = () => {
-    setIsReceiptOpen(false);
-    setSelectedTransaction(null); 
   };
 
   const handleDateSelect = (date: string) => {
@@ -262,7 +251,6 @@ const DataTransaksi = () => {
                             <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">ID</th>
                             <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">Tanggal</th>
                             <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">Kasir</th>
-                            <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">Pelanggan</th>
                             <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">Metode</th>
                             <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider text-center">Qty</th>
                             <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">Total</th>
@@ -275,7 +263,6 @@ const DataTransaksi = () => {
                                 <td className="px-6 py-4 font-bold text-[#202224]">#{transaction.id}</td>
                                 <td className="px-6 py-4 text-gray-600 text-sm">{formatDate(transaction.createdAt)}</td>
                                 <td className="px-6 py-4 font-medium text-gray-700">{transaction.employeeName || "-"}</td>
-                                <td className="px-6 py-4 text-gray-600">{transaction.customerName || "Pelanggan"}</td>
                                 <td className="px-6 py-4">
                                     <span className="px-3 py-1 bg-[#F1F4FD] text-[#5887FF] rounded-full text-xs font-bold uppercase">
                                         {transaction.paymentMethod}
@@ -317,12 +304,8 @@ const DataTransaksi = () => {
 
                 {/* Modal Content */}
                 <div className="px-4 sm:px-8 py-4 sm:py-6 max-h-[70vh] overflow-y-auto">
-                    {/* Customer & Cashier Info */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                        <div className="bg-gray-50 rounded-2xl p-4">
-                            <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Pelanggan</p>
-                            <p className="font-bold text-gray-900">{selectedTransaction.customerName || "Pelanggan"}</p>
-                        </div>
+                    {/* Cashier Info */}
+                    <div className="mb-8">
                         <div className="bg-gray-50 rounded-2xl p-4">
                             <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Kasir</p>
                             <p className="font-bold text-gray-900">{selectedTransaction.employeeName || "-"}</p>
@@ -420,89 +403,6 @@ const DataTransaksi = () => {
         </div>
       )}
 
-      {/* Mini Receipt Modal */}
-      {isReceiptOpen && selectedTransaction && (
-           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={closeReceipt} />
-                <div className="relative bg-white w-full max-w-sm shadow-2xl p-8 transform animate-in slide-in-from-bottom-10">
-                    <div className="text-center mb-8">
-                        <h2 className="text-2xl font-black tracking-tighter uppercase mb-1 italic">POS CAFE</h2>
-                        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">Jl. Contoh No. 123, Jakarta</p>
-                        <p className="text-[10px] text-gray-400 font-mono">--------------------------------------</p>
-                    </div>
-
-                    <div className="font-mono text-[10px] space-y-1 mb-6">
-                        <div className="flex justify-between">
-                            <span>REG: {selectedTransaction.id}</span>
-                            <span>{selectedTransaction.createdAt.split('T')[1].substring(0,5)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>CSR: {selectedTransaction.employeeName || "-"}</span>
-                            <span>{selectedTransaction.createdAt.split('T')[0]}</span>
-                        </div>
-                        <p>--------------------------------------</p>
-                    </div>
-
-                    <div className="font-mono text-[10px] space-y-4 mb-8">
-                        {(selectedTransaction.items || []).map((item, idx) => (
-                            <div key={idx}>
-                                <div className="flex justify-between font-bold">
-                                    <span className="max-w-[150px]">{item.name}</span>
-                                    <span>{formatCurrency(item.subTotal)}</span>
-                                </div>
-                                <div className="text-gray-500 pl-2">
-                                    {item.qty} x {formatCurrency(item.price)}
-                                </div>
-                            </div>
-                        ))}
-                        <p>--------------------------------------</p>
-                    </div>
-
-                    <div className="font-mono text-xs space-y-2 mb-8 uppercase">
-                        <div className="flex justify-between">
-                            <span>Subtotal</span>
-                            <span>{formatCurrency(selectedTransaction.subtotal)}</span>
-                        </div>
-                        {selectedTransaction.taxDetails && selectedTransaction.taxDetails.length > 0 ? (
-                            selectedTransaction.taxDetails.map((td, idx) => (
-                                <div key={idx} className="flex justify-between">
-                                    <span>{td.name} ({td.percentage}%)</span>
-                                    <span>{formatCurrency(td.amount)}</span>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="flex justify-between">
-                                <span>Tax</span>
-                                <span>{formatCurrency(selectedTransaction.taxAmount)}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between font-black text-sm pt-2">
-                            <span>TOTAL</span>
-                            <span>{formatCurrency(selectedTransaction.totalPrice)}</span>
-                        </div>
-                        <div className="flex justify-between pt-2">
-                            <span>{selectedTransaction.paymentMethod}</span>
-                            <span>{formatCurrency(selectedTransaction.paidAmount)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>Change</span>
-                            <span>{formatCurrency(selectedTransaction.changeAmount)}</span>
-                        </div>
-                    </div>
-
-                    <div className="text-center font-mono italic text-[10px] text-gray-400 mt-12 border-t border-dashed pt-4">
-                        THANK YOU FOR YOUR VISIT
-                    </div>
-
-                    <button 
-                        onClick={closeReceipt}
-                        className="mt-8 w-full py-3 bg-black text-white text-[10px] font-bold uppercase tracking-widest hover:bg-gray-800 transition-all no-print"
-                    >
-                        Close
-                    </button>
-                </div>
-           </div>
-      )}
       {createPortal(
         <div className="final-print-container">
           <div className="text-center py-2 font-mono text-[10px] border-b border-dashed mb-4">--- RECEIPT ---</div>

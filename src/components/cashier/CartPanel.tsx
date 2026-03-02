@@ -142,65 +142,6 @@ export default function CartPanel({
         <div className="w-full bg-white flex flex-col h-full">
             <div className="flex-1 overflow-y-auto hide-scrollbar">
                 <div className="p-6">
-                    {/* Customer Info */}
-                    <div className="mb-6 relative" ref={suggestionRef}>
-                        <h3 className="font-medium text-gray-700 mb-3">Nama Pelanggan</h3>
-                        <div className="relative group">
-                            <input
-                                type="text"
-                                placeholder="Tulis nama pelanggan"
-                                value={customer}
-                                onChange={handleCustomerChange}
-                                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                                className="w-full p-4 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white text-gray-700 placeholder-gray-400 transition-all font-medium"
-                            />
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                                <ChevronDown size={20} />
-                            </div>
-                        </div>
-
-                        {/* Custom Dropdown Suggestions */}
-                        {showSuggestions && (customer.length >= 2 || suggestions.length > 0) && (
-                            <div className="absolute left-0 right-0 mt-2 bg-[#202224] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[100] border border-white/5 animate-in fade-in slide-in-from-top-2 duration-200">
-                                <div className="py-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-                                    {suggestions.map((s) => (
-                                        <button
-                                            key={s.id}
-                                            type="button"
-                                            onClick={() => {
-                                                setCustomer(s.name);
-                                                if (setCustomerId) setCustomerId(s.id);
-                                                setShowSuggestions(false);
-                                            }}
-                                            className="w-full text-left px-5 py-4 text-white hover:bg-orange-500 transition-colors flex items-center justify-between group"
-                                        >
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-[15px]">{s.name}</span>
-                                                <span className="text-[11px] text-gray-400 group-hover:text-white/80">ID: CUST-{s.id.toString().padStart(4, '0')}</span>
-                                            </div>
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Plus size={16} />
-                                            </div>
-                                        </button>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setNewCustomer({ ...newCustomer, name: customer });
-                                            setIsAddModalOpen(true);
-                                            setShowSuggestions(false);
-                                        }}
-                                        className="w-full text-left px-5 py-4 border-t border-white/5 text-orange-500 hover:bg-orange-500 hover:text-white transition-colors flex items-center gap-3 font-bold text-sm"
-                                    >
-                                        <div className="bg-orange-500/10 p-2 rounded-lg group-hover:bg-white/20">
-                                            <UserPlus size={18} />
-                                        </div>
-                                        Tambah "{customer || "Pelanggan Baru"}"
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
 
                     <OrderTypeSelector orderType={dineType} setOrderType={setDineType} />
 

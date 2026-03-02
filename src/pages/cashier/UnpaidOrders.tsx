@@ -385,7 +385,7 @@ export default function UnpaidOrders() {
                     <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">Pesanan Belum Dibayar</h1>
-                            <p className="text-sm text-gray-500 mt-1">Daftar transaksi hari ini dengan status, pembayaran, dan pelanggan</p>
+                            <p className="text-sm text-gray-500 mt-1">Daftar transaksi hari ini dengan status dan pembayaran</p>
                         </div>
 
                         <div className="flex items-center gap-3 w-full xl:w-auto">
@@ -429,12 +429,8 @@ export default function UnpaidOrders() {
 
                                     <div>
                                         <div className="flex items-start gap-3 mb-4">
-                                            <div className="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-lg">
-                                                {order.customerName.charAt(0).toUpperCase()}
-                                            </div>
                                             <div>
-                                                <h3 className="font-bold text-gray-800">{order.customerName}</h3>
-                                                <p className="text-xs text-gray-500">Order {order.id}</p>
+                                                <h3 className="font-bold text-gray-800">Order #{order.id}</h3>
                                             </div>
                                         </div>
                                         <div className="mb-4 text-xs text-gray-500">
@@ -505,33 +501,8 @@ export default function UnpaidOrders() {
                             <div className="p-6 flex-1 overflow-y-auto scroll-area hide-scrollbar">
                                 <div className="flex justify-between items-start mb-6">
                                     <div className="text-center w-full relative">
-                                        {isEditingName ? (
-                                            <input
-                                                autoFocus
-                                                type="text"
-                                                className="font-bold text-lg text-gray-900 text-center border-b-2 border-orange-500 focus:outline-none w-full bg-transparent px-2 py-1"
-                                                value={tempCustomerName}
-                                                onChange={(e) => setTempCustomerName(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
-                                            />
-                                        ) : (
-                                            <h2 className="font-bold text-lg text-gray-900 px-2 py-1 border-b-2 border-transparent">{selectedOrder.customerName}</h2>
-                                        )}
-                                        <p className="text-gray-500 text-sm">{selectedOrder.id}</p>
+                                        <h2 className="font-bold text-lg text-gray-900 px-2 py-1">Order #{selectedOrder.id}</h2>
                                     </div>
-                                    <button
-                                        onClick={() => {
-                                            if (isEditingName) {
-                                                handleSaveName();
-                                            } else {
-                                                setTempCustomerName(selectedOrder.customerName);
-                                                setIsEditingName(true);
-                                            }
-                                        }}
-                                        className={`absolute right-6 top-6 p-2 rounded-lg hover:bg-gray-100 transition-colors ${isEditingName ? 'bg-orange-50 text-orange-500' : 'text-gray-400'}`}
-                                    >
-                                        {isEditingName ? <Check size={16} /> : <Edit size={16} />}
-                                    </button>
                                 </div>
 
                                 <div className="mb-6">
