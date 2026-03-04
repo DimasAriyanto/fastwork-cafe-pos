@@ -1,23 +1,37 @@
 import { useState, useMemo } from "react";
 import { X, Search, Plus } from "lucide-react";
-import { PRODUCTS_BY_CATEGORY, CATEGORIES } from "../../../constants/products";
 import type { Product } from "../../../types/cashier";
 
 type AddMenuModalProps = {
     isOpen: boolean;
     onClose: () => void;
     onAddProduct: (product: Product) => void;
+    products: Product[];
+    categories: { name: string; icon: string }[];
 };
 
-export default function AddMenuModal({ isOpen, onClose, onAddProduct }: AddMenuModalProps) {
+export default function AddMenuModal({ isOpen, onClose, onAddProduct, products, categories }: AddMenuModalProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("Semua Menu");
 
     const filteredProducts = useMemo(() => {
-        const products = PRODUCTS_BY_CATEGORY[selectedCategory] || [];
-        if (!searchTerm) return products;
-        return products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    }, [selectedCategory, searchTerm]);
+        let result = products;
+        
+        if (selectedCategory !== "Semua Menu") {
+            result = result.filter(p => p.category === selectedCategory);
+        }
+        
+        if (searchTerm) {
+            result = result.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        }
+        
+        return result;
+    }, [selectedCategory, searchTerm, products]);
+
+    const allCategories = useMemo(() => [
+        { name: "Semua Menu", icon: "🍽️" },
+        ...categories
+    ], [categories]);
 
     if (!isOpen) return null;
 
@@ -57,12 +71,12 @@ export default function AddMenuModal({ isOpen, onClose, onAddProduct }: AddMenuM
                     </div>
 
                     <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-                        {CATEGORIES.map(cat => (
+                        {allCategories.map(cat => (
                             <button
                                 key={cat.name}
                                 onClick={() => setSelectedCategory(cat.name)}
                                 className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${selectedCategory === cat.name
-                                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
+                                    ? "bg-[#FE4E10] text-white shadow-lg shadow-[#FE4E10]/20"
                                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                                     }`}
                             >
@@ -84,24 +98,24 @@ export default function AddMenuModal({ isOpen, onClose, onAddProduct }: AddMenuM
                                 <div
                                     key={product.id}
                                     className="bg-white border border-gray-100 rounded-2xl p-3 flex flex-col gap-3 hover:shadow-xl hover:border-orange-200 transition-all group cursor-pointer"
-                                    onClick={() => onAddProduct(product)} // Bisa klik di seluruh card
+                                    onClick={() => onAddProduct(product)}
                                 >
                                     <div className="w-24 h-24 mx-auto rounded-xl bg-gray-100 overflow-hidden relative flex-shrink-0">
                                         <img
                                             src={product.image}
                                             alt={product.name}
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 cursor-pointer"
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                         />
                                     </div>
                                     <div className="text-center">
-                                        <h4 className="font-bold text-gray-900 group-hover:text-orange-500 transition-colors line-clamp-1">{product.name}</h4>
-                                        <p className="text-orange-500 font-bold">Rp {product.price.toLocaleString("id-ID")}</p>
+                                        <h4 className="font-bold text-gray-900 group-hover:text-[#FE4E10] transition-colors line-clamp-1">{product.name}</h4>
+                                        <p className="text-[#FE4E10] font-black font-mono">Rp {product.price.toLocaleString("id-ID")}</p>
                                     </div>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); onAddProduct(product); }}
-                                        className="w-full py-2 bg-orange-50 text-orange-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-orange-500 hover:text-white transition-all active:scale-95 shadow-sm"
+                                        className="w-full py-2 bg-orange-50 text-[#FE4E10] rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#FE4E10] hover:text-white transition-all active:scale-95 shadow-sm"
                                     >
-                                        <Plus size={18} /> Tambah
+                                        <Plus size={16} /> Tambah
                                     </button>
                                 </div>
                             ))}

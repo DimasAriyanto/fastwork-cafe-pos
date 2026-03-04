@@ -55,7 +55,7 @@ export default function QRISPaymentModal({
                 <div className="bg-[#F8F9FA] rounded-2xl p-6 mb-8 text-center">
                     <p className="text-gray-500 text-sm font-medium mb-1">Total Pembayaran</p>
                     <p className="text-[32px] font-bold text-[#1F2937]">
-                        Rp {total.toLocaleString("id-ID")}
+                        Rp {(total || 0).toLocaleString("id-ID")}
                     </p>
                 </div>
 

@@ -12,7 +12,6 @@ type PaymentModalProps = {
     taxDetails?: { name: string; amount: number; percentage: number }[];
     discount?: number;
     manualDiscount?: { type: 'fixed' | 'percentage'; value: number } | null;
-    discountAmount?: number;
     onPaymentSuccess: (
         paidAmount: number,
         change: number,
@@ -32,7 +31,6 @@ export default function PaymentModal({
     taxDetails,
     discount,
     manualDiscount,
-    discountAmount,
     onPaymentSuccess,
 }: PaymentModalProps) {
     const [cashAmount, setCashAmount] = useState("");
@@ -134,7 +132,7 @@ export default function PaymentModal({
                                         )}
 
                                         <p className="mt-1 font-semibold">
-                                            Rp.{(item.price * item.qty).toLocaleString("id-ID")},00
+                                            Rp.{((item.price || 0) * (item.qty || 0)).toLocaleString("id-ID")},00
                                         </p>
                                     </div>
                                 ))}
@@ -144,7 +142,7 @@ export default function PaymentModal({
                                 <div className="flex justify-between text-lg">
                                     <span className="text-gray-500">Subtotal</span>
                                     <span className="font-semibold">
-                                        Rp.{subtotal.toLocaleString("id-ID")},00
+                                        Rp.{(subtotal || 0).toLocaleString("id-ID")},00
                                     </span>
                                 </div>
 
@@ -152,7 +150,7 @@ export default function PaymentModal({
                                     <div className="flex justify-between text-lg text-orange-500 italic font-medium">
                                         <span className="text-gray-500">Promo ({discount}%)</span>
                                         <span>
-                                            - Rp.{(subtotal * discount / 100).toLocaleString("id-ID")},00
+                                            - Rp.{((subtotal || 0) * (discount || 0) / 100).toLocaleString("id-ID")},00
                                         </span>
                                     </div>
                                 )}
@@ -164,7 +162,7 @@ export default function PaymentModal({
                                         </span>
                                         <span>
                                             - Rp.{ (manualDiscount.type === 'percentage' 
-                                                ? Math.round(subtotal * (manualDiscount.value / 100)) 
+                                                ? Math.round((subtotal || 0) * (manualDiscount.value / 100)) 
                                                 : manualDiscount.value
                                             ).toLocaleString("id-ID") },00
                                         </span>
@@ -176,7 +174,7 @@ export default function PaymentModal({
                                         <div key={idx} className="flex justify-between text-lg">
                                             <span className="text-gray-500">{t.name} ({t.percentage}%)</span>
                                             <span className="font-semibold">
-                                                Rp.{t.amount.toLocaleString("id-ID")},00
+                                                Rp.{(t.amount || 0).toLocaleString("id-ID")},00
                                             </span>
                                         </div>
                                     ))
@@ -184,7 +182,7 @@ export default function PaymentModal({
                                     <div className="flex justify-between text-lg">
                                         <span className="text-gray-500">Pajak ({(taxRate * 100).toFixed(0)}%)</span>
                                         <span className="font-semibold">
-                                            Rp.{tax.toLocaleString("id-ID")},00
+                                            Rp.{(tax || 0).toLocaleString("id-ID")},00
                                         </span>
                                     </div>
                                 )}
@@ -192,7 +190,7 @@ export default function PaymentModal({
                                 <div className="flex justify-between text-xl pt-3">
                                     <span className="font-semibold">Total</span>
                                     <span className="font-semibold">
-                                        Rp.{total.toLocaleString("id-ID")},00
+                                        Rp.{(total || 0).toLocaleString("id-ID")},00
                                     </span>
                                 </div>
                             </div>

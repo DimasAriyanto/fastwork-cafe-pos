@@ -31,6 +31,10 @@ export default function UnpaidOrders() {
     const [isEditingName, setIsEditingName] = useState(false);
     const [tempCustomerName, setTempCustomerName] = useState("");
 
+    // Dynamic Menu Data
+    const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
+    const [allProducts, setAllProducts] = useState<Product[]>([]);
+
     // Modal states using shared hook
     const {
         isPaymentModalOpen, openPaymentModal, closePaymentModal,
@@ -42,6 +46,43 @@ export default function UnpaidOrders() {
     // Manual Discount State for Sidebar
     const [manualDiscountType, setManualDiscountType] = useState<'fixed' | 'percentage'>('fixed');
     const [manualDiscountValue, setManualDiscountValue] = useState("");
+
+    // Fetch dynamic menu data
+    useEffect(() => {
+        const fetchMenuData = async () => {
+            try {
+                const [productsDataArr, categoriesDataArr] = await Promise.all([
+                    apiClient.getMenus({ limit: 100 }),
+                    apiClient.getCategories()
+                ]);
+
+                const productsData = productsDataArr.map((m: any) => ({
+                    id: m.id,
+                    name: m.name,
+                    category: m.categoryName,
+                    price: m.price,
+                    image: m.image ? apiClient.getImageUrl(m.image) : `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random`,
+                    isAvailable: m.isAvailable,
+                    variants: m.variants?.map((v: any) => v.name) || [],
+                    toppings: (m.toppings || []).map((t: any) => ({
+                        id: Number(t.id),
+                        name: t.name,
+                        price: Number(t.price)
+                    }))
+                }));
+
+                setAllProducts(productsData);
+                setCategories(categoriesDataArr.map((c: any) => ({
+                    name: c.name,
+                    icon: c.name.includes("Minuman") ? "🥤" : c.name.includes("Kopi") ? "☕" : "🍽️",
+                })));
+            } catch (error) {
+                console.error("Failed to fetch menu data:", error);
+            }
+        };
+
+        fetchMenuData();
+    }, []);
 
 
     // Filter orders
@@ -115,14 +156,15 @@ export default function UnpaidOrders() {
                             variantId: item.variantId,
                             name: item.name, 
                             qty: item.qty,
-                            price: item.finalPrice || item.price,            
-                            basePrice: item.originalPrice, 
-                            variant: item.variantName,
+                            price: Number(item.finalPrice || item.price || item.unitPrice || 0),            
+                            basePrice: Number(item.originalPrice || item.basePrice || item.price || 0), 
+                            variant: item.variantName || item.variant,
                             toppings: (item.toppings || []).map((t: any) => ({
                                 name: t.name,
-                                price: t.price,
+                                price: Number(t.price || 0),
                                 toppingId: t.toppingId
-                            }))
+                            })),
+                            note: item.notes || item.note
                         }))
                     } as UnpaidOrder
                 }));
@@ -256,14 +298,15 @@ export default function UnpaidOrders() {
                         variantId: i.variantId,
                         name: i.name,
                         qty: i.qty,
-                        price: i.price,            
-                        basePrice: i.originalPrice, 
-                        variant: i.variantName,
+                        price: Number(i.finalPrice || i.price || i.unitPrice || 0),            
+                        basePrice: Number(i.originalPrice || i.basePrice || i.price || 0), 
+                        variant: i.variantName || i.variant,
                         toppings: (i.toppings || []).map((t: any) => ({
                             name: t.name,
-                            price: t.price,
+                            price: Number(t.price || 0),
                             toppingId: t.toppingId
-                        }))
+                        })),
+                        note: i.notes || i.note
                     }))
                 } as UnpaidOrder
             }));
@@ -348,6 +391,10 @@ export default function UnpaidOrders() {
         };
 
         updateUnpaidOrder(updatedOrder);
+        setFetchedDetails(prev => ({
+            ...prev,
+            [selectedOrder.id]: updatedOrder
+        }));
         setIsEditingName(false);
     };
 
@@ -404,6 +451,10 @@ export default function UnpaidOrders() {
         };
 
         updateUnpaidOrder(updatedOrder);
+        setFetchedDetails(prev => ({
+            ...prev,
+            [selectedOrder.id]: updatedOrder
+        }));
         // We keep the modal open so user can add multiple items
     };
 
@@ -449,6 +500,10 @@ export default function UnpaidOrders() {
         };
 
         updateUnpaidOrder(updatedOrder);
+        setFetchedDetails(prev => ({
+            ...prev,
+            [selectedOrder.id]: updatedOrder
+        }));
     };
 
     const handleDeleteItem = (menuId: number | undefined, variantId: number | undefined) => {
@@ -488,6 +543,10 @@ export default function UnpaidOrders() {
         };
 
         updateUnpaidOrder(updatedOrder);
+        setFetchedDetails(prev => ({
+            ...prev,
+            [selectedOrder.id]: updatedOrder
+        }));
     };
 
 
@@ -865,7 +924,6 @@ export default function UnpaidOrders() {
                 total={selectedOrder?.totalPrice || 0}
                 discount={selectedOrder?.discount || 0}
                 manualDiscount={selectedOrder?.manualDiscount || null}
-                discountAmount={selectedOrder?.discountAmount || 0}
                 taxDetails={selectedOrder?.taxDetails}
                 onPaymentSuccess={handlePaymentSuccess}
             />
@@ -890,6 +948,8 @@ export default function UnpaidOrders() {
                 isOpen={showAddMenu}
                 onClose={() => setShowAddMenu(false)}
                 onAddProduct={handleAddProduct}
+                products={allProducts}
+                categories={categories}
             />
         </>
     );
