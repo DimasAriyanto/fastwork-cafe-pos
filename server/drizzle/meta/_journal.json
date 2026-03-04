@@ -36,6 +36,13 @@
       "when": 1771736839598,
       "tag": "0004_puzzling_thor_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1772639942329,
+      "tag": "0005_curved_stellaris",
+      "breakpoints": true
     }
   ]
 }

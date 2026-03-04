@@ -1,27 +1,18 @@
-import { db } from "../db/index";
-import {
-  transactions,
-  transactionItems,
-  transactionItemToppings,
-  payments,
-  menuStockHistory,
-  menus,
-  toppings,
-  users,
-  menuVariants,
-  employees,
-  taxes,
-} from "../db/schemas/index";
-import { eq, sql, desc, inArray, and, gte, lte } from "drizzle-orm";
+import { db } from '../db';
+import { transactions, transactionItems, transactionItemToppings, payments, menuStockHistory } from '../db/schemas/transactions';
+import { eq, and, sql, desc, inArray, gte, lte } from 'drizzle-orm';
+import { menus, toppings, menuVariants } from '../db/schemas/menu';
+import { users } from '../db/schemas/auth';
+import { employees } from '../db/schemas/hr';
+import { taxes } from '../db/schemas/sales';
 
-// Interface for creating a PENDING order (no payment yet)
 export interface CreateOrderParams {
   outletId: number;
-  cashierId: number; // employee id of cashier
-  createdBy: number; // user id
+  cashierId: number;
   customerName?: string;
   notes?: string;
   orderType?: string;
+  createdBy: number;
   items: Array<{
     menuId: number;
     variantId?: number;
@@ -29,6 +20,9 @@ export interface CreateOrderParams {
     price: number;
     toppings?: { toppingId: number; price: number }[];
   }>;
+  discountAmount?: number;
+  manualDiscountType?: 'fixed' | 'percentage';
+  manualDiscountValue?: number;
 }
 
 // Interface Parameter (Sudah mencakup semua)
@@ -50,6 +44,9 @@ export interface CreateTransactionParams {
     discount?: number;
     toppings?: { toppingId: number; price: number }[];
   }>;
+  manualDiscountType?: 'fixed' | 'percentage';
+  manualDiscountValue?: number;
+  discountAmount?: number;
 }
 
 export class TransactionRepository {
@@ -65,7 +62,9 @@ export class TransactionRepository {
         taxAmount: data.taxAmount,
         totalPrice: data.totalAmount,
         serviceChargeAmount: 0,
-        discountAmount: 0,
+        discountAmount: data.discountAmount || 0,
+        manualDiscountType: data.manualDiscountType,
+        manualDiscountValue: data.manualDiscountValue || 0,
         status: "completed",
         paymentStatus: "paid", // Status transaksi lunas
         totalItems: data.items.reduce((acc, curr) => acc + curr.qty, 0),
@@ -150,29 +149,43 @@ export class TransactionRepository {
         return { ...item, unitPrice };
       });
 
-      // Dynamic Tax Logic
+      // 1. Calculate Discount (Moved up to calculate tax after discount)
+      let discountAmount = data.discountAmount || 0;
+      if (!data.discountAmount) {
+        if (data.manualDiscountType === 'percentage') {
+          discountAmount = Math.round(subtotal * ((data.manualDiscountValue || 0) / 100));
+        } else if (data.manualDiscountType === 'fixed') {
+          discountAmount = data.manualDiscountValue || 0;
+        }
+      }
+
+      // 2. Calculate Total After Discount
+      const totalAfterDiscount = subtotal - discountAmount;
+
+      // 3. Dynamic Tax Logic (Calculated after discount)
       const activeTaxes = await tx.select().from(taxes).where(eq(taxes.isActive, true));
       
-      // Calculate tax breakdown
       const taxDetails = activeTaxes.map(t => ({
         name: t.name,
         percentage: parseFloat(t.percentage.toString()),
-        amount: Math.round(subtotal * (parseFloat(t.percentage.toString()) / 100))
+        amount: Math.round(totalAfterDiscount * (parseFloat(t.percentage.toString()) / 100))
       }));
 
       const taxAmount = taxDetails.reduce((sum, t) => sum + t.amount, 0);
-      const totalPrice = subtotal + taxAmount;
+      const finalTotalPrice = totalAfterDiscount + taxAmount;
 
-      // 1. INSERT header
+      // 4. INSERT header
       const [trxResult] = await tx.insert(transactions).values({
         outletId: data.outletId,
         cashierId: data.cashierId,
         subtotal,
         taxAmount,
-        totalPrice,
+        totalPrice: finalTotalPrice,
         taxDetails: JSON.stringify(taxDetails),
         serviceChargeAmount: 0,
-        discountAmount: 0,
+        discountAmount,
+        manualDiscountType: data.manualDiscountType,
+        manualDiscountValue: data.manualDiscountValue || 0,
         status: 'pending',
         paymentStatus: 'unpaid',
         totalItems: data.items.reduce((acc, curr) => acc + curr.qty, 0),
@@ -183,7 +196,7 @@ export class TransactionRepository {
 
       const transactionId = trxResult.insertId;
 
-      // 2. INSERT items
+      // 5. INSERT items
       for (const item of mappedItems) {
         // unitPriceIncludingToppings is (base price + toppings)
         const unitPrice = item.unitPrice; 
@@ -232,23 +245,39 @@ export class TransactionRepository {
         return { ...item, unitPrice };
       });
 
-      // 3. Dynamic Tax Logic
+      // 3. Calculate Discount
+      let discountAmount = data.discountAmount || 0;
+      if (!data.discountAmount) {
+        if (data.manualDiscountType === 'percentage') {
+          discountAmount = Math.round(subtotal * ((data.manualDiscountValue || 0) / 100));
+        } else if (data.manualDiscountType === 'fixed') {
+          discountAmount = data.manualDiscountValue || 0;
+        }
+      }
+
+      // 4. Calculate Total After Discount
+      const totalAfterDiscount = subtotal - discountAmount;
+
+      // 5. Dynamic Tax Logic (Calculated after discount)
       const activeTaxes = await tx.select().from(taxes).where(eq(taxes.isActive, true));
       const taxDetails = activeTaxes.map(t => ({
         name: t.name,
         percentage: parseFloat(t.percentage.toString()),
-        amount: Math.round(subtotal * (parseFloat(t.percentage.toString()) / 100))
+        amount: Math.round(totalAfterDiscount * (parseFloat(t.percentage.toString()) / 100))
       }));
       const taxAmount = taxDetails.reduce((sum, t) => sum + t.amount, 0);
-      const totalPrice = subtotal + taxAmount;
+      const finalTotalPrice = totalAfterDiscount + taxAmount;
 
       // 4. Update Header
       await tx.update(transactions)
         .set({
           subtotal,
           taxAmount,
-          totalPrice,
+          totalPrice: finalTotalPrice,
           taxDetails: JSON.stringify(taxDetails),
+          discountAmount,
+          manualDiscountType: data.manualDiscountType,
+          manualDiscountValue: data.manualDiscountValue || 0,
           totalItems: data.items.reduce((acc, curr) => acc + curr.qty, 0),
           orderType: data.orderType || existing.orderType,
           notes: data.notes || existing.notes,
@@ -275,17 +304,16 @@ export class TransactionRepository {
           menuId: item.menuId,
           variantId: item.variantId || null,
           qty: item.qty,
-          originalPrice: item.price, // Base price
-          subTotal: lineTotal,       // Line total (unit * qty)
-          finalPrice: unitPrice,     // Unit price (base + toppings)
+          originalPrice: item.price,
+          subTotal: lineTotal,
+          finalPrice: unitPrice,
           discountPercentage: 0,
         });
-        const newItemId = itemRes.insertId;
-
+        const transactionItemId = itemRes.insertId;
         if (item.toppings && item.toppings.length > 0) {
           for (const topping of item.toppings) {
             await tx.insert(transactionItemToppings).values({
-              transactionItemId: newItemId,
+              transactionItemId,
               toppingId: topping.toppingId,
               price: topping.price,
             });
@@ -295,23 +323,11 @@ export class TransactionRepository {
     });
   }
 
-  // Delete a PENDING order
+  // Delete a pending order
   async deleteTransaction(transactionId: number): Promise<void> {
     await db.transaction(async (tx) => {
-      const [existing] = await tx.select().from(transactions).where(eq(transactions.id, transactionId));
-      if (!existing) throw new Error('Transaksi tidak ditemukan');
-      if (existing.paymentStatus === 'paid') throw new Error('Tidak bisa menghapus transaksi yang sudah lunas');
-
-      // 1. Clear items and toppings
-      const items = await tx.select({ id: transactionItems.id }).from(transactionItems).where(eq(transactionItems.transactionId, transactionId));
-      const itemIds = items.map(i => i.id);
-      
-      if (itemIds.length > 0) {
-        await tx.delete(transactionItemToppings).where(inArray(transactionItemToppings.transactionItemId, itemIds));
-        await tx.delete(transactionItems).where(eq(transactionItems.transactionId, transactionId));
-      }
-
-      // 2. Delete Header
+      // Toppings will be deleted via cascade on transaction_items
+      // Transaction items will be deleted via cascade on transactions
       await tx.delete(transactions).where(eq(transactions.id, transactionId));
     });
   }
@@ -417,54 +433,50 @@ export class TransactionRepository {
     startDate?: Date; 
     endDate?: Date 
   }) {
-    const { outletId, cashierId, paymentStatus, limit = 20, page = 1, startDate, endDate } = options;
-    const offset = (Math.max(page, 1) - 1) * limit;
+    const filters = [eq(transactions.outletId, options.outletId)];
+    
+    if (options.cashierId) filters.push(eq(transactions.cashierId, options.cashierId));
+    if (options.paymentStatus) filters.push(eq(transactions.paymentStatus, options.paymentStatus));
+    if (options.startDate) filters.push(gte(transactions.createdAt, options.startDate));
+    if (options.endDate) filters.push(lte(transactions.createdAt, options.endDate));
 
-    const data = await db
+    const query = db
       .select({
         id: transactions.id,
-        customerName: transactions.notes, // Map notes to customerName for consistency
-        totalPrice: transactions.totalPrice,
-        totalItems: transactions.totalItems,
         subtotal: transactions.subtotal,
         taxAmount: transactions.taxAmount,
+        discountAmount: transactions.discountAmount,
+        totalPrice: transactions.totalPrice,
         paymentStatus: transactions.paymentStatus,
         status: transactions.status,
         createdAt: transactions.createdAt,
-        employeeName: employees.name, // Match frontend property name
-        paymentMethod: payments.paymentMethod,
-        paidAmount: payments.amountPaid,
-        changeAmount: payments.changeAmount,
+        notes: transactions.notes,
+        totalItems: transactions.totalItems,
+        orderType: transactions.orderType,
+        cashierName: users.name,
+        employeeName: employees.name,
+        manualDiscountType: transactions.manualDiscountType,
+        manualDiscountValue: transactions.manualDiscountValue,
       })
       .from(transactions)
+      .leftJoin(users, eq(transactions.createdBy, users.id))
       .leftJoin(employees, eq(transactions.cashierId, employees.id))
-      .leftJoin(payments, eq(transactions.id, payments.transactionId))
-      .where(and(
-        eq(transactions.outletId, outletId),
-        cashierId ? eq(transactions.cashierId, cashierId) : sql`1=1`,
-        paymentStatus ? eq(transactions.paymentStatus, paymentStatus) : sql`1=1`,
-        startDate ? gte(transactions.createdAt, startDate) : sql`1=1`,
-        endDate ? lte(transactions.createdAt, endDate) : sql`1=1`
-      ))
-      .orderBy(desc(transactions.createdAt))
-      .limit(limit)
-      .offset(offset);
+      .where(and(...filters))
+      .orderBy(desc(transactions.createdAt));
 
-    return data;
+    if (options.limit && options.page) {
+      query.limit(options.limit).offset((options.page - 1) * options.limit);
+    }
+
+    return await query;
   }
 
   async findById(id: number) {
-    // 1. Ambil Header
-    // 1. Ambil Header + Employee Name
     const [trx] = await db
       .select({
         id: transactions.id,
-        outletId: transactions.outletId,
-        tableId: transactions.tableId,
-        cashierId: transactions.cashierId,
         subtotal: transactions.subtotal,
         taxAmount: transactions.taxAmount,
-        serviceChargeAmount: transactions.serviceChargeAmount,
         discountAmount: transactions.discountAmount,
         totalPrice: transactions.totalPrice,
         status: transactions.status,
@@ -472,61 +484,56 @@ export class TransactionRepository {
         totalItems: transactions.totalItems,
         orderType: transactions.orderType,
         notes: transactions.notes,
-        customerId: transactions.customerId,
-        createdBy: transactions.createdBy,
-        taxDetails: transactions.taxDetails,
         createdAt: transactions.createdAt,
-        updatedAt: transactions.updatedAt,
+        taxDetails: transactions.taxDetails,
+        manualDiscountType: transactions.manualDiscountType,
+        manualDiscountValue: transactions.manualDiscountValue,
+        cashierName: users.name,
         employeeName: employees.name,
       })
       .from(transactions)
+      .leftJoin(users, eq(transactions.createdBy, users.id))
       .leftJoin(employees, eq(transactions.cashierId, employees.id))
       .where(eq(transactions.id, id));
+
     if (!trx) return null;
 
-    // 2. Ambil Items & Toppings (Logic sama seperti sebelumnya)
-    const items = await db.select({
+    // 2. AMBIL ITEMS DENGAN TOPPINGS
+    const rawItems = await db
+      .select({
         id: transactionItems.id,
         menuId: transactionItems.menuId,
-        variantId: transactionItems.variantId,
+        menuName: menus.name,
         qty: transactionItems.qty,
         originalPrice: transactionItems.originalPrice,
-        price: transactionItems.finalPrice,
+        finalPrice: transactionItems.finalPrice,
         subTotal: transactionItems.subTotal,
-        name: menus.name,
         variantName: menuVariants.name,
-    })
-    .from(transactionItems)
-    .leftJoin(menus, eq(transactionItems.menuId, menus.id))
-    .leftJoin(menuVariants, eq(transactionItems.variantId, menuVariants.id))
-    .where(eq(transactionItems.transactionId, id));
+      })
+      .from(transactionItems)
+      .leftJoin(menus, eq(transactionItems.menuId, menus.id))
+      .leftJoin(menuVariants, eq(transactionItems.variantId, menuVariants.id))
+      .where(eq(transactionItems.transactionId, id));
 
-    const itemIds = items.map((i) => i.id);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let toppingsData: any[] = [];
+    const itemIds = rawItems.map((i) => i.id);
+    const allToppings = itemIds.length > 0 
+      ? await db
+          .select({
+            transactionItemId: transactionItemToppings.transactionItemId,
+            name: toppings.name,
+            price: transactionItemToppings.price,
+          })
+          .from(transactionItemToppings)
+          .leftJoin(toppings, eq(transactionItemToppings.toppingId, toppings.id))
+          .where(inArray(transactionItemToppings.transactionItemId, itemIds))
+      : [];
 
-    if (itemIds.length > 0) {
-      toppingsData = await db
-        .select({
-          id: transactionItemToppings.id,
-          transactionItemId: transactionItemToppings.transactionItemId,
-          toppingId: transactionItemToppings.toppingId,
-          name: toppings.name,
-          price: transactionItemToppings.price,
-        })
-        .from(transactionItemToppings)
-        .leftJoin(toppings, eq(transactionItemToppings.toppingId, toppings.id))
-        .where(inArray(transactionItemToppings.transactionItemId, itemIds));
-    }
-
-    const itemsWithTopping = items.map((item) => {
-      const myToppings = toppingsData.filter(
-        (t) => t.transactionItemId === item.id
-      );
-
-      const displayName = item.variantName
-        ? `${item.name} (${item.variantName})`
-        : item.name;
+    const itemsWithTopping = rawItems.map((item) => {
+      const myToppings = allToppings.filter((t) => t.transactionItemId === item.id);
+      
+      // Susun nama display: "Menu (Varian) + Topping1, Topping2"
+      let displayName = item.menuName;
+      if (item.variantName) displayName += ` (${item.variantName})`;
 
       return {
         ...item,

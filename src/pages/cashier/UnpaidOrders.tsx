@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useOutletContext } from "react-router-dom";
-import { Search, Minus, Plus, Trash2, Edit, ClipboardList, Check } from "lucide-react";
+import { Search, Minus, Plus, Trash2, ClipboardList, Check, ShoppingBag } from "lucide-react";
 import DateFilter from "../../components/cashier/DateFilter";
 import type { CashierContextType } from "../../layouts/CashierLayout";
 import PaymentModal from "../../components/cashier/modals/PaymentModal";
@@ -38,6 +38,10 @@ export default function UnpaidOrders() {
         isSuccessModalOpen, openSuccessModal, closeSuccessModal,
         lastTransaction
     } = usePayment();
+
+    // Manual Discount State for Sidebar
+    const [manualDiscountType, setManualDiscountType] = useState<'fixed' | 'percentage'>('fixed');
+    const [manualDiscountValue, setManualDiscountValue] = useState("");
 
 
     // Filter orders
@@ -89,6 +93,12 @@ export default function UnpaidOrders() {
         if (!fetchedDetails[id]) {
             try {
                 const detail = await apiClient.getTransactionDetail(Number(id));
+                
+                // Calculate manual discount object if exists in detail
+                const manualDiscount = detail.manualDiscountType 
+                    ? { type: detail.manualDiscountType as 'fixed' | 'percentage', value: detail.manualDiscountValue || 0 }
+                    : null;
+                
                 setFetchedDetails(prev => ({
                     ...prev,
                     [id]: {
@@ -98,13 +108,15 @@ export default function UnpaidOrders() {
                         tax: detail.taxAmount,
                         customerName: detail.customerName || detail.notes || "Pelanggan",
                         status: "unpaid",
+                        manualDiscount: manualDiscount,
+                        discountAmount: detail.discountAmount || 0,
                         items: (detail.items || []).map((item: any) => ({
                             menuId: item.menuId,
                             variantId: item.variantId,
-                            name: item.name, // name in detail contains name + variant
+                            name: item.name, 
                             qty: item.qty,
-                            price: item.price,            // unit price (base + toppings)
-                            basePrice: item.originalPrice, // base price only
+                            price: item.finalPrice || item.price,            
+                            basePrice: item.originalPrice, 
                             variant: item.variantName,
                             toppings: (item.toppings || []).map((t: any) => ({
                                 name: t.name,
@@ -114,10 +126,69 @@ export default function UnpaidOrders() {
                         }))
                     } as UnpaidOrder
                 }));
+
+                // Initialize sidebar input state from fetched detail
+                if (detail.manualDiscountType) {
+                    setManualDiscountType(detail.manualDiscountType as 'fixed' | 'percentage');
+                    setManualDiscountValue(String(detail.manualDiscountValue || ""));
+                } else {
+                    setManualDiscountType('fixed');
+                    setManualDiscountValue("");
+                }
             } catch (err) {
                 console.error("Gagal memuat detail pesanan:", id, err);
             }
         }
+    };
+
+    const handleApplyManualDiscount = () => {
+        if (!selectedOrderId) return;
+        const val = parseFloat(manualDiscountValue);
+        
+        setFetchedDetails(prev => {
+            const current = prev[selectedOrderId];
+            if (!current) return prev;
+            
+            const manualDiscount = (isNaN(val) || val <= 0) ? null : { type: manualDiscountType, value: val };
+            
+            // Recalculate totalPrice
+            const subtotal = current.subtotal || 0;
+            const discountAmount = manualDiscount ? (manualDiscount.type === 'percentage' ? Math.round(subtotal * (manualDiscount.value / 100)) : manualDiscount.value) : 0;
+            const totalAfterDiscount = subtotal - discountAmount;
+            const taxAmount = (current.taxDetails || []).reduce((sum, t) => sum + Math.round(totalAfterDiscount * (t.percentage / 100)), 0);
+            
+            return {
+                ...prev,
+                [selectedOrderId]: {
+                    ...current,
+                    manualDiscount,
+                    discountAmount,
+                    totalPrice: totalAfterDiscount + taxAmount
+                }
+            };
+        });
+    };
+
+    const handleRemoveManualDiscount = () => {
+        if (!selectedOrderId) return;
+        setManualDiscountValue("");
+        setFetchedDetails(prev => {
+            const current = prev[selectedOrderId];
+            if (!current) return prev;
+            
+            const subtotal = current.subtotal || 0;
+            const taxAmount = (current.taxDetails || []).reduce((sum, t) => sum + Math.round(subtotal * (t.percentage / 100)), 0);
+            
+            return {
+                ...prev,
+                [selectedOrderId]: {
+                    ...current,
+                    manualDiscount: null,
+                    discountAmount: 0,
+                    totalPrice: subtotal + taxAmount
+                }
+            };
+        });
     };
 
     // Reset edit state when selection changes
@@ -153,13 +224,22 @@ export default function UnpaidOrders() {
                         toppingId: t.toppingId,
                         price: t.price
                     }))
-                }))
+                })),
+                manualDiscountType: selectedOrder.manualDiscount?.type || undefined,
+                manualDiscountValue: selectedOrder.manualDiscount?.value || 0,
+                discountAmount: selectedOrder.discountAmount || 0
             };
 
             await apiClient.updateTransaction(Number(selectedOrder.id), payload);
             setIsEditingName(false);
             // Refresh local state by re-fetching details to ensure consistency
             const freshDetail = await apiClient.getTransactionDetail(Number(selectedOrder.id));
+            
+            // Calculate manual discount object if exists in detail
+            const manualDiscount = freshDetail.manualDiscountType 
+                ? { type: freshDetail.manualDiscountType as 'fixed' | 'percentage', value: freshDetail.manualDiscountValue || 0 }
+                : null;
+                
             setFetchedDetails(prev => ({
                 ...prev,
                 [selectedOrder.id]: {
@@ -169,13 +249,15 @@ export default function UnpaidOrders() {
                     tax: freshDetail.taxAmount,
                     customerName: freshDetail.customerName || freshDetail.notes || "Pelanggan",
                     status: "unpaid",
+                    manualDiscount: manualDiscount,
+                    discountAmount: freshDetail.discountAmount || 0,
                     items: (freshDetail.items || []).map((i: any) => ({
                         menuId: i.menuId,
                         variantId: i.variantId,
                         name: i.name,
                         qty: i.qty,
-                        price: i.price,            // unit price (base + toppings)
-                        basePrice: i.originalPrice, // base price only
+                        price: i.price,            
+                        basePrice: i.originalPrice, 
                         variant: i.variantName,
                         toppings: (i.toppings || []).map((t: any) => ({
                             name: t.name,
@@ -295,8 +377,19 @@ export default function UnpaidOrders() {
         }
 
         const newSubtotal = updatedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-        const discountPercent = selectedOrder.discount || 0;
-        const totalAfterDiscount = newSubtotal * (1 - discountPercent / 100);
+        
+        // 1. Promo Discount (Percentage)
+        const promoDiscountPercent = selectedOrder.discount || 0;
+        const promoDiscountAmount = newSubtotal * (promoDiscountPercent / 100);
+        
+        // 2. Manual Discount
+        const manualDiscount = selectedOrder.manualDiscount;
+        const manualDiscountAmount = manualDiscount 
+            ? (manualDiscount.type === 'percentage' ? Math.round(newSubtotal * (manualDiscount.value / 100)) : manualDiscount.value) 
+            : 0;
+            
+        const totalDiscount = Math.min(newSubtotal, promoDiscountAmount + manualDiscountAmount);
+        const totalAfterDiscount = newSubtotal - totalDiscount;
         const newTax = totalAfterDiscount * 0.10;
         const newTotal = totalAfterDiscount + newTax;
 
@@ -305,6 +398,7 @@ export default function UnpaidOrders() {
             items: updatedItems,
             totalItems: updatedItems.reduce((acc, item) => acc + item.qty, 0),
             subtotal: newSubtotal,
+            discountAmount: totalDiscount,
             tax: newTax,
             totalPrice: newTotal
         };
@@ -328,8 +422,19 @@ export default function UnpaidOrders() {
         }).filter(item => item.qty > 0);
 
         const newSubtotal = updatedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-        const discountPercent = selectedOrder.discount || 0;
-        const totalAfterDiscount = newSubtotal * (1 - discountPercent / 100);
+        
+        // 1. Promo Discount (Percentage)
+        const promoDiscountPercent = selectedOrder.discount || 0;
+        const promoDiscountAmount = newSubtotal * (promoDiscountPercent / 100);
+        
+        // 2. Manual Discount
+        const manualDiscount = selectedOrder.manualDiscount;
+        const manualDiscountAmount = manualDiscount 
+            ? (manualDiscount.type === 'percentage' ? Math.round(newSubtotal * (manualDiscount.value / 100)) : manualDiscount.value) 
+            : 0;
+            
+        const totalDiscount = Math.min(newSubtotal, promoDiscountAmount + manualDiscountAmount);
+        const totalAfterDiscount = newSubtotal - totalDiscount;
         const newTax = totalAfterDiscount * 0.10;
         const newTotal = totalAfterDiscount + newTax;
 
@@ -338,6 +443,7 @@ export default function UnpaidOrders() {
             items: updatedItems,
             totalItems: updatedItems.reduce((acc, item) => acc + item.qty, 0),
             subtotal: newSubtotal,
+            discountAmount: totalDiscount,
             tax: newTax,
             totalPrice: newTotal
         };
@@ -355,8 +461,19 @@ export default function UnpaidOrders() {
         });
 
         const newSubtotal = updatedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-        const discountPercent = selectedOrder.discount || 0;
-        const totalAfterDiscount = newSubtotal * (1 - discountPercent / 100);
+        
+        // 1. Promo Discount (Percentage)
+        const promoDiscountPercent = selectedOrder.discount || 0;
+        const promoDiscountAmount = newSubtotal * (promoDiscountPercent / 100);
+        
+        // 2. Manual Discount
+        const manualDiscount = selectedOrder.manualDiscount;
+        const manualDiscountAmount = manualDiscount 
+            ? (manualDiscount.type === 'percentage' ? Math.round(newSubtotal * (manualDiscount.value / 100)) : manualDiscount.value) 
+            : 0;
+            
+        const totalDiscount = Math.min(newSubtotal, promoDiscountAmount + manualDiscountAmount);
+        const totalAfterDiscount = newSubtotal - totalDiscount;
         const newTax = totalAfterDiscount * 0.10;
         const newTotal = totalAfterDiscount + newTax;
 
@@ -365,6 +482,7 @@ export default function UnpaidOrders() {
             items: updatedItems,
             totalItems: updatedItems.reduce((acc, item) => acc + item.qty, 0),
             subtotal: newSubtotal,
+            discountAmount: totalDiscount,
             tax: newTax,
             totalPrice: newTotal
         };
@@ -462,7 +580,7 @@ export default function UnpaidOrders() {
                                                         <span className="text-gray-800 font-medium truncate w-32">{item.name}</span>
                                                         <div className="flex gap-4 text-right">
                                                             <span className="w-6 text-center">{item.qty}</span>
-                                                            <span className="w-20">Rp{item.price.toLocaleString('id-ID')}</span>
+                                                            <span className="w-20">Rp{(item.price || 0).toLocaleString('id-ID')}</span>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -476,7 +594,7 @@ export default function UnpaidOrders() {
                                     <div>
                                         <div className="flex justify-between items-center mb-4 pt-3 border-t border-gray-100">
                                             <span className="font-bold text-gray-700">Total</span>
-                                            <span className="font-bold text-gray-900 text-lg">Rp{order.totalPrice.toLocaleString('id-ID')}</span>
+                                            <span className="font-bold text-gray-900 text-lg">Rp{(order.totalPrice || 0).toLocaleString('id-ID')}</span>
                                         </div>
                                         {/* Button is redundant as whole card is clickable, but kept for clarity */}
                                         <button
@@ -498,30 +616,29 @@ export default function UnpaidOrders() {
                 <div className="h-full flex flex-col bg-white">
                     {selectedOrderId && selectedOrder ? (
                         <>
-                            <div className="p-6 flex-1 overflow-y-auto scroll-area hide-scrollbar">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="text-center w-full relative">
-                                        <h2 className="font-bold text-lg text-gray-900 px-2 py-1">Order #{selectedOrder.id}</h2>
+                            <div className="p-4 sm:p-5 flex-1 overflow-y-auto scroll-area hide-scrollbar">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="text-center w-full relative border-b border-gray-100 pb-2">
+                                        <h2 className="font-bold text-base text-gray-900 leading-tight">Order #{selectedOrder.id}</h2>
                                     </div>
                                 </div>
 
-                                <div className="mb-6">
-                                    <div className="w-full border border-gray-200 rounded-lg p-3 flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Makan di tempat</span>
-                                        {/* Would be a dropdown in full version */}
+                                <div className="mb-4">
+                                    <div className="w-full border border-gray-100 bg-gray-50/50 rounded-lg px-3 py-2 flex justify-between items-center">
+                                        <span className="text-[11px] font-medium text-gray-600 uppercase tracking-widest">{selectedOrder.serviceType || 'Makan di tempat'}</span>
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 mb-6">
+                                <div className="space-y-3 mb-4">
                                     {selectedOrder.items.map((item, idx) => (
-                                        <div key={idx} className="flex gap-3">
-                                            <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                                        <div key={idx} className="flex gap-2.5">
+                                            <div className="w-12 h-12 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden border border-gray-200">
                                                 {/* Placeholder image or mapped if available in item (TransactionItem might need image prop or we map from name) */}
                                                 <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">Img</div>
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="flex justify-between items-start">
-                                                    <h4 className="font-bold text-sm text-gray-800">{item.name}</h4>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-start gap-1">
+                                                    <h4 className="font-bold text-[13px] text-gray-800 leading-tight truncate">{item.name}</h4>
                                                      <button
                                                         onClick={() => handleDeleteItem(item.menuId, item.variantId)}
                                                         className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
@@ -536,11 +653,10 @@ export default function UnpaidOrders() {
                                                         Toppings: {item.toppings.map(t => t.name).join(", ")}
                                                     </p>
                                                 )}
-                                                <div className="flex justify-between items-end mt-2">
-                                                    <span className="text-xs font-medium text-gray-500">Rp{item.price.toLocaleString('id-ID')}</span>
-                                                    <div className="flex items-center gap-3">
-                                                        <button className="p-1 border rounded text-gray-400 hover:bg-gray-50"><Edit size={12} /></button>
-                                                        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2 py-0.5">
+                                                <div className="flex justify-between items-center mt-1.5">
+                                                    <span className="text-[11px] font-bold text-orange-600">Rp{(item.price || 0).toLocaleString('id-ID')}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-md px-1.5 py-0.5">
                                                             <button
                                                                 onClick={() => handleUpdateQty(item.menuId, item.variantId, -1)}
                                                                 className="text-gray-400 hover:text-orange-500"
@@ -565,31 +681,103 @@ export default function UnpaidOrders() {
 
                                 <button
                                     onClick={() => setShowAddMenu(true)}
-                                    className="w-full py-3 border-2 border-dashed border-orange-300 text-orange-500 rounded-xl font-medium mb-8 hover:bg-orange-50 transition-colors flex items-center justify-center gap-2"
+                                    className="w-full py-2 border-2 border-dashed border-orange-200 text-orange-500 rounded-lg text-xs font-bold mb-6 hover:bg-orange-50 transition-colors flex items-center justify-center gap-2"
                                 >
-                                    Tambahkan Menu <Plus size={16} />
+                                    Tambah Menu <Plus size={14} />
                                 </button>
 
 
                                 {/* Summary */}
-                                <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                                    <div className="flex justify-between text-sm mb-2">
-                                        <span className="text-gray-500">Sub Total</span>
-                                        <span className="font-medium">Rp{(selectedOrder.subtotal || 0).toLocaleString('id-ID')}</span>
+                                <div className="bg-gray-50 rounded-xl p-3 mb-3 border border-gray-100">
+                                    <div className="flex justify-between text-[11px] mb-1.5 text-gray-500 font-medium">
+                                        <span>Sub Total</span>
+                                        <span className="text-gray-900 font-bold">Rp{(selectedOrder.subtotal || 0).toLocaleString('id-ID')}</span>
                                     </div>
-                                    {(selectedOrder.discount || 0) > 0 && (
-                                        <div className="flex justify-between text-sm mb-2 text-orange-500 italic">
-                                            <span className="text-gray-500">Potongan ({selectedOrder.discount}%)</span>
-                                            <span className="font-medium">- Rp{((selectedOrder.subtotal || 0) * (selectedOrder.discount || 0) / 100).toLocaleString('id-ID')}</span>
+                                    {selectedOrder.manualDiscount && (
+                                        <div className="flex justify-between text-[11px] mb-1.5 text-orange-600 italic font-bold">
+                                            <span>Manual ({selectedOrder.manualDiscount?.type === 'percentage' ? `${selectedOrder.manualDiscount?.value || 0}%` : `Rp${(selectedOrder.manualDiscount?.value || 0).toLocaleString("id-ID")}`})</span>
+                                            <span>- Rp{(selectedOrder.manualDiscount.type === 'percentage' 
+                                                ? Math.round((selectedOrder.subtotal || 0) * (selectedOrder.manualDiscount.value / 100)) 
+                                                : selectedOrder.manualDiscount.value
+                                            ).toLocaleString("id-ID")}</span>
                                         </div>
                                     )}
-                                    <div className="flex justify-between text-sm mb-4">
-                                        <span className="text-gray-500">Pajak (10%)</span>
-                                        <span className="font-medium">Rp{(selectedOrder.tax || 0).toLocaleString('id-ID')}</span>
+                                    {(selectedOrder.discount || 0) > 0 && (
+                                        <div className="flex justify-between text-[11px] mb-1.5 text-orange-500 italic font-medium">
+                                            <span>Promo ({selectedOrder.discount}%)</span>
+                                            <span className="font-bold">- Rp{((selectedOrder.subtotal || 0) * (selectedOrder.discount || 0) / 100).toLocaleString('id-ID')}</span>
+                                        </div>
+                                    )}
+                                    {selectedOrder.taxDetails && selectedOrder.taxDetails.length > 0 ? (
+                                        selectedOrder.taxDetails.map((t, idx) => (
+                                            <div key={idx} className="flex justify-between text-[11px] mb-1.5 text-gray-500 font-medium">
+                                                <span>{t.name} ({t.percentage}%)</span>
+                                                <span className="text-gray-900 font-bold">Rp{t.amount?.toLocaleString("id-ID") || 0}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="flex justify-between text-[11px] mb-1.5 text-gray-500 font-medium">
+                                            <span>Pajak ({(selectedOrder.taxRate || 0.1) * 100}%)</span>
+                                            <span className="text-gray-900 font-bold">Rp{(selectedOrder.tax || 0).toLocaleString('id-ID')}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between text-base font-black border-t border-gray-200 pt-2 mt-2">
+                                        <span className="text-gray-700">Total</span>
+                                        <span className="text-[#FE4E10]">Rp{(selectedOrder.totalPrice || 0).toLocaleString('id-ID')}</span>
                                     </div>
-                                    <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
-                                        <span>Total</span>
-                                        <span>Rp{(selectedOrder.totalPrice || 0).toLocaleString('id-ID')}</span>
+
+                                    {/* Manual Discount Input Section */}
+                                    <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                                        <div className="flex items-center justify-between mb-2 px-0.5">
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Diskon Manual</span>
+                                            {selectedOrder.manualDiscount && (
+                                                <button 
+                                                    onClick={handleRemoveManualDiscount}
+                                                    className="text-[10px] text-red-500 hover:underline font-bold"
+                                                >
+                                                    HAPUS
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col gap-3 p-3 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipe</span>
+                                                <div className="flex bg-gray-100 rounded-lg p-0.5">
+                                                    <button
+                                                        onClick={() => setManualDiscountType('fixed')}
+                                                        className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${manualDiscountType === 'fixed' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-400'}`}
+                                                    >
+                                                        Rp
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setManualDiscountType('percentage')}
+                                                        className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${manualDiscountType === 'percentage' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-400'}`}
+                                                    >
+                                                        %
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="relative flex-1">
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={manualDiscountValue}
+                                                        onChange={(e) => setManualDiscountValue(e.target.value)}
+                                                        className="w-full p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 bg-gray-50 text-gray-700 h-[38px] text-xs pr-8"
+                                                    />
+                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-[10px]">
+                                                        {manualDiscountType === 'fixed' ? 'Rp' : '%'}
+                                                    </span>
+                                                </div>
+                                                <button 
+                                                    onClick={handleApplyManualDiscount}
+                                                    className="h-[38px] px-4 bg-orange-500 text-white rounded-xl font-bold text-xs hover:bg-orange-600 transition-all active:scale-95 shadow-sm"
+                                                >
+                                                    OK
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -620,7 +808,7 @@ export default function UnpaidOrders() {
                                                     : "border-gray-200 bg-gray-50 opacity-50"
                                                     }`}
                                             >
-                                                <svg viewBox="0 0 80 30" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-[20px] w-auto" > <path d="M76.7227 10.4773H64.024V7.936H76.7227V2.856H56.4053V15.5547H69.104V18.096H56.4053V23.176H76.7227V10.4773Z" fill="black" /> <path d="M53.8667 2.856H48.7867V23.1733H53.8667V2.856Z" fill="black" /> <path d="M25.9307 2.856V7.936H41.168V10.4773H25.9307V23.176H31.008V15.632L38.6293 23.176H46.248L38.2987 15.5547H46.248V2.856H25.9307Z" fill="black" /> <path d="M10.6907 15.5547H15.7573V10.488H10.6907V15.5547ZM11.9627 11.7467H14.5013V14.2853H11.9627V11.7467Z" fill="black" /> <path d="M8.152 2.856H3.70667C3.53867 2.85728 3.37786 2.92428 3.25867 3.04267C3.19937 3.10176 3.15234 3.172 3.12031 3.24935C3.08827 3.3267 3.07185 3.40962 3.072 3.49333V22.5387C3.07185 22.6224 3.08827 22.7053 3.12031 22.7827C3.15234 22.86 3.19937 22.9302 3.25867 22.9893C3.37813 23.107 3.539 23.1731 3.70667 23.1733H15.7707V18.1067H8.152V2.856Z" fill="black" /> <path d="M22.7547 2.856H10.6907V7.936H18.312V15.5547H23.3787V3.49333C23.3802 3.32555 23.3161 3.16381 23.2 3.04267C23.081 2.92563 22.9216 2.8588 22.7547 2.856Z" fill="black" /> <path d="M23.392 18.096H18.312V29.5253H23.392V18.096Z" fill="black" /> <path d="M10.16 0H0.634667C0.466559 0.000701921 0.305536 0.0677938 0.186665 0.186665C0.0677938 0.305536 0.000701921 0.466559 0 0.634667V10.16H1.26933V1.89333C1.27281 1.72708 1.34113 1.56878 1.4597 1.4522C1.57827 1.33562 1.73772 1.26999 1.904 1.26933H10.1707L10.16 0Z" fill="black" /> <path d="M78.7307 16.5067V24.7733C78.73 24.9414 78.6629 25.1025 78.544 25.2213C78.4251 25.3402 78.2641 25.4073 78.096 25.408H69.8293V26.6667H79.3547C79.4388 26.6677 79.5223 26.6521 79.6004 26.6207C79.6785 26.5893 79.7496 26.5428 79.8096 26.4838C79.8696 26.4248 79.9173 26.3545 79.95 26.2769C79.9826 26.1994 79.95 26.2769C79.9826 26.1994 79.9997 26.1161 80 26.032V16.5067H78.7307Z" fill="black" /> </svg>
+                                                <svg viewBox="0 0 80 30" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-[20px] w-auto" > <path d="M76.7227 10.4773H64.024V7.936H76.7227V2.856H56.4053V15.5547H69.104V18.096H56.4053V23.176H76.7227V10.4773Z" fill="black" /> <path d="M53.8667 2.856H48.7867V23.1733H53.8667V2.856Z" fill="black" /> <path d="M25.9307 2.856V7.936H41.168V10.4773H25.9307V23.176H31.008V15.632L38.6293 23.176H46.248L38.2987 15.5547H46.248V2.856H25.9307Z" fill="black" /> <path d="M10.6907 15.5547H15.7573V10.488H10.6907V15.5547ZM11.9627 11.7467H14.5013V14.2853H11.9627V11.7467Z" fill="black" /> <path d="M8.152 2.856H3.70667C3.53867 2.85728 3.37786 2.92428 3.25867 3.04267C3.19937 3.10176 3.15234 3.172 3.12031 3.24935C3.08827 3.3267 3.07185 3.40962 3.072 3.49333V22.5387C3.07185 22.6224 3.08827 22.7053 3.12031 22.7827C3.15234 22.86 3.19937 22.9302 3.25867 22.9893C3.37813 23.107 3.539 23.1731 3.70667 23.1733H15.7707V18.1067H8.152V2.856Z" fill="black" /> <path d="M22.7547 2.856H10.6907V7.936H18.312V15.5547H23.3787V3.49333C23.3802 3.32555 23.3161 3.16381 23.2 3.04267C23.081 2.92563 22.9216 2.8588 22.7547 2.856Z" fill="black" /> <path d="M23.392 18.096H18.312V29.5253H23.392V18.096Z" fill="black" /> <path d="M10.16 0H0.634667C0.466559 0.000701921 0.305536 0.0677938 0.186665 0.186665C0.0677938 0.305536 0.000701921 0.466559 0 0.634667V10.16H1.26933V1.89333C1.27281 1.72708 1.34113 1.56878 1.4597 1.4522C1.57827 1.33562 1.73772 1.26999 1.904 1.26933H10.1707L10.16 0Z" fill="black" /> <path d="M78.7307 16.5067V24.7733C78.73 24.9414 78.6629 25.1025 78.544 25.2213C78.4251 25.3402 78.2641 25.4073 78.096 25.408H69.8293V26.6667H79.3547C79.4388 26.6677 79.5223 26.6521 79.6004 26.6207C79.6785 26.5893 79.7496 26.5428 79.8096 26.4838C79.8696 26.4248 79.9173 26.3545 79.95 26.2769C79.9997 26.1161 80 26.032V16.5067H78.7307Z" fill="black" /> </svg>
                                             </button>
                                             <span className={`text-sm font-medium ${paymentOption === 'QRIS' ? 'text-[#FE4E10]' : 'text-gray-400'}`}>Qris</span>
                                         </div>
@@ -630,24 +818,25 @@ export default function UnpaidOrders() {
                             </div>
 
                             {/* Bottom Buttons */}
-                            <div className="grid grid-cols-3 gap-3 p-4 border-t border-gray-100 bg-white">
+                            <div className="p-3 bg-white border-t border-gray-100 flex gap-2">
                                 <button
                                     onClick={handleCancelOrder}
-                                    className="py-3 px-2 rounded-xl border border-red-200 font-bold text-red-500 hover:bg-red-50 transition-all text-sm"
+                                    className="p-2.5 border border-red-100 rounded-xl text-red-400 hover:bg-red-50 transition-colors"
+                                    title="Batalkan Pesanan"
                                 >
-                                    Batalkan
+                                    <Trash2 size={16} />
                                 </button>
                                 <button
-                                    onClick={() => handleSave()}
-                                    className="py-3 px-2 rounded-xl border border-gray-300 font-bold text-gray-700 hover:bg-gray-50 transition-all text-sm"
+                                    onClick={() => setIsRightPanelOpen(false)}
+                                    className="px-4 py-2.5 border border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:bg-gray-50 transition-colors"
                                 >
-                                    Simpan
+                                    Tutup
                                 </button>
                                 <button
                                     onClick={handlePay}
-                                    className="py-3 px-2 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all transform active:scale-95 text-sm"
+                                    className="flex-1 py-2.5 bg-[#FE4E10] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#E0450E] transition-all shadow-lg shadow-[#FE4E10]/20 flex items-center justify-center gap-2"
                                 >
-                                    Bayar
+                                    Bayar <ShoppingBag size={14} />
                                 </button>
                             </div>
                         </>
@@ -675,6 +864,9 @@ export default function UnpaidOrders() {
                 tax={selectedOrder?.tax || 0}
                 total={selectedOrder?.totalPrice || 0}
                 discount={selectedOrder?.discount || 0}
+                manualDiscount={selectedOrder?.manualDiscount || null}
+                discountAmount={selectedOrder?.discountAmount || 0}
+                taxDetails={selectedOrder?.taxDetails}
                 onPaymentSuccess={handlePaymentSuccess}
             />
 

@@ -51,6 +51,8 @@ export type Transaction = {
     paidAmount?: number;
     change?: number;
     discount?: number;
+    manualDiscount?: { type: "fixed" | "percentage"; value: number } | null;
+    discountAmount?: number;
     cashierName?: string; // employee who created the transaction
 };
 

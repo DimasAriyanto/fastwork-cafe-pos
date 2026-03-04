@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useOutletContext } from "react-router-dom";
-import { Search, X } from "lucide-react";
+import { Search, X, ClipboardList } from "lucide-react";
 import DateFilter from "../../components/cashier/DateFilter";
 import type { CashierContextType } from "../../layouts/CashierLayout";
 import type { Transaction } from "../../types/cashier";
@@ -72,6 +72,12 @@ export default function Riwayat() {
     if (!fetchedDetails[id]) {
       try {
         const detail = await apiClient.getTransactionDetail(Number(id));
+        
+        // Build manualDiscount object from flat fields
+        const manualDiscount = detail.manualDiscountType
+          ? { type: detail.manualDiscountType as 'fixed' | 'percentage', value: detail.manualDiscountValue || 0 }
+          : null;
+
         setFetchedDetails(prev => ({
           ...prev,
           [id]: {
@@ -81,12 +87,14 @@ export default function Riwayat() {
             tax: detail.taxAmount,
             change: detail.changeAmount,
             customerName: detail.customerName || detail.notes || "Pelanggan",
+            manualDiscount: manualDiscount,
+            discountAmount: detail.discountAmount || 0,
             items: (detail.items || []).map((item: any) => ({
-              name: item.name, // contains combined "Name (Variant)"
+              name: item.name,
               qty: item.qty,
-              price: item.price,
-              variant: undefined, // avoid redundant "Rasa: ..." display
-              note: undefined // item-level notes not supported in schema
+              price: item.finalPrice || item.price || 0,
+              variant: undefined,
+              note: undefined
             })),
             serviceType: detail.orderType === 'take_away' ? 'Take Away' : 'Dine In'
           } as Transaction
@@ -111,8 +119,7 @@ export default function Riwayat() {
     return `${day}/${month}/${year} - ${hours}.${minutes}`;
   };
 
-  const formatCurrency = (val: number | undefined | null) =>
-    "Rp" + (val || 0).toLocaleString("id-ID") + ",00";
+  const formatCurrency = (val: number | undefined | null) => "Rp" + (val || 0).toLocaleString("id-ID");
 
   const handlePrintReceipt = () => {
     if (receiptRef.current) {
@@ -121,44 +128,64 @@ export default function Riwayat() {
   };
 
   // Reusable Receipt Content Render
-  const renderReceiptContent = (tx: typeof transactions[0]) => (
+  const renderReceiptContent = (tx: Transaction) => (
     <>
-      <div className="border border-gray-200 rounded-xl p-4 mb-4">
-        <div className="flex justify-between items-center mb-3">
-          <span className="font-bold text-gray-700 text-sm">Detail Transaksi</span>
-          <span className="text-xs text-gray-400 font-mono">{tx.id}</span>
+      <div className="border border-gray-100 bg-white rounded-xl p-3 mb-3 shadow-sm">
+        <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-50">
+          <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center text-orange-400 shrink-0">
+            <ClipboardList size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-gray-900 text-sm truncate">Order #{tx.id}</h3>
+            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">{tx.cashierName || 'Kasir'}</div>
+          </div>
         </div>
-        <div className="space-y-2 text-sm">
+        <div className="space-y-1 text-[10px]">
           <div className="flex justify-between">
-            <span className="text-gray-500">Tipe Pembayaran</span>
+            <span className="text-gray-400 uppercase font-black tracking-widest text-[8px]">ID Transaksi</span>
+            <span className="font-mono text-gray-900">#{tx.id}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400 uppercase font-black tracking-widest text-[8px]">Waktu</span>
+            <span className="font-medium text-gray-900">{formatDate(tx.date)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400 uppercase font-black tracking-widest text-[8px]">Layanan</span>
+            <span className="font-medium text-gray-900">{tx.serviceType === "Dine In" ? "Dine In" : "Take Away"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400 uppercase font-black tracking-widest text-[8px]">Pembayaran</span>
             <span className="font-medium text-gray-900">
               {tx.paymentMethod === "CASH" ? "Tunai" : tx.paymentMethod || "ERROR"}
             </span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">Tanggal Transaksi</span>
-            <span className="font-medium text-gray-900 text-right w-32">
-              {new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })}, {new Date(tx.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">Jenis Layanan</span>
-            <span className="font-medium text-gray-900">{tx.serviceType === "Dine In" ? "Makan di Tempat" : "Bawa Pulang"}</span>
-          </div>
         </div>
       </div>
-
-      <div className="border border-gray-200 rounded-xl p-4 mb-4">
-        <h4 className="font-bold text-gray-700 text-sm mb-3">Detail Pembayaran</h4>
-        <div className="space-y-2 text-sm">
+      <div className="border border-gray-100 bg-gray-50/50 rounded-xl p-3 mb-2">
+        <h4 className="font-black text-gray-400 text-[9px] uppercase tracking-widest mb-2 pb-1 border-b border-gray-100">Detail Pembayaran</h4>
+        <div className="space-y-1.5 text-[11px]">
           <div className="flex justify-between">
             <span className="text-gray-500">Sub Total</span>
             <span className="font-medium text-gray-900">{formatCurrency(tx.subtotal)}</span>
           </div>
           {(tx.discount || 0) > 0 && (
-            <div className="flex justify-between text-orange-500 italic">
-              <span className="text-gray-500">Potongan ({tx.discount}%)</span>
-              <span className="font-medium">- {formatCurrency((tx.subtotal || 0) * (tx.discount || 0) / 100)}</span>
+            <div className="flex justify-between text-orange-500 italic font-medium">
+              <span className="text-gray-400">Promo ({tx.discount}%)</span>
+              <span className="font-bold">- {formatCurrency((tx.subtotal || 0) * (tx.discount || 0) / 100)}</span>
+            </div>
+          )}
+          {(tx as any).manualDiscount && (
+            <div className="flex justify-between text-orange-600 italic font-bold">
+              <span className="text-gray-400">
+                Manual ({(tx as any).manualDiscount.type === 'percentage' 
+                  ? `${(tx as any).manualDiscount.value}%` 
+                  : `Rp${((tx as any).manualDiscount?.value || 0).toLocaleString('id-ID')}`})
+              </span>
+              <span>- {formatCurrency(
+                (tx as any).manualDiscount.type === 'percentage'
+                  ? Math.round((tx.subtotal || 0) * ((tx as any).manualDiscount.value / 100))
+                  : (tx as any).manualDiscount.value
+              )}</span>
             </div>
           )}
           {tx.taxDetails && tx.taxDetails.length > 0 ? (
@@ -175,42 +202,41 @@ export default function Riwayat() {
             </div>
           )}
         </div>
-        <div className="border-t border-gray-100 mt-3 pt-3">
+        <div className="border-t border-gray-100 mt-2.5 pt-2.5">
           <div className="flex justify-between items-center">
-            <span className="font-bold text-gray-900">Total({tx.totalItems})</span>
-            <span className="font-bold text-gray-900">{formatCurrency(tx.totalPrice)}</span>
+            <span className="font-black text-gray-700 text-xs">TOTAL ({tx.totalItems})</span>
+            <span className="font-black text-[#FE4E10] text-lg font-mono">{formatCurrency(tx.totalPrice)}</span>
           </div>
         </div>
-        <div className="space-y-2 text-sm mt-3 pt-2 border-t border-dashed border-gray-200">
+        <div className="space-y-1 text-[10px] mt-2 pt-2 border-t border-dashed border-gray-200">
           <div className="flex justify-between">
             <span className="text-gray-400">Dibayar</span>
-            <span className="font-medium text-gray-600">{formatCurrency(tx.paidAmount || 0)}</span>
+            <span className="font-bold text-gray-600 font-mono">{formatCurrency(tx.paidAmount || 0)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Kembalian</span>
-            <span className="font-medium text-gray-600">{formatCurrency(tx.change || 0)}</span>
+            <span className="font-bold text-gray-600 font-mono">{formatCurrency(tx.change || 0)}</span>
           </div>
         </div>
       </div>
 
-      <div className="border border-gray-200 rounded-xl p-4">
-        <h4 className="font-bold text-gray-700 text-sm mb-3">Detail Pembelian</h4>
-        <div className="flex text-xs text-gray-400 mb-2">
+      <div className="border border-gray-100 rounded-xl p-3">
+        <h4 className="font-black text-gray-400 text-[9px] uppercase tracking-widest mb-2 pb-1 border-b border-gray-100">Detail Pembelian</h4>
+        <div className="flex text-[9px] font-bold text-gray-400 mb-2 uppercase tracking-tight">
           <span className="flex-1">Nama Item</span>
-          <span className="w-12 text-center">Jumlah</span>
-          <span className="w-20 text-right">Harga</span>
+          <span className="w-10 text-center">Qty</span>
+          <span className="w-16 text-right">Harga</span>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {tx.items.map((item, idx) => (
-            <div key={idx} className="text-sm">
-              <div className="flex items-start">
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900">{item.name}</div>
-                  {item.variant && <div className="text-xs text-gray-500 mt-0.5">Rasa: {item.variant}</div>}
-                  {item.note && <div className="text-xs text-orange-500 mt-0.5">Catatan: {item.note}</div>}
+            <div key={idx} className="text-[11px]">
+              <div className="flex items-start gap-1">
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-gray-900 truncate">{item.name}</div>
+                  {item.variant && <div className="text-[9px] text-gray-400 mt-0.5">Varian: {item.variant}</div>}
                 </div>
-                <div className="w-12 text-center text-gray-900">{item.qty}</div>
-                <div className="w-20 text-right text-gray-900">{formatCurrency(item.price)}</div>
+                <div className="w-10 text-center text-gray-900 font-medium">{item.qty}x</div>
+                <div className="w-16 text-right text-gray-900 font-bold font-mono">{formatCurrency(item.price)}</div>
               </div>
             </div>
           ))}
@@ -315,15 +341,15 @@ export default function Riwayat() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setOverlayMode("print")}
-                    className="flex-1 font-bold py-2.5 sm:py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 transition-colors text-center"
+                    className="flex-1 font-black py-2 rounded-xl bg-[#FE4E10] text-white shadow-lg shadow-[#FE4E10]/20 transition-all text-[10px] uppercase tracking-widest active:scale-95"
                   >
-                    Cetak Sekarang
+                    Cetak Struk
                   </button>
                   <button
                     onClick={() => setOverlayMode("view")}
-                    className="flex-1 border border-gray-200 font-bold py-2.5 sm:py-3 rounded-xl bg-white hover:border-gray-300 text-gray-700 transition-colors text-center"
+                    className="flex-1 border border-gray-200 font-black py-2 rounded-xl bg-white text-gray-400 transition-all text-[10px] uppercase tracking-widest hover:bg-gray-50 active:scale-95"
                   >
-                    Lihat Sekarang
+                    Lihat Struk
                   </button>
                 </div>
               </div>
@@ -344,27 +370,27 @@ export default function Riwayat() {
       {overlayMode && selectedTx && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-white/60 backdrop-blur-md" onClick={() => setOverlayMode(null)} />
-          <div className="bg-white w-full max-w-[420px] rounded-2xl shadow-2xl relative z-10 max-h-[90vh] flex flex-col border border-gray-100 animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-2xl">
-              <h3 className="font-bold text-gray-800 text-lg">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl relative z-10 max-h-[92vh] flex flex-col border border-gray-100 animate-in zoom-in-95 duration-200">
+            <div className="p-3.5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-2xl">
+              <h3 className="font-black text-gray-400 text-[10px] uppercase tracking-widest">
                 {overlayMode === "print" ? "Cetak Struk" : "Lihat Struk"}
               </h3>
-              <button onClick={() => setOverlayMode(null)} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors">
-                <X size={20} />
+              <button onClick={() => setOverlayMode(null)} className="p-1.5 hover:bg-gray-200 rounded-full text-gray-400 transition-colors">
+                <X size={18} />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto scroll-area">
-              <div className="text-center mb-6">
-                <h2 className="font-bold text-2xl text-gray-900 mb-1">{selectedTx.id}</h2>
-                <p className="text-gray-500 text-sm">Pratinjau Struk</p>
+            <div className="p-4 overflow-y-auto scroll-area scrollbar-hide">
+              <div className="text-center mb-4 pb-2 border-b border-gray-100 border-dashed">
+                <h2 className="font-black text-2xl text-[#FE4E10] mb-0.5 font-mono">{selectedTx.id}</h2>
+                <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">Pratinjau Struk</p>
               </div>
               {renderReceiptContent(selectedTx)}
             </div>
             {overlayMode === "print" && (
-              <div className="p-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl flex justify-center">
+              <div className="p-3 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl flex justify-center">
                 <button
                   onClick={handlePrintReceipt}
-                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-10 py-2.5 rounded-xl shadow-lg shadow-orange-500/20 active:scale-95 transition-all"
+                  className="w-full bg-[#FE4E10] text-white font-black py-2.5 rounded-xl shadow-lg shadow-[#FE4E10]/20 active:scale-95 transition-all text-[10px] uppercase tracking-widest"
                 >
                   Cetak Sekarang
                 </button>

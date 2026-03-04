@@ -38,22 +38,6 @@ export default function Dashboard() {
   const [selectedProductForModal, setSelectedProductForModal] = useState<CartItem | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | undefined>();
 
-  // Hooks
-  const {
-    cart, addToCart, updateCartItem, removeFromCart, updateQuantity, clearCart,
-    subtotal, tax, total, taxRate, setTaxRate, setTaxes, taxDetails,
-    appliedDiscount, applyDiscountCode, removeDiscount, 
-    manualDiscount, setManualDiscount, discountAmount
-  } = useCart();
-  
-  const {
-    isPaymentModalOpen, openPaymentModal, closePaymentModal,
-    isQRISModalOpen, openQRISModal, closeQRISModal,
-    isSuccessModalOpen, openSuccessModal, closeSuccessModal,
-    lastTransaction
-  } = usePayment();
-  const receiptRef = useRef<HTMLDivElement>(null);
-
   // Fetch Data
   useEffect(() => {
     const fetchData = async () => {
@@ -72,6 +56,7 @@ export default function Dashboard() {
                 image: m.image ? apiClient.getImageUrl(m.image) : `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random`,
                 isAvailable: m.isAvailable,
                 variants: m.variants?.map((v: any) => v.name) || [],
+                // Use per-menu toppings from the API response
                 toppings: (m.toppings || []).map((t: any) => ({
                     id: Number(t.id),
                     name: t.name,
@@ -111,17 +96,29 @@ export default function Dashboard() {
         }
     };
     fetchData();
-  }, [setTaxRate, setTaxes]);
+  }, []);
+
+  // Hooks
+  const {
+    cart, addToCart, updateCartItem, removeFromCart, updateQuantity, clearCart,
+    subtotal, tax, total, taxRate, setTaxRate, setTaxes, taxDetails,
+    appliedDiscount, applyDiscountCode, removeDiscount, totalAfterDiscount
+  } = useCart();
+  const {
+    isPaymentModalOpen, openPaymentModal, closePaymentModal,
+    isQRISModalOpen, openQRISModal, closeQRISModal,
+    isSuccessModalOpen, openSuccessModal, closeSuccessModal,
+    lastTransaction
+  } = usePayment();
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   // Sync cartCount to context
-  useEffect(() => {
-    setCartCount(cart.reduce((acc, item) => acc + item.qty, 0));
+  useMemo(() => {
+    setCartCount(cart.length);
   }, [cart, setCartCount]);
 
   const handlePrintReceipt = () => {
     if (receiptRef.current) {
-        // window.print() might be handled by the PrintableReceipt component's exposed methods or similar
-        // dashboard-before had window.print(), I'll keep it for now but if they use a custom print method, I'll adjust
         window.print();
     }
   };
@@ -146,7 +143,8 @@ export default function Dashboard() {
     setSelectedProductForModal({ 
         ...product, 
         qty: 1
-    } as any);
+        // product.toppings already has the correct per-menu toppings from the API
+    });
     setEditingIndex(undefined);
   };
 
@@ -187,10 +185,7 @@ export default function Dashboard() {
               const t = (c as any).toppings?.find((top: any) => top.name === tName);
               return t ? { toppingId: t.id, price: t.price } : null;
           }).filter(Boolean)
-        })),
-        manualDiscountType: manualDiscount?.type || undefined,
-        manualDiscountValue: manualDiscount?.value || 0,
-        discountAmount: discountAmount
+        }))
       };
 
       // Create order first
@@ -216,8 +211,6 @@ export default function Dashboard() {
         taxRate: taxRate,
         taxDetails: taxDetails,
         discount: appliedDiscount?.percentage || 0,
-        manualDiscount: manualDiscount,
-        discountAmount: discountAmount,
         cashierName: user?.name || user?.username || "Kasir",
         items: cart.map(c => ({ 
           name: c.name, 
@@ -234,7 +227,6 @@ export default function Dashboard() {
 
       clearCart();
       removeDiscount();
-      setManualDiscount(null);
       setCustomer("");
       setCustomerId(null);
       closePaymentModal();
@@ -247,7 +239,7 @@ export default function Dashboard() {
   };
 
   const handleQRISPaymentConfirm = () => {
-    onPaymentConfirm(total, 0, "QRIS");
+    onPaymentConfirm(totalAfterDiscount, 0, "QRIS");
   };
 
   const createUnpaidOrder = async () => {
@@ -266,17 +258,13 @@ export default function Dashboard() {
               const t = (c as any).toppings?.find((top: any) => top.name === tName);
               return t ? { toppingId: t.id, price: t.price } : null;
           }).filter(Boolean)
-        })),
-        manualDiscountType: manualDiscount?.type || undefined,
-        manualDiscountValue: manualDiscount?.value || 0,
-        discountAmount: discountAmount
+        }))
       };
 
       await createOrder(orderData);
       alert(`Pesanan ${customer || "tanpa nama"} disimpan sebagai Bayar Nanti!`);
       clearCart();
       removeDiscount();
-      setManualDiscount(null);
       setCustomer("");
       setCustomerId(null);
       setIsRightPanelOpen(false);
@@ -337,8 +325,6 @@ export default function Dashboard() {
             removeDiscount={removeDiscount}
             subtotal={subtotal}
             onCheckout={handleCheckout}
-            manualDiscount={manualDiscount}
-            onSetManualDiscount={setManualDiscount}
           />
         </div>,
         rightPanelTarget
@@ -374,8 +360,6 @@ export default function Dashboard() {
         taxDetails={taxDetails}
         total={total}
         discount={appliedDiscount?.percentage || 0}
-        manualDiscount={manualDiscount}
-        discountAmount={discountAmount}
         onPaymentSuccess={(paid, change) => onPaymentConfirm(paid, change, "CASH")}
       />
 

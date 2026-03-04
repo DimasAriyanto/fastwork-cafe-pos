@@ -44,13 +44,18 @@ export default function CashierLayout() {
     id: String(t.id),
     customerName: t.customerName || t.notes || 'Guest',
     items: t.items || [],
+    subtotal: Number(t.subtotal || 0),
     totalPrice: Number(t.totalPrice),
+    discountAmount: Number(t.discountAmount || 0),
     paymentMethod: (t.paymentMethod?.toUpperCase() || 'CASH') as PaymentMethod,
     date: t.createdAt || new Date().toISOString(),
     paidAmount: Number(t.paidAmount || t.totalPrice),
     change: Number(t.changeAmount || 0),
     cashierName: t.cashierName || t.employeeName || '',
     serviceType: t.orderType === 'take_away' ? 'Take Away' : 'Dine In',
+    manualDiscount: t.manualDiscountType
+      ? { type: t.manualDiscountType as 'fixed' | 'percentage', value: Number(t.manualDiscountValue || 0) }
+      : null,
   });
 
   // Normalize API order → frontend UnpaidOrder shape
@@ -377,7 +382,7 @@ export default function CashierLayout() {
           /* Desktop: Fixed Sidebar */
           <div
             id="cashier-right-panel-slot"
-            className="w-[30%] min-w-[350px] max-w-[450px] border-l border-gray-200 bg-white h-full relative z-20 shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] shrink-0"
+            className="w-[25%] min-w-[300px] max-w-[380px] border-l border-gray-200 bg-white h-full relative z-20 shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] shrink-0"
           />
         ) : (
           /* Tablet & Mobile: Responsive Drawer Overlay */

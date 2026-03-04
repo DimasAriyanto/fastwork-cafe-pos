@@ -86,10 +86,20 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
                         <span>Subtotal</span>
                         <span>{formatCurrency(transaction.subtotal || 0)}</span>
                     </div>
-                    {transaction.discount && transaction.discount > 0 && (
+                    {!!transaction.discount && transaction.discount > 0 && (
                         <div className="flex justify-between">
-                            <span>Diskon ({transaction.discount}%)</span>
+                            <span>Promo ({transaction.discount}%)</span>
                             <span>-{formatCurrency((transaction.subtotal || 0) * (transaction.discount / 100))}</span>
+                        </div>
+                    )}
+                    {transaction.manualDiscount && (
+                        <div className="flex justify-between">
+                            <span>Diskon Manual</span>
+                            <span>-{formatCurrency(
+                                transaction.manualDiscount.type === 'percentage' 
+                                    ? Math.round((transaction.subtotal || 0) * (transaction.manualDiscount.value / 100)) 
+                                    : transaction.manualDiscount.value
+                            )}</span>
                         </div>
                     )}
                     {transaction.taxDetails && transaction.taxDetails.length > 0 ? (

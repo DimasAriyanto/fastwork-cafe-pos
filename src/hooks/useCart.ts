@@ -38,6 +38,11 @@ export const useCart = () => {
 
     const clearCart = () => setCart([]);
 
+    const [manualDiscount, setManualDiscount] = useState<{
+        type: 'fixed' | 'percentage';
+        value: number;
+    } | null>(null);
+
     const [appliedDiscount, setAppliedDiscount] = useState<{
         code: string;
         percentage: number;
@@ -58,9 +63,24 @@ export const useCart = () => {
     }, [cart]);
 
     const discountAmount = useMemo(() => {
-        if (!appliedDiscount || subtotal < appliedDiscount.minSpend) return 0;
-        return subtotal * (appliedDiscount.percentage / 100);
-    }, [subtotal, appliedDiscount]);
+        let totalDiscount = 0;
+        
+        // 1. Applied Coupon/Code Discount
+        if (appliedDiscount && subtotal >= appliedDiscount.minSpend) {
+            totalDiscount += subtotal * (appliedDiscount.percentage / 100);
+        }
+
+        // 2. Manual Discount
+        if (manualDiscount) {
+            if (manualDiscount.type === 'percentage') {
+                totalDiscount += subtotal * (manualDiscount.value / 100);
+            } else {
+                totalDiscount += manualDiscount.value;
+            }
+        }
+
+        return Math.min(totalDiscount, subtotal); // Cannot discount more than subtotal
+    }, [subtotal, appliedDiscount, manualDiscount]);
 
     const totalAfterDiscount = subtotal - discountAmount;
     
@@ -97,6 +117,7 @@ export const useCart = () => {
     };
 
     const removeDiscount = () => setAppliedDiscount(null);
+    const removeManualDiscount = () => setManualDiscount(null);
 
     return {
         cart,
@@ -116,6 +137,9 @@ export const useCart = () => {
         appliedDiscount,
         applyDiscountCode,
         removeDiscount,
+        manualDiscount,
+        setManualDiscount,
+        removeManualDiscount,
         discountAmount,
         totalAfterDiscount
     };

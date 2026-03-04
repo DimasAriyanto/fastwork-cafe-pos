@@ -24,6 +24,8 @@ type CartPanelProps = {
     appliedDiscount: { code: string; percentage: number; minSpend: number } | null;
     applyDiscountCode: (code: string) => Promise<{ success: boolean; message: string }>;
     removeDiscount: () => void;
+    manualDiscount: { type: 'fixed' | 'percentage'; value: number } | null;
+    onSetManualDiscount: (discount: { type: 'fixed' | 'percentage'; value: number } | null) => void;
 };
 
 interface CustomerSuggestion {
@@ -49,12 +51,16 @@ export default function CartPanel({
     appliedDiscount,
     applyDiscountCode,
     removeDiscount,
+    manualDiscount,
+    onSetManualDiscount,
     onCheckout,
 }: CartPanelProps) {
     const [payType, setPayType] = useState<"payNow" | "payLater">("payNow");
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
     const [isDiscountFocused, setIsDiscountFocused] = useState(false);
     const [discountCode, setDiscountCode] = useState("");
+    const [manualDiscountType, setManualDiscountType] = useState<'fixed' | 'percentage'>('fixed');
+    const [manualDiscountValue, setManualDiscountValue] = useState("");
     const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -101,6 +107,20 @@ export default function CartPanel({
             const match = suggestions.find(s => s.name === val);
             setCustomerId(match ? match.id : null);
         }
+    };
+
+    const handleApplyManualDiscount = () => {
+        const val = parseFloat(manualDiscountValue);
+        if (isNaN(val) || val <= 0) {
+            onSetManualDiscount(null);
+            return;
+        }
+        onSetManualDiscount({ type: manualDiscountType, value: val });
+    };
+
+    const handleRemoveManualDiscount = () => {
+        setManualDiscountValue("");
+        onSetManualDiscount(null);
     };
 
     const handleApplyDiscount = async () => {
@@ -188,6 +208,19 @@ export default function CartPanel({
                                         </span>
                                     </div>
                                 )}
+                                {manualDiscount && (
+                                    <div className="flex justify-between items-center text-orange-600 italic">
+                                        <span className="text-base">
+                                            Diskon Manual ({manualDiscount.type === 'percentage' ? `${manualDiscount.value}%` : `Rp${manualDiscount.value.toLocaleString("id-ID")}`})
+                                        </span>
+                                        <span className="text-base">
+                                            - Rp{(manualDiscount.type === 'percentage' 
+                                                ? Math.round(subtotal * (manualDiscount.value / 100)) 
+                                                : manualDiscount.value
+                                            ).toLocaleString("id-ID")}
+                                        </span>
+                                    </div>
+                                )}
                                 {taxDetails && taxDetails.length > 0 ? (
                                     taxDetails.map((t, idx) => (
                                         <div key={idx} className="flex justify-between items-center text-gray-400">
@@ -218,34 +251,88 @@ export default function CartPanel({
                             <div className="flex flex-col gap-2 mb-8">
                                 <div className="flex items-center justify-between">
                                     <span className="text-lg font-bold text-gray-800">Diskon</span>
-                                    {appliedDiscount && (
+                                    {(appliedDiscount || manualDiscount) && (
                                         <button 
-                                            onClick={removeDiscount}
+                                            onClick={() => {
+                                                removeDiscount();
+                                                handleRemoveManualDiscount();
+                                            }}
                                             className="text-sm text-red-500 hover:underline"
                                         >
-                                            Hapus
+                                            Hapus Semua
                                         </button>
                                     )}
                                 </div>
-                                <div className="flex items-center gap-2">
+
+                                {/* Manual Discount Input */}
+                                <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Diskon Manual</span>
+                                        <div className="flex bg-gray-200 rounded-lg p-0.5">
+                                            <button
+                                                onClick={() => setManualDiscountType('fixed')}
+                                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${manualDiscountType === 'fixed' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'}`}
+                                            >
+                                                Rp
+                                            </button>
+                                            <button
+                                                onClick={() => setManualDiscountType('percentage')}
+                                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${manualDiscountType === 'percentage' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'}`}
+                                            >
+                                                %
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="number"
+                                                placeholder={manualDiscountType === 'fixed' ? "0" : "0"}
+                                                value={manualDiscountValue}
+                                                onChange={(e) => setManualDiscountValue(e.target.value)}
+                                                className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-orange-500 bg-white text-gray-700 h-[48px] pr-10"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">
+                                                {manualDiscountType === 'fixed' ? 'Rp' : '%'}
+                                            </span>
+                                        </div>
+                                        <button 
+                                            onClick={handleApplyManualDiscount}
+                                            className="h-[48px] px-4 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 transition-all active:scale-95"
+                                        >
+                                            Ok
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="relative mt-2">
+                                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                                        <div className="w-full border-t border-gray-200"></div>
+                                    </div>
+                                    <div className="relative flex justify-center">
+                                        <span className="px-2 bg-white text-xs text-gray-400 uppercase">Atau Gunakan Kode</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 mt-2">
                                     <input
                                         type="text"
-                                        placeholder="Masukkan kode diskon"
+                                        placeholder="Kode Promo"
                                         value={discountCode}
                                         onChange={(e) => setDiscountCode(e.target.value)}
                                         onFocus={() => setIsDiscountFocused(true)}
                                         onBlur={() => setIsDiscountFocused(false)}
                                         disabled={!!appliedDiscount}
-                                        className={`flex-1 p-3 border rounded-xl focus:outline-none transition-colors duration-200 ${isDiscountFocused || appliedDiscount ? "border-[#FE4E10]" : "border-gray-300"
-                                            } bg-white text-gray-700 h-[56px]`}
+                                        className={`flex-1 p-3 border rounded-xl focus:outline-none transition-colors duration-200 ${isDiscountFocused || appliedDiscount ? "border-orange-500" : "border-gray-300"
+                                            } bg-white text-gray-700 h-[48px]`}
                                     />
                                     <button 
                                         onClick={handleApplyDiscount}
                                         disabled={!!appliedDiscount || !discountCode}
-                                        className={`h-14 px-6 rounded-xl font-bold transition-all ${
+                                        className={`h-[48px] px-4 rounded-xl font-bold transition-all ${
                                             !!appliedDiscount || !discountCode 
-                                            ? "bg-gray-200 text-gray-400 cursor-not-allowed" 
-                                            : "bg-[#FE4E10] text-white hover:bg-[#e0440e]"
+                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+                                            : "bg-orange-500 text-white hover:bg-orange-600"
                                         }`}
                                     >
                                         Pakai
@@ -254,11 +341,6 @@ export default function CartPanel({
                                 {appliedDiscount && subtotal < appliedDiscount.minSpend && (
                                     <p className="text-xs text-red-500 italic mt-1">
                                         * Minimal belanja Rp{appliedDiscount.minSpend.toLocaleString("id-ID")} untuk kode ini
-                                    </p>
-                                )}
-                                {appliedDiscount && subtotal >= appliedDiscount.minSpend && (
-                                    <p className="text-xs text-green-600 italic mt-1">
-                                        * Kode {appliedDiscount.code} berhasil dipasang ({appliedDiscount.percentage}%)
                                     </p>
                                 )}
                             </div>

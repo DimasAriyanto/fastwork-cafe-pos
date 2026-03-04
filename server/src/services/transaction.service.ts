@@ -20,6 +20,9 @@ export class TransactionService {
     orderType?: string;
     notes?: string;
     items: Array<{ menuId: number; variantId?: number; qty: number; price: number; toppings?: { toppingId: number; price: number }[] }>;
+    manualDiscountType?: 'fixed' | 'percentage';
+    manualDiscountValue?: number;
+    discountAmount?: number;
   }) {
     if (!data.items || data.items.length === 0) {
       throw new Error('Keranjang belanja kosong.');
@@ -37,6 +40,9 @@ export class TransactionService {
       notes: data.notes || data.customerName || 'Guest',
       orderType: data.orderType || 'dine_in',
       items: data.items,
+      manualDiscountType: data.manualDiscountType,
+      manualDiscountValue: data.manualDiscountValue,
+      discountAmount: data.discountAmount,
     });
 
     return { transactionId };
@@ -61,6 +67,9 @@ export class TransactionService {
       notes: data.notes || data.customerName,
       orderType: data.orderType || 'dine_in',
       items: data.items,
+      manualDiscountType: data.manualDiscountType,
+      manualDiscountValue: data.manualDiscountValue,
+      discountAmount: data.discountAmount,
     });
 
     return { transactionId };

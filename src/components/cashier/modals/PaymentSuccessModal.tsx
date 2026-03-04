@@ -41,12 +41,12 @@ export default function PaymentSuccessModal({
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fadeIn">
             <div
                 ref={modalRef}
-                className="bg-white rounded-[32px] shadow-2xl w-full max-w-[640px] overflow-hidden animate-scaleIn relative flex flex-col items-center text-center p-10 pt-12"
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-sm max-h-[92vh] overflow-y-auto animate-scaleIn relative flex flex-col items-center text-center p-5 pt-8 scrollbar-hide"
             >
                 {/* Success Icon */}
-                <div className="mb-8">
-                    <div className="bg-[#00D95A] w-[112px] h-[112px] rounded-full flex items-center justify-center shadow-[0_12px_24px_rgba(0,217,90,0.3)]">
-                        <svg className="w-16 h-16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <div className="mb-3">
+                    <div className="bg-[#00D95A] w-[60px] h-[60px] rounded-full flex items-center justify-center shadow-[0_8px_16px_rgba(0,217,90,0.2)]">
+                        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path
                                 d="M5 13L9 17L19 7"
                                 stroke="white"
@@ -60,109 +60,107 @@ export default function PaymentSuccessModal({
                     </div>
                 </div>
 
-                <h2 className="text-[32px] font-semibold text-[#1F2937] mb-2">Pembayaran Berhasil</h2>
+                <h2 className="text-xl font-bold text-[#1F2937] mb-1">Pembayaran Berhasil</h2>
 
-                <p className="text-[#6B7280] text-lg mb-6">
+                <p className="text-[#6B7280] text-sm mb-4">
                     {new Date(transaction.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })} | {new Date(transaction.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </p>
 
-                <div className="text-[48px] font-semibold text-[#1F2937] mb-10">
-                    Rp { (transaction.totalPrice || 0).toLocaleString('id-ID') }
+                <div className="text-2xl font-black text-[#FE4E10] mb-5 font-mono">
+                    Rp {(transaction.totalPrice || 0).toLocaleString('id-ID')}
                 </div>
 
-                <div className="w-full grid grid-cols-2 gap-8 mb-8 px-4">
-                    <div className="flex flex-col items-center gap-2">
-                        <span className="text-[#9CA3AF] text-base font-semibold">Metode Pembayaran</span>
-                        <span className="text-[#1F2937] text-[28px] font-semibold">
+                <div className="w-full grid grid-cols-2 gap-2 mb-5 px-1">
+                    <div className="flex flex-col items-center gap-0.5 border-r border-gray-100">
+                        <span className="text-gray-400 text-[9px] font-black uppercase tracking-widest">Metode</span>
+                        <span className="text-[#1F2937] text-base font-bold">
                             {transaction.paymentMethod === "CASH" ? "Tunai" : transaction.paymentMethod}
                         </span>
                     </div>
-                    <div className="flex flex-col items-center gap-2 text-right">
-                        <span className="text-[#9CA3AF] text-base font-semibold">
-                            {transaction.paymentMethod === "QRIS" ? "Kembali" : "Kembalian"}
+                    <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-gray-400 text-[9px] font-black uppercase tracking-widest">
+                            {transaction.paymentMethod === "QRIS" ? "Status" : "Kembalian"}
                         </span>
-                        <span className="text-[#1F2937] text-[28px] font-semibold">
-                            Rp {transaction.paymentMethod === "QRIS" ? "0" : ((transaction.change || 0).toLocaleString('id-ID'))}
+                        <span className={`${transaction.paymentMethod === "QRIS" ? "text-green-500" : "text-orange-500"} text-base font-bold font-mono`}>
+                            {transaction.paymentMethod === "QRIS" ? "Lunas" : `Rp ${(transaction.change || 0).toLocaleString('id-ID')}`}
                         </span>
                     </div>
-
                 </div>
 
                 {/* Order Items Summary */}
-                <div className="w-full bg-gray-50 rounded-2xl p-6 mb-10 text-left border border-gray-100">
-                    <h4 className="text-gray-500 font-bold text-xs uppercase tracking-wider mb-4">Ringkasan Pesanan</h4>
-                    <div className="space-y-4 max-h-[160px] overflow-y-auto custom-scrollbar pr-2 mb-4">
+                <div className="w-full bg-gray-50 rounded-xl p-3 mb-5 text-left border border-gray-100">
+                    <h4 className="text-gray-400 font-black text-[9px] uppercase tracking-widest mb-2 border-b border-gray-100 pb-1">Ringkasan</h4>
+                    <div className="space-y-2 max-h-[100px] overflow-y-auto scrollbar-hide mb-2">
                         {transaction.items.map((item, idx) => (
-                            <div key={idx} className="border-b border-gray-200 border-dashed pb-3 last:border-0 last:pb-0">
-                                <div className="flex justify-between items-start mb-1">
-                                    <div className="font-bold text-gray-800">{item.name}</div>
-                                    <div className="font-bold text-gray-800">x{item.qty}</div>
+                            <div key={idx} className="pb-1 last:pb-0">
+                                <div className="flex justify-between items-start text-xs">
+                                    <div className="font-bold text-gray-700 truncate flex-1">{item.name}</div>
+                                    <div className="font-bold text-gray-900 ml-2">x{item.qty}</div>
                                 </div>
                                 {item.variant && (
-                                    <div className="text-xs text-gray-500 mb-1">Rasa: {item.variant}</div>
-                                )}
-                                {item.toppings && item.toppings.length > 0 && (
-                                    <div className="text-xs text-gray-500 mb-1">
-                                        Tambahan: {item.toppings.map(t => `${t.name} (Rp${t.price.toLocaleString("id-ID")})`).join(", ")}
-                                    </div>
-                                )}
-                                {item.note && (
-                                    <div className="text-xs text-orange-600 bg-orange-50 px-2.5 py-1.5 rounded-lg inline-block font-medium">
-                                        Catatan: {item.note}
-                                    </div>
+                                    <div className="text-[9px] text-gray-400">Varian: {item.variant}</div>
                                 )}
                             </div>
                         ))}
                     </div>
 
                     {/* Price Breakdown */}
-                    <div className="border-t border-gray-200 pt-4 space-y-2">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Sub Total</span>
-                            <span className="font-medium text-gray-800">Rp {(transaction.subtotal || 0).toLocaleString('id-ID')}</span>
+                    <div className="border-t border-gray-200 pt-2 space-y-1 text-[10px]">
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">Sub Total</span>
+                            <span className="font-bold text-gray-700">Rp {(transaction.subtotal || 0).toLocaleString('id-ID')}</span>
                         </div>
                         {(transaction.discount || 0) > 0 && (
-                            <div className="flex justify-between text-sm text-orange-600 italic">
-                                <span>Potongan ({transaction.discount}%)</span>
-                                <span className="font-medium">- Rp {((transaction.subtotal || 0) * (transaction.discount || 0) / 100).toLocaleString('id-ID')}</span>
+                            <div className="flex justify-between text-orange-600 italic font-bold">
+                                <span>Promo ({transaction.discount}%)</span>
+                                <span>- Rp {((transaction.subtotal || 0) * (transaction.discount || 0) / 100).toLocaleString('id-ID')}</span>
+                            </div>
+                        )}
+                        {transaction.manualDiscount && (
+                            <div className="flex justify-between text-orange-600 italic font-bold">
+                                <span>Manual ({transaction.manualDiscount.type === 'percentage' ? `${transaction.manualDiscount.value}%` : `Rp${transaction.manualDiscount.value.toLocaleString("id-ID")}`})</span>
+                                <span>- Rp {(
+                                    transaction.manualDiscount.type === 'percentage' 
+                                        ? Math.round((transaction.subtotal || 0) * (transaction.manualDiscount.value / 100)) 
+                                        : transaction.manualDiscount.value
+                                ).toLocaleString('id-ID')}</span>
                             </div>
                         )}
                         {transaction.taxDetails && transaction.taxDetails.length > 0 ? (
                             transaction.taxDetails.map((t, idx) => (
-                                <div key={idx} className="flex justify-between text-sm">
-                                    <span className="text-gray-500">{t.name} ({t.percentage}%)</span>
-                                    <span className="font-medium text-gray-800">Rp {t.amount.toLocaleString('id-ID')}</span>
+                                <div key={idx} className="flex justify-between">
+                                    <span className="text-gray-400">{t.name}</span>
+                                    <span className="font-bold text-gray-700">Rp {t.amount.toLocaleString('id-ID')}</span>
                                 </div>
                             ))
                         ) : (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Pajak ({((transaction.taxRate || 0.1) * 100).toFixed(0)}%)</span>
-                                <span className="font-medium text-gray-800">Rp {(transaction.tax || 0).toLocaleString('id-ID')}</span>
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">Pajak</span>
+                                <span className="font-bold text-gray-700">Rp {(transaction.tax || 0).toLocaleString('id-ID')}</span>
                             </div>
                         )}
                     </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="w-full space-y-4 px-2">
+                <div className="w-full space-y-2">
                     <button
                         onClick={onPrintReceipt}
-                        className="w-full h-14 flex items-center justify-center gap-3 bg-white border border-[#E5E7EB] text-[#1F2937] rounded-xl font-semibold text-lg hover:bg-gray-50 hover:scale-[1.01] transition-all active:scale-[0.98]"
+                        className="w-full h-10 flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-50 transition-all uppercase tracking-widest"
                     >
-                        <Printer size={20} />
+                        <Printer size={14} />
                         Cetak Struk
                     </button>
-
-                    <div className="flex gap-4">
+                    <div className="flex gap-2">
                         <button
                             onClick={onNewOrder}
-                            className="flex-1 h-16 bg-[#FE4E10] text-white rounded-2xl font-semibold text-lg hover:bg-[#e64610] hover:scale-[1.02] hover:shadow-lg transition-all active:scale-[0.98]"
+                            className="flex-1 h-11 bg-white border-2 border-[#FE4E10] text-[#FE4E10] rounded-xl font-black text-xs hover:bg-orange-50 uppercase tracking-widest"
                         >
-                            + Buat Pesanan Baru
+                            Baru
                         </button>
                         <button
                             onClick={onClose}
-                            className="flex-1 h-16 bg-[#FE4E10] text-white rounded-2xl font-semibold text-lg hover:bg-[#e64610] hover:scale-[1.02] hover:shadow-lg transition-all active:scale-[0.98]"
+                            className="flex-1 h-11 bg-[#FE4E10] text-white rounded-xl font-black text-xs hover:bg-[#e64610] shadow-lg shadow-orange-500/20 uppercase tracking-widest"
                         >
                             Selesai
                         </button>
