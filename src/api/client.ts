@@ -684,12 +684,23 @@ class ApiClient {
     throw new Error(response.error || response.message || 'Gagal memuat detail transaksi');
   }
 
-  async getTransactions(options?: { page?: number; limit?: number; startDate?: string; endDate?: string }) {
+  async getTransactions(options?: { 
+    page?: number; 
+    limit?: number; 
+    startDate?: string; 
+    endDate?: string;
+    cashierId?: number;
+    orderType?: string;
+    paymentStatus?: string;
+  }) {
     const params = new URLSearchParams();
     if (options?.page) params.append('page', String(options.page));
     if (options?.limit) params.append('limit', String(options.limit));
     if (options?.startDate) params.append('startDate', options.startDate);
     if (options?.endDate) params.append('endDate', options.endDate);
+    if (options?.cashierId) params.append('cashierId', String(options.cashierId));
+    if (options?.orderType) params.append('orderType', options.orderType);
+    if (options?.paymentStatus) params.append('paymentStatus', options.paymentStatus);
 
     const response = await this.request<ApiResponse>(`/transactions?${params.toString()}`, { method: 'GET' });
     if (response.success) return response.data;
@@ -753,29 +764,55 @@ class ApiClient {
     throw new Error(response.error || response.message || 'Gagal mengambil stats dashboard');
   }
 
-  async getRevenueGraph(type: 'monthly' | 'daily' = 'daily') {
-    const response = await this.request<ApiResponse>(`/reports/revenue-graph?type=${type}`, { method: 'GET' });
+  async getRevenueGraph(type: 'monthly' | 'daily' = 'daily', filters?: { start?: string; end?: string; cashier?: string; orderType?: string; paymentMethod?: string }) {
+    const params = new URLSearchParams();
+    params.append('type', type);
+    if (filters?.start) params.append('start', filters.start);
+    if (filters?.end) params.append('end', filters.end);
+    if (filters?.cashier) params.append('cashier', filters.cashier);
+    if (filters?.orderType) params.append('orderType', filters.orderType);
+    if (filters?.paymentMethod) params.append('paymentMethod', filters.paymentMethod);
+
+    const response = await this.request<ApiResponse>(`/reports/revenue-graph?${params.toString()}`, { method: 'GET' });
     if (response.success) return response.data;
     throw new Error(response.error || response.message || 'Gagal mengambil grafik pendapatan');
   }
 
-  async getFinancialSummary(start?: string, end?: string) {
-    const query = start && end ? `?start=${start}&end=${end}` : '';
-    const response = await this.request<ApiResponse>(`/reports/financial-summary${query}`, { method: 'GET' });
+  async getFinancialSummary(filters?: { start?: string; end?: string; cashier?: string; orderType?: string; paymentMethod?: string }) {
+    const params = new URLSearchParams();
+    if (filters?.start) params.append('start', filters.start);
+    if (filters?.end) params.append('end', filters.end);
+    if (filters?.cashier) params.append('cashier', filters.cashier);
+    if (filters?.orderType) params.append('orderType', filters.orderType);
+    if (filters?.paymentMethod) params.append('paymentMethod', filters.paymentMethod);
+
+    const response = await this.request<ApiResponse>(`/reports/financial-summary?${params.toString()}`, { method: 'GET' });
     if (response.success) return response.data;
     throw new Error(response.error || response.message || 'Gagal mengambil laporan keuangan');
   }
 
-  async getSalesByCategory(start?: string, end?: string) {
-    const query = start && end ? `?start=${start}&end=${end}` : '';
-    const response = await this.request<ApiResponse>(`/reports/sales-category${query}`, { method: 'GET' });
+  async getSalesByCategory(filters?: { start?: string; end?: string; cashier?: string; orderType?: string; paymentMethod?: string }) {
+    const params = new URLSearchParams();
+    if (filters?.start) params.append('start', filters.start);
+    if (filters?.end) params.append('end', filters.end);
+    if (filters?.cashier) params.append('cashier', filters.cashier);
+    if (filters?.orderType) params.append('orderType', filters.orderType);
+    if (filters?.paymentMethod) params.append('paymentMethod', filters.paymentMethod);
+
+    const response = await this.request<ApiResponse>(`/reports/sales-category?${params.toString()}`, { method: 'GET' });
     if (response.success) return response.data;
     throw new Error(response.error || response.message || 'Gagal mengambil laporan penjualan kategori');
   }
 
-  async getSalesByProduct(start?: string, end?: string) {
-    const query = start && end ? `?start=${start}&end=${end}` : '';
-    const response = await this.request<ApiResponse>(`/reports/sales-product${query}`, { method: 'GET' });
+  async getSalesByProduct(filters?: { start?: string; end?: string; cashier?: string; orderType?: string; paymentMethod?: string }) {
+    const params = new URLSearchParams();
+    if (filters?.start) params.append('start', filters.start);
+    if (filters?.end) params.append('end', filters.end);
+    if (filters?.cashier) params.append('cashier', filters.cashier);
+    if (filters?.orderType) params.append('orderType', filters.orderType);
+    if (filters?.paymentMethod) params.append('paymentMethod', filters.paymentMethod);
+
+    const response = await this.request<ApiResponse>(`/reports/sales-product?${params.toString()}`, { method: 'GET' });
     if (response.success) return response.data;
     throw new Error(response.error || response.message || 'Gagal mengambil laporan penjualan produk');
   }

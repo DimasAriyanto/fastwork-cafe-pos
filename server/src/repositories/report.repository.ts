@@ -5,8 +5,17 @@ import {
   payments,
   menus,
   categories,
+  employees,
 } from "../db/schemas/index";
 import { eq, sql, and, gte, lte, desc } from "drizzle-orm";
+
+export interface ReportFilters {
+  start?: Date;
+  end?: Date;
+  cashierName?: string;
+  orderType?: string;
+  paymentMethod?: string;
+}
 
 export class ReportRepository {
   /**
@@ -52,6 +61,40 @@ export class ReportRepository {
   }
 
   /**
+   * Helper to build where clause with optional filters
+   */
+  private buildWhereClause(outletId: number, filters?: ReportFilters) {
+    const conditions = [
+      eq(transactions.outletId, outletId),
+      eq(transactions.paymentStatus, 'paid')
+    ];
+
+    if (filters?.start) {
+      const startStr = this.formatDate(filters.start);
+      conditions.push(gte(transactions.createdAt, sql`STR_TO_DATE(${startStr}, '%Y-%m-%d %H:%i:%s')`));
+    }
+
+    if (filters?.end) {
+      const endStr = this.formatDate(filters.end);
+      conditions.push(lte(transactions.createdAt, sql`STR_TO_DATE(${endStr}, '%Y-%m-%d %H:%i:%s')`));
+    }
+
+    if (filters?.cashierName && filters.cashierName !== 'all') {
+      conditions.push(eq(employees.name, filters.cashierName));
+    }
+
+    if (filters?.orderType && filters.orderType !== 'all') {
+      conditions.push(eq(transactions.orderType, filters.orderType));
+    }
+
+    if (filters?.paymentMethod && filters.paymentMethod !== 'all') {
+      conditions.push(eq(payments.paymentMethod, filters.paymentMethod));
+    }
+
+    return and(...conditions);
+  }
+
+  /**
    * Helper to format Date for MySQL (Local Time)
    */
   private formatDate(date: Date) {
@@ -67,39 +110,40 @@ export class ReportRepository {
   /**
    * Get revenue over time for charts
    */
-  async getRevenueGraph(outletId: number, labelFormat: string, dateFormat: string, startDate: Date, endDate: Date) {
-    const startStr = this.formatDate(startDate);
-    const endStr = this.formatDate(endDate);
-
+  /**
+   * Get revenue over time for charts
+   */
+  async getRevenueGraph(outletId: number, labelFormat: string, dateFormat: string, filters: ReportFilters) {
     const graphExpr = sql`DATE_FORMAT(${transactions.createdAt}, ${sql.raw(dateFormat)})`;
 
-    const query = db
+    let query = db
       .select({
         name: sql<string>`DATE_FORMAT(${transactions.createdAt}, ${sql.raw(labelFormat)})`,
         value: sql<number>`sum(${transactions.totalPrice})`,
         rawDate: graphExpr,
       })
       .from(transactions)
-      .where(and(
-        eq(transactions.outletId, outletId),
-        eq(transactions.paymentStatus, 'paid'),
-        gte(transactions.createdAt, sql`STR_TO_DATE(${startStr}, '%Y-%m-%d %H:%i:%s')`),
-        lte(transactions.createdAt, sql`STR_TO_DATE(${endStr}, '%Y-%m-%d %H:%i:%s')`)
-      ))
+      .$dynamic();
+
+    if (filters.cashierName && filters.cashierName !== 'all') {
+      query = query.leftJoin(employees, eq(transactions.cashierId, employees.id)) as any;
+    }
+    
+    if (filters.paymentMethod && filters.paymentMethod !== 'all') {
+      query = query.leftJoin(payments, eq(transactions.id, payments.transactionId)) as any;
+    }
+
+    return await query
+      .where(this.buildWhereClause(outletId, filters))
       .groupBy(graphExpr)
       .orderBy(graphExpr);
-
-    return await query;
   }
 
   /**
    * Get financial summary (aggregated by day)
    */
-  async getFinancialSummary(outletId: number, startDate: Date, endDate: Date) {
-    const startStr = this.formatDate(startDate);
-    const endStr = this.formatDate(endDate);
-
-    return await db
+  async getFinancialSummary(outletId: number, filters: ReportFilters) {
+    let query = db
       .select({
         tanggal: sql<string>`DATE_FORMAT(${transactions.createdAt}, '%d/%m/%y')`,
         totalTransaksi: sql<number>`count(${transactions.id})`,
@@ -108,12 +152,18 @@ export class ReportRepository {
         laba: sql<number>`sum(${transactions.totalPrice}) * 0.6`,
       })
       .from(transactions)
-      .where(and(
-        eq(transactions.outletId, outletId),
-        eq(transactions.paymentStatus, 'paid'),
-        gte(transactions.createdAt, sql`STR_TO_DATE(${startStr}, '%Y-%m-%d %H:%i:%s')`),
-        lte(transactions.createdAt, sql`STR_TO_DATE(${endStr}, '%Y-%m-%d %H:%i:%s')`)
-      ))
+      .$dynamic();
+
+    if (filters.cashierName && filters.cashierName !== 'all') {
+      query = query.leftJoin(employees, eq(transactions.cashierId, employees.id)) as any;
+    }
+    
+    if (filters.paymentMethod && filters.paymentMethod !== 'all') {
+      query = query.leftJoin(payments, eq(transactions.id, payments.transactionId)) as any;
+    }
+
+    return await query
+      .where(this.buildWhereClause(outletId, filters))
       .groupBy(sql`DATE(${transactions.createdAt})`)
       .orderBy(desc(sql`DATE(${transactions.createdAt})`));
   }
@@ -121,11 +171,8 @@ export class ReportRepository {
   /**
    * Get sales grouped by category
    */
-  async getSalesByCategory(outletId: number, startDate: Date, endDate: Date) {
-    const startStr = this.formatDate(startDate);
-    const endStr = this.formatDate(endDate);
-
-    return await db
+  async getSalesByCategory(outletId: number, filters: ReportFilters) {
+    let query = db
       .select({
         category: categories.name,
         sold: sql<number>`sum(${transactionItems.qty})`,
@@ -135,12 +182,18 @@ export class ReportRepository {
       .innerJoin(transactions, eq(transactionItems.transactionId, transactions.id))
       .innerJoin(menus, eq(transactionItems.menuId, menus.id))
       .innerJoin(categories, eq(menus.categoryId, categories.id))
-      .where(and(
-        eq(transactions.outletId, outletId),
-        eq(transactions.paymentStatus, 'paid'),
-        gte(transactions.createdAt, sql`STR_TO_DATE(${startStr}, '%Y-%m-%d %H:%i:%s')`),
-        lte(transactions.createdAt, sql`STR_TO_DATE(${endStr}, '%Y-%m-%d %H:%i:%s')`)
-      ))
+      .$dynamic();
+
+    if (filters.cashierName && filters.cashierName !== 'all') {
+      query = query.leftJoin(employees, eq(transactions.cashierId, employees.id)) as any;
+    }
+    
+    if (filters.paymentMethod && filters.paymentMethod !== 'all') {
+      query = query.leftJoin(payments, eq(transactions.id, payments.transactionId)) as any;
+    }
+
+    return await query
+      .where(this.buildWhereClause(outletId, filters))
       .groupBy(categories.id)
       .orderBy(desc(sql`sum(${transactionItems.qty})`));
   }
@@ -148,11 +201,8 @@ export class ReportRepository {
   /**
    * Get sales grouped by product
    */
-  async getSalesByProduct(outletId: number, startDate: Date, endDate: Date) {
-    const startStr = this.formatDate(startDate);
-    const endStr = this.formatDate(endDate);
-
-    return await db
+  async getSalesByProduct(outletId: number, filters: ReportFilters) {
+    let query = db
       .select({
         product: menus.name,
         category: categories.name,
@@ -163,12 +213,18 @@ export class ReportRepository {
       .innerJoin(transactions, eq(transactionItems.transactionId, transactions.id))
       .innerJoin(menus, eq(transactionItems.menuId, menus.id))
       .innerJoin(categories, eq(menus.categoryId, categories.id))
-      .where(and(
-        eq(transactions.outletId, outletId),
-        eq(transactions.paymentStatus, 'paid'),
-        gte(transactions.createdAt, sql`STR_TO_DATE(${startStr}, '%Y-%m-%d %H:%i:%s')`),
-        lte(transactions.createdAt, sql`STR_TO_DATE(${endStr}, '%Y-%m-%d %H:%i:%s')`)
-      ))
+      .$dynamic();
+
+    if (filters.cashierName && filters.cashierName !== 'all') {
+      query = query.leftJoin(employees, eq(transactions.cashierId, employees.id)) as any;
+    }
+    
+    if (filters.paymentMethod && filters.paymentMethod !== 'all') {
+      query = query.leftJoin(payments, eq(transactions.id, payments.transactionId)) as any;
+    }
+
+    return await query
+      .where(this.buildWhereClause(outletId, filters))
       .groupBy(menus.id)
       .orderBy(desc(sql`sum(${transactionItems.qty})`));
   }

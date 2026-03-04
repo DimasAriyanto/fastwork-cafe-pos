@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Filter, ChevronDown, RotateCcw, Share, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Filter, ChevronDown, RotateCcw, Share, X, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { exportToCSV } from '../../utils/csvExport';
 import {
   LineChart,
@@ -29,25 +29,63 @@ const LaporanKeuanganToko = () => {
   const [chartData, setChartData] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({ 
+    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1), 
+    end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0) 
+  });
+  const [filterType, setFilterType] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'year' | 'custom'>('month');
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
-  const [filterLabel, setFilterLabel] = useState('Semua Waktu');
+  const [filterLabel, setFilterLabel] = useState('Bulan Ini');
+  const [viewDate, setViewDate] = useState<Date>(new Date());
+  const [hoverDate, setHoverDate] = useState<Date | null>(null);
+
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    cashierName: 'all',
+    orderType: 'all',
+    paymentMethod: 'all'
+  });
+  const [availableCashiers, setAvailableCashiers] = useState<string[]>([]);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const emps = await apiClient.getEmployees();
+        setAvailableCashiers(emps.map((e: any) => e.name));
+      } catch (err) {
+        console.error("Gagal memuat opsi filter:", err);
+      }
+    };
+    fetchOptions();
+  }, []);
 
   useEffect(() => {
     const fetchFinancialData = async () => {
       try {
         setLoading(true);
-        const data = await apiClient.getFinancialSummary(dateRange.start, dateRange.end);
+        const startStr = dateRange.start?.toISOString().split('T')[0];
+        const endStr = dateRange.end?.toISOString().split('T')[0];
+
+        const params = {
+          start: startStr,
+          end: endStr,
+          cashier: filters.cashierName,
+          orderType: filters.orderType,
+          paymentMethod: filters.paymentMethod
+        };
+
+        const data = await apiClient.getFinancialSummary(params);
         
-        // Mapped for the table and chart
         setTransactions(data);
         setChartData(data.map((d: any) => ({
           name: d.tanggal,
           Pendapatan: d.pendapatan,
           Laba: d.laba
-        })).reverse()); // Reverse to show chronological order in chart
+        })).reverse());
 
-        // Calculate aggregate for summary cards
         const totalPendapatan = data.reduce((acc: number, curr: any) => acc + Number(curr.pendapatan), 0);
         const totalLaba = data.reduce((acc: number, curr: any) => acc + Number(curr.laba), 0);
         const totalTransaksi = data.reduce((acc: number, curr: any) => acc + Number(curr.totalTransaksi), 0);
@@ -68,7 +106,143 @@ const LaporanKeuanganToko = () => {
     };
 
     fetchFinancialData();
-  }, [dateRange]);
+  }, [dateRange, filters]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDateDropdownOpen(false);
+      }
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setIsFilterDropdownOpen(false);
+      }
+    };
+    if (isDateDropdownOpen || isFilterDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDateDropdownOpen, isFilterDropdownOpen]);
+
+  const handleDatePreset = (type: typeof filterType) => {
+    setFilterType(type);
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    let newStart: Date | null = null;
+    let newEnd: Date | null = null;
+    let label = '';
+
+    switch (type) {
+      case 'today':
+        newStart = start;
+        newEnd = start;
+        label = 'Hari Ini';
+        break;
+      case 'yesterday':
+        const yesterday = new Date(start);
+        yesterday.setDate(start.getDate() - 1);
+        newStart = yesterday;
+        newEnd = yesterday;
+        label = 'Kemarin';
+        break;
+      case 'week':
+        const day = start.getDay();
+        const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+        newStart = new Date(start.setDate(diff));
+        newEnd = new Date(newStart);
+        newEnd.setDate(newStart.getDate() + 6);
+        label = 'Minggu Ini';
+        break;
+      case 'month':
+        newStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        newEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        label = 'Bulan Ini';
+        break;
+      case 'year':
+        newStart = new Date(now.getFullYear(), 0, 1);
+        newEnd = new Date(now.getFullYear(), 11, 31);
+        label = 'Tahun Ini';
+        break;
+      case 'all':
+        newStart = null;
+        newEnd = null;
+        label = 'Semua Waktu';
+        setIsDateDropdownOpen(false);
+        break;
+    }
+    
+    setDateRange({ start: newStart, end: newEnd });
+    setFilterLabel(label);
+  };
+
+  const handleCalendarClick = (date: Date) => {
+    setFilterType('custom');
+    if (!dateRange.start || (dateRange.start && dateRange.end)) {
+      setDateRange({ start: date, end: null });
+    } else {
+      if (date < dateRange.start) {
+        setDateRange({ start: date, end: dateRange.start });
+      } else {
+        setDateRange({ ...dateRange, end: date });
+      }
+    }
+  };
+
+  const renderMonth = (monthOffset: number) => {
+    const date = new Date(viewDate.getFullYear(), viewDate.getMonth() + monthOffset, 1);
+    const monthName = date.toLocaleString('default', { month: 'long' });
+    const year = date.getFullYear();
+    const daysInMonth = new Date(year, date.getMonth() + 1, 0).getDate();
+    const firstDayOfMonth = new Date(year, date.getMonth(), 1).getDay();
+    const days = [];
+    const startOffset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+
+    for (let i = 0; i < startOffset; i++) {
+        days.push(<div key={`empty-${i}`} className="h-9 w-9" />);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const current = new Date(year, date.getMonth(), d);
+        const isSelected = (dateRange.start && current.toDateString() === dateRange.start.toDateString()) || 
+                           (dateRange.end && current.toDateString() === dateRange.end.toDateString());
+        const isInRange = dateRange.start && dateRange.end && current > dateRange.start && current < dateRange.end;
+        const isHovered = dateRange.start && !dateRange.end && hoverDate && (
+            (current > dateRange.start && current <= hoverDate) || (current < dateRange.start && current >= hoverDate)
+        );
+
+        days.push(
+            <div 
+                key={d} 
+                className={`h-9 w-9 flex items-center justify-center cursor-pointer text-sm transition-all relative z-10
+                    ${isSelected ? 'bg-black text-white rounded-md' : ''}
+                    ${isInRange ? 'bg-gray-100' : ''}
+                    ${isHovered ? 'bg-gray-50' : ''}
+                    hover:bg-gray-200 rounded-md
+                `}
+                onClick={() => handleCalendarClick(current)}
+                onMouseEnter={() => setHoverDate(current)}
+                onMouseLeave={() => setHoverDate(null)}
+            >
+                {d}
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-[280px]">
+            <div className="text-center font-bold mb-4">{monthName} {year}</div>
+            <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                    <div key={d} className="text-[10px] font-bold text-gray-400 uppercase">{d}</div>
+                ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+                {days}
+            </div>
+        </div>
+    );
+  };
 
   const handleViewDetail = async (item: any) => {
     try {
@@ -79,14 +253,21 @@ const LaporanKeuanganToko = () => {
       const startDate = `${year}-${month}-${day}T00:00:00Z`;
       const endDate = `${year}-${month}-${day}T23:59:59Z`;
 
-      const data = await apiClient.getTransactions({ startDate, endDate, limit: 100 });
+      const data = await apiClient.getTransactions({ 
+        startDate, 
+        endDate, 
+        limit: 100,
+      });
       
-      // We need to fetch item details for each transaction if not included?
-      // Actually, getTransactions (findAll) doesn't include items by default.
-      // But we can map it to show headers first, or fetch details in parallel.
-      // For now, let's fetch details for each to get the items list.
+      const filteredDetails = data.filter((trx: any) => {
+        if (filters.cashierName !== 'all' && trx.employeeName !== filters.cashierName) return false;
+        if (filters.orderType !== 'all' && trx.orderType !== filters.orderType) return false;
+        if (filters.paymentMethod !== 'all' && trx.paymentMethod !== filters.paymentMethod) return false;
+        return true;
+      });
+
       const detailedTransactions = await Promise.all(
-        data.map(async (trx: any) => {
+        filteredDetails.map(async (trx: any) => {
           const detail = await apiClient.getTransactionDetail(trx.id);
           return {
             id: trx.id,
@@ -142,50 +323,152 @@ const LaporanKeuanganToko = () => {
 
       <div className="flex flex-wrap items-center gap-4">
         {/* Filter By */}
-        <button className="flex items-center gap-2 px-4 py-2 bg-white border border-[#EAEAEA] rounded-lg text-[#202224] hover:bg-gray-50 transition-colors">
-            <Filter size={18} />
-            <span className="text-sm font-medium">Filter By</span>
-        </button>
+        <div className="relative" ref={filterDropdownRef}>
+            <button 
+                onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                className={`flex items-center gap-2 px-4 py-2 bg-white border border-[#D5D5D5] rounded-lg text-[#202224] hover:bg-gray-50 transition-colors ${
+                    filters.cashierName !== 'all' || filters.orderType !== 'all' || filters.paymentMethod !== 'all' 
+                    ? 'border-[#FE4E10] text-[#FE4E10] bg-[#FFF5F2]' : ''
+                }`}
+            >
+                <Filter size={18} />
+                <span className="text-sm font-medium">Filter By</span>
+            </button>
+
+            {isFilterDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-[#EAEAEA] rounded-xl shadow-xl z-50 py-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-4 py-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Kasir</p>
+                        <select 
+                            value={filters.cashierName}
+                            onChange={(e) => setFilters(prev => ({ ...prev, cashierName: e.target.value }))}
+                            className="w-full px-3 py-2 text-sm bg-gray-50 border border-transparent rounded-lg focus:bg-white focus:border-[#FE4E10] outline-none transition-all"
+                        >
+                            <option value="all">Semua Kasir</option>
+                            {availableCashiers.map(name => (
+                                <option key={name} value={name}>{name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="px-4 py-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tipe Pesanan</p>
+                        <select 
+                            value={filters.orderType}
+                            onChange={(e) => setFilters(prev => ({ ...prev, orderType: e.target.value }))}
+                            className="w-full px-3 py-2 text-sm bg-gray-50 border border-transparent rounded-lg focus:bg-white focus:border-[#FE4E10] outline-none transition-all"
+                        >
+                            <option value="all">Semua Tipe</option>
+                            <option value="dine_in">Makan Ditempat</option>
+                            <option value="take_away">Bawa Pulang</option>
+                        </select>
+                    </div>
+
+                    <div className="px-4 py-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Metode</p>
+                        <select 
+                            value={filters.paymentMethod}
+                            onChange={(e) => setFilters(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                            className="w-full px-3 py-2 text-sm bg-gray-50 border border-transparent rounded-lg focus:bg-white focus:border-[#FE4E10] outline-none transition-all"
+                        >
+                            <option value="all">Semua Metode</option>
+                            <option value="CASH">CASH</option>
+                            <option value="QRIS">QRIS</option>
+                            <option value="TRANSFER">TRANSFER</option>
+                        </select>
+                    </div>
+
+                    <div className="mt-3 px-4 pt-3 border-t border-gray-50">
+                        <button 
+                            onClick={() => setIsFilterDropdownOpen(false)}
+                            className="w-full py-2 bg-black text-white text-xs font-bold rounded-lg hover:opacity-80 transition-all"
+                        >
+                            Apply Filters
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
 
         {/* Date Filter */}
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
             <button 
                 onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
-                className={`flex items-center gap-2 px-4 py-2 bg-white border border-[#EAEAEA] rounded-lg text-[#202224] hover:bg-gray-50 transition-colors min-w-[160px] justify-between`}
+                className={`flex items-center gap-2 px-4 py-2.5 bg-white border border-[#D5D5D5] rounded-lg text-[#202224] hover:bg-gray-50 transition-colors min-w-[200px] justify-between ${
+                    filterType !== 'all' ? 'border-[#FE4E10] text-[#FE4E10] bg-[#FFF5F2]' : ''
+                }`}
             >
-                <span className="text-sm font-medium">{filterLabel}</span>
-                <ChevronDown size={14} className="text-gray-400" />
+                <div className="flex items-center gap-2">
+                    <Calendar size={18} />
+                    <span className="text-sm font-medium">{filterLabel}</span>
+                </div>
+                <ChevronDown size={14} className={isDateDropdownOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
             </button>
 
             {isDateDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-[#EAEAEA] rounded-xl shadow-xl z-20 py-2">
-                    {[
-                      { label: 'Semua Waktu', range: { start: '', end: '' } },
-                      { label: 'Hari Ini', range: { 
-                        start: new Date().toISOString().split('T')[0], 
-                        end: new Date().toISOString().split('T')[0] 
-                      } },
-                      { label: 'Minggu Ini', range: { 
-                        start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0], 
-                        end: new Date().toISOString().split('T')[0] 
-                      } },
-                      { label: 'Bulan Ini', range: { 
-                        start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0], 
-                        end: new Date().toISOString().split('T')[0] 
-                      } },
-                    ].map((item) => (
-                      <button 
-                          key={item.label}
-                          onClick={() => {
-                            setDateRange(item.range);
-                            setFilterLabel(item.label);
-                            setIsDateDropdownOpen(false);
-                          }}
-                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700`}
-                      >
-                          {item.label}
-                      </button>
-                    ))}
+                <div className="absolute top-full left-0 mt-2 bg-white border border-[#EAEAEA] rounded-2xl shadow-2xl z-50 flex overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    {/* Presets Sidebar */}
+                    <div className="w-[180px] border-r border-[#EAEAEA] bg-gray-50/50 py-4">
+                        {[
+                            { id: 'all', label: 'Semua Waktu' },
+                            { id: 'today', label: 'Hari Ini' },
+                            { id: 'yesterday', label: 'Kemarin' },
+                            { id: 'week', label: 'Minggu Ini' },
+                            { id: 'month', label: 'Bulan Ini' },
+                            { id: 'year', label: 'Tahun Ini' },
+                        ].map((preset) => (
+                            <button
+                                key={preset.id}
+                                onClick={() => handleDatePreset(preset.id as any)}
+                                className={`w-full text-left px-6 py-2.5 text-sm transition-colors
+                                    ${filterType === preset.id ? 'text-[#FE4E10] font-bold bg-[#FFF5F2]' : 'text-gray-600 hover:bg-gray-100'}`}
+                            >
+                                {preset.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Dual Calendar View */}
+                    <div className="p-6">
+                        <div className="flex gap-8">
+                            <div className="relative">
+                                {renderMonth(0)}
+                                <button 
+                                    onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
+                                    className="absolute -left-2 top-0 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                            </div>
+                            <div className="relative">
+                                {renderMonth(1)}
+                                <button 
+                                    onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
+                                    className="absolute -right-2 top-0 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="mt-6 pt-6 border-t border-[#EAEAEA] flex items-center justify-between">
+                            <div className="text-xs text-gray-500 font-medium">
+                                {dateRange.start && (
+                                    <>
+                                        Selected: <span className="text-black font-bold">{dateRange.start.toLocaleDateString('id-ID')}</span>
+                                        {dateRange.end && <> - <span className="text-black font-bold">{dateRange.end.toLocaleDateString('id-ID')}</span></>}
+                                    </>
+                                )}
+                            </div>
+                            <button 
+                                onClick={() => setIsDateDropdownOpen(false)}
+                                className="px-6 py-2 bg-black text-white text-xs font-bold rounded-lg hover:opacity-80 transition-all"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
@@ -193,10 +476,14 @@ const LaporanKeuanganToko = () => {
         {/* Reset */}
         <button 
             onClick={() => {
-              setDateRange({ start: '', end: '' });
-              setFilterLabel('Semua Waktu');
+              handleDatePreset('all');
+              setFilters({
+                cashierName: 'all',
+                orderType: 'all',
+                paymentMethod: 'all'
+              });
             }}
-            className="flex items-center gap-2 text-[#FE4E10] font-bold text-sm hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 text-[#FE4E10] font-bold text-sm hover:opacity-80 transition-all px-2"
         >
             <RotateCcw size={18} />
             Reset Filter
