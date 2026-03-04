@@ -88,14 +88,14 @@ const LaporanKeuanganToko = () => {
 
         const totalPendapatan = data.reduce((acc: number, curr: any) => acc + Number(curr.pendapatan), 0);
         const totalLaba = data.reduce((acc: number, curr: any) => acc + Number(curr.laba), 0);
-        const totalTransaksi = data.reduce((acc: number, curr: any) => acc + Number(curr.totalTransaksi), 0);
-        const totalMenu = data.reduce((acc: number, curr: any) => acc + Number(curr.totalMenu), 0);
+        const totalDiskon = data.reduce((acc: number, curr: any) => acc + Number(curr.diskon || 0), 0);
+        const totalPajak = data.reduce((acc: number, curr: any) => acc + Number(curr.pajak || 0), 0);
 
         setSummaryStats([
           { title: 'Total Pendapatan', value: formatCurrency(totalPendapatan), isCurrency: true },
+          { title: 'Total Diskon', value: formatCurrency(totalDiskon), isCurrency: true },
+          { title: 'Total Pajak', value: formatCurrency(totalPajak), isCurrency: true },
           { title: 'Laba Bersih', value: formatCurrency(totalLaba), isCurrency: true },
-          { title: 'Total Transaksi', value: totalTransaksi.toLocaleString(), isCurrency: false },
-          { title: 'Total Menu Terjual', value: `${totalMenu} Menu`, isCurrency: false },
         ]);
 
       } catch (err) {
@@ -274,10 +274,15 @@ const LaporanKeuanganToko = () => {
             waktu: new Date(trx.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
             kasir: trx.employeeName || 'System',
             metode: trx.paymentMethod || 'Tunai',
+            subtotal: detail.subtotal || trx.subtotal,
+            taxAmount: detail.taxAmount || trx.taxAmount,
+            taxDetails: detail.taxDetails || [],
+            discountAmount: detail.discountAmount || trx.discountAmount,
             total: trx.totalPrice,
             items: detail.items.map((it: any) => ({
               name: it.menuName,
-              qty: it.qty
+              qty: it.qty,
+              price: it.finalPrice || it.originalPrice
             }))
           };
         })
@@ -502,14 +507,14 @@ const LaporanKeuanganToko = () => {
       </div>
 
       {/* 3. Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {summaryStats.map((stat, index) => (
           <div
             key={index}
-            className="bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA] flex flex-col justify-center min-h-[140px]"
+            className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#F5F6FA] flex flex-col justify-center min-h-[120px] sm:min-h-[140px]"
           >
-            <p className="text-[#565656] text-sm font-medium mb-2">{stat.title}</p>
-            <h3 className="text-3xl font-bold text-[#202224]">{stat.value}</h3>
+            <p className="text-[#565656] text-xs sm:text-sm font-medium mb-1 sm:mb-2">{stat.title}</p>
+            <h3 className="text-xl sm:text-3xl font-bold text-[#202224] truncate">{stat.value}</h3>
           </div>
         ))}
       </div>
@@ -586,10 +591,12 @@ const LaporanKeuanganToko = () => {
             <thead>
               <tr className="border-b border-[#EAEAEA]">
                 <th className="py-4 px-4 text-left text-sm font-bold text-[#202224]">Tanggal</th>
-                <th className="py-4 px-4 text-right text-sm font-bold text-[#202224]">Total Transaksi</th>
-                <th className="py-4 px-4 text-right text-sm font-bold text-[#202224]">Total Menu Terjual</th>
-                <th className="py-4 px-4 text-right text-sm font-bold text-[#202224]">Pendapatan Kotor</th>
-                <th className="py-4 px-4 text-right text-sm font-bold text-[#202224]">Laba Bersih</th>
+                <th className="py-4 px-4 text-right text-sm font-bold text-[#202224]">Transaksi</th>
+                <th className="py-4 px-4 text-right text-sm font-bold text-[#202224]">Menu</th>
+                <th className="py-4 px-4 text-right text-sm font-bold text-[#202224]">Gross</th>
+                <th className="py-4 px-4 text-right text-sm font-bold text-[#202224]">Diskon</th>
+                <th className="py-4 px-4 text-right text-sm font-bold text-[#202224]">Pajak</th>
+                <th className="py-4 px-4 text-right text-sm font-bold text-[#202224]">Net Profit</th>
                 <th className="py-4 px-4 text-center text-sm font-bold text-[#202224]">Aksi</th>
               </tr>
             </thead>
@@ -600,7 +607,9 @@ const LaporanKeuanganToko = () => {
                   <td className="py-4 px-4 text-sm text-[#202224] font-medium text-right">{item.totalTransaksi}</td>
                   <td className="py-4 px-4 text-sm text-[#202224] font-medium text-right">{item.totalMenu}</td>
                   <td className="py-4 px-4 text-sm text-[#202224] font-medium text-right">{formatCurrency(item.pendapatan)}</td>
-                  <td className="py-4 px-4 text-sm text-[#202224] font-medium text-right">{formatCurrency(item.laba)}</td>
+                  <td className="py-4 px-4 text-sm text-red-500 font-medium text-right">{formatCurrency(item.diskon || 0)}</td>
+                  <td className="py-4 px-4 text-sm text-orange-500 font-medium text-right">{formatCurrency(item.pajak || 0)}</td>
+                  <td className="py-4 px-4 text-sm text-[#202224] font-bold text-right">{formatCurrency(item.laba)}</td>
                   <td className="py-4 px-4 text-center">
                     <button 
                       onClick={() => handleViewDetail(item)}
@@ -638,12 +647,13 @@ const LaporanKeuanganToko = () => {
                 <thead>
                   <tr className="bg-[#F1F4F9] border-b border-[#EAEAEA]">
                     <th className="py-4 px-4 text-left text-sm font-semibold text-[#202224] w-[60px] rounded-tl-xl">No</th>
-                    <th className="py-4 px-4 text-left text-sm font-semibold text-[#202224]">ID Transaksi</th>
                     <th className="py-4 px-4 text-left text-sm font-semibold text-[#202224]">Waktu</th>
                     <th className="py-4 px-4 text-left text-sm font-semibold text-[#202224]">Kasir</th>
-                    <th className="py-4 px-4 text-left text-sm font-semibold text-[#202224]">Metode Bayar</th>
-                    <th className="py-4 px-4 text-left text-sm font-semibold text-[#202224] w-[25%]">Menu</th>
+                    <th className="py-4 px-4 text-left text-sm font-semibold text-[#202224] w-[20%]">Menu</th>
                     <th className="py-4 px-4 text-center text-sm font-semibold text-[#202224]">Qty</th>
+                    <th className="py-4 px-4 text-right text-sm font-semibold text-[#202224]">Subtotal</th>
+                    <th className="py-4 px-4 text-right text-sm font-semibold text-[#202224]">Diskon</th>
+                    <th className="py-4 px-4 text-right text-sm font-semibold text-[#202224]">Pajak</th>
                     <th className="py-4 px-4 text-right text-sm font-semibold text-[#202224] rounded-tr-xl">Total</th>
                   </tr>
                 </thead>
@@ -656,10 +666,8 @@ const LaporanKeuanganToko = () => {
                     selectedDayTransactions.map((row, idx) => (
                       <tr key={idx} className="hover:bg-gray-50 transition-colors">
                         <td className="py-4 px-4 text-sm text-[#202224] align-top">{idx + 1}</td>
-                        <td className="py-4 px-4 text-sm text-[#202224] font-medium align-top">{row.id}</td>
-                        <td className="py-4 px-4 text-sm text-[#202224] align-top">{row.waktu}</td>
-                        <td className="py-4 px-4 text-sm text-[#202224] align-top">{row.kasir}</td>
-                        <td className="py-4 px-4 text-sm text-[#202224] align-top">{row.metode}</td>
+                        <td className="py-4 px-4 text-sm text-[#202224] align-top whitespace-nowrap">{row.waktu}<br/><span className="text-[10px] text-gray-400">#{row.id}</span></td>
+                        <td className="py-4 px-4 text-sm text-[#202224] align-top">{row.kasir}<br/><span className="text-[10px] text-gray-400">{row.metode}</span></td>
                         
                         {/* Nested Menu Items */}
                         <td className="py-4 px-4 text-sm text-[#202224] align-top">
@@ -677,7 +685,10 @@ const LaporanKeuanganToko = () => {
                           </div>
                         </td>
 
-                        <td className="py-4 px-4 text-sm text-[#202224] text-right font-medium align-top">{formatCurrency(row.total)}</td>
+                        <td className="py-4 px-4 text-sm text-[#202224] text-right align-top font-mono">{formatCurrency(row.subtotal)}</td>
+                        <td className="py-4 px-4 text-sm text-red-500 text-right align-top font-mono">-{formatCurrency(row.discountAmount)}</td>
+                        <td className="py-4 px-4 text-sm text-orange-500 text-right align-top font-mono">+{formatCurrency(row.taxAmount)}</td>
+                        <td className="py-4 px-4 text-sm text-[#202224] text-right font-bold align-top font-mono">{formatCurrency(row.total)}</td>
                       </tr>
                     ))
                   )}

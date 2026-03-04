@@ -597,9 +597,13 @@ const DataTransaksi = () => {
                                     </span>
                                 </td>
                                 <td className="px-6 py-4">
-                                    <span className="px-3 py-1 bg-[#F1F4FD] text-[#5887FF] rounded-full text-xs font-bold uppercase">
-                                        {transaction.paymentMethod}
-                                    </span>
+                                    {transaction.paymentMethod ? (
+                                        <span className="px-3 py-1 bg-[#F1F4FD] text-[#5887FF] rounded-full text-xs font-bold uppercase">
+                                            {transaction.paymentMethod}
+                                        </span>
+                                    ) : (
+                                        <span className="text-gray-400 text-xs italic">Belum Bayar</span>
+                                    )}
                                 </td>
                                 <td className="px-6 py-4 text-center font-semibold text-gray-700">{transaction.totalItems}</td>
                                 <td className="px-6 py-4 font-bold text-[#202224]">{formatCurrency(transaction.totalPrice)}</td>

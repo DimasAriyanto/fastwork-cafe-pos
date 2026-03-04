@@ -26,6 +26,8 @@ export class ReportRepository {
     const revenueResult = await db
       .select({
         totalRevenue: sql<number>`sum(${transactions.totalPrice})`,
+        totalTax: sql<number>`sum(${transactions.taxAmount})`,
+        totalDiscount: sql<number>`sum(${transactions.discountAmount})`,
         count: sql<number>`count(${transactions.id})`,
       })
       .from(transactions)
@@ -55,6 +57,8 @@ export class ReportRepository {
 
     return {
       totalRevenue: Number(revenueResult[0]?.totalRevenue || 0),
+      totalTax: Number(revenueResult[0]?.totalTax || 0),
+      totalDiscount: Number(revenueResult[0]?.totalDiscount || 0),
       totalTransactions: Number(revenueResult[0]?.count || 0),
       bestSelling,
     };
@@ -149,6 +153,8 @@ export class ReportRepository {
         totalTransaksi: sql<number>`count(${transactions.id})`,
         totalMenu: sql<number>`sum(${transactions.totalItems})`,
         pendapatan: sql<number>`sum(${transactions.totalPrice})`,
+        diskon: sql<number>`sum(${transactions.discountAmount})`,
+        pajak: sql<number>`sum(${transactions.taxAmount})`,
         laba: sql<number>`sum(${transactions.totalPrice}) * 0.6`,
       })
       .from(transactions)

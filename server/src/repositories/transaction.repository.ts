@@ -455,12 +455,14 @@ export class TransactionRepository {
         orderType: transactions.orderType,
         cashierName: users.name,
         employeeName: employees.name,
+        paymentMethod: payments.paymentMethod,
         manualDiscountType: transactions.manualDiscountType,
         manualDiscountValue: transactions.manualDiscountValue,
       })
       .from(transactions)
       .leftJoin(users, eq(transactions.createdBy, users.id))
       .leftJoin(employees, eq(transactions.cashierId, employees.id))
+      .leftJoin(payments, eq(transactions.id, payments.transactionId))
       .where(and(...filters))
       .orderBy(desc(transactions.createdAt));
 

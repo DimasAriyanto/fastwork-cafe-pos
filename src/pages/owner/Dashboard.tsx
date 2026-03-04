@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, ShoppingBag, DollarSign, Calendar, TrendingDown } from 'lucide-react';
+import { TrendingUp, DollarSign, Calendar, TrendingDown, Search, Percent } from 'lucide-react';
 import { 
   AreaChart, 
   Area, 
@@ -49,22 +49,31 @@ const Dashboard = () => {
               isUp: true 
           },
           { 
-              title: 'Total Modal', 
-              value: formatCurrency(statsRes.totalModal), 
-              icon: ShoppingBag, 
-              iconColor: 'text-[#FEC53D]', 
-              iconBg: 'bg-[#FEC53D]/20', 
-              trend: 'Stabil', 
+              title: 'Total Diskon', 
+              value: formatCurrency(statsRes.totalDiscount || 0), 
+              icon: Percent, 
+              iconColor: 'text-orange-500', 
+              iconBg: 'bg-orange-50', 
+              trend: 'Potongan', 
               isUp: true 
           },
           { 
-              title: 'Laba Bersih', 
-              value: formatCurrency(statsRes.netProfit), 
-              icon: TrendingUp, 
-              iconColor: 'text-[#4AD991]', 
-              iconBg: 'bg-[#4AD991]/20', 
-              trend: statsRes.trend.revenue, 
+              title: 'Total Pajak (PPN)', 
+              value: formatCurrency(statsRes.totalTax || 0), 
+              icon: Search, 
+              iconColor: 'text-blue-500', 
+              iconBg: 'bg-blue-50', 
+              trend: 'Setoran', 
               isUp: true 
+          },
+          { 
+            title: 'Laba Bersih', 
+            value: formatCurrency(statsRes.netProfit), 
+            icon: TrendingUp, 
+            iconColor: 'text-[#4AD991]', 
+            iconBg: 'bg-[#4AD991]/20', 
+            trend: statsRes.trend.revenue, 
+            isUp: true 
           },
           { 
               title: 'Total Transaksi', 
@@ -109,25 +118,25 @@ const Dashboard = () => {
     <div className="space-y-8">
       
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div key={index} className="bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA] hover:shadow-md transition-shadow">
+            <div key={index} className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#F5F6FA] hover:shadow-md transition-shadow flex flex-col justify-between">
               <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-[#565656] font-medium text-sm mb-1">{stat.title}</p>
-                  <h3 className="text-2xl font-bold text-[#202224]">{stat.value}</h3>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[#565656] font-medium text-xs sm:text-sm mb-1 truncate">{stat.title}</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-[#202224] truncate">{stat.value}</h3>
                 </div>
-                <div className={`p-3 rounded-full ${stat.iconBg}`}>
-                  <Icon size={24} className={stat.iconColor} />
+                <div className={`p-2 sm:p-3 rounded-full shrink-0 ml-2 ${stat.iconBg}`}>
+                  <Icon size={20} className={`${stat.iconColor} sm:w-6 sm:h-6`} />
                 </div>
               </div>
               <div className="flex items-center gap-2 text-sm font-medium">
                  <span className={`flex items-center gap-1 ${stat.isUp ? 'text-[#4AD991]' : 'text-red-500'}`}>
-                    {stat.isUp ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                    {stat.isUp ? <TrendingUp size={14} className="sm:w-4 sm:h-4" /> : <TrendingDown size={14} className="sm:w-4 sm:h-4" />}
                  </span>
-                 <span className="text-[#606060] text-xs">{stat.trend}</span>
+                 <span className="text-[#606060] text-[10px] sm:text-xs truncate">{stat.trend}</span>
               </div>
             </div>
           );
@@ -137,13 +146,13 @@ const Dashboard = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Revenue Chart */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA] flex flex-col min-h-[500px]">
+        <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#F5F6FA] flex flex-col min-h-[400px] sm:min-h-[500px]">
             <div className="flex items-center justify-between mb-6">
-               <h3 className="text-xl font-bold text-[#202224]">Grafik Pendapatan</h3>
+               <h3 className="text-lg sm:text-xl font-bold text-[#202224]">Grafik Pendapatan</h3>
                <select 
                 value={graphType}
                 onChange={(e) => setGraphType(e.target.value as any)}
-                className="bg-[#FCFDFD] border border-[#D5D5D5] text-[#202224] text-sm rounded-lg px-3 py-2 outline-none focus:border-[#FE4E10]"
+                className="bg-[#FCFDFD] border border-[#D5D5D5] text-[#202224] text-xs sm:text-sm rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 outline-none focus:border-[#FE4E10]"
                >
                   <option value="monthly">Tahun Ini</option>
                   <option value="daily">Minggu Ini</option>
@@ -194,7 +203,7 @@ const Dashboard = () => {
         {/* Right Column: Bar Chart & Best Selling */}
         <div className="space-y-8">
            {/* Secondary Bar Chart */}
-           <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA]">
+           <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#F5F6FA]">
               <div className="flex items-center justify-between mb-6">
                  <h3 className="text-lg font-bold text-[#202224]">Jumlah Pelanggan</h3>
                  <select className="bg-[#FCFDFD] border border-[#D5D5D5] text-[#202224] text-xs rounded-lg px-2 py-1 outline-none">
@@ -227,7 +236,7 @@ const Dashboard = () => {
            </div>
 
            {/* Best Selling Products */}
-           <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA]">
+           <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#F5F6FA]">
                <div className="flex items-center justify-between mb-6">
                    <h3 className="text-lg font-bold text-[#202224]">Menu Terlaris</h3>
                </div>

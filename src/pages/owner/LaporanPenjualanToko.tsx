@@ -80,13 +80,14 @@ const LaporanPenjualanToko = () => {
         
         const financialSummary = await apiClient.getFinancialSummary(params);
         const totalTrx = financialSummary.reduce((acc: number, curr: any) => acc + Number(curr.totalTransaksi), 0);
-        const avgDaily = financialSummary.length > 0 ? totalGross / financialSummary.length : 0;
+
+        const totalDiskon = financialSummary.reduce((acc: number, curr: any) => acc + Number(curr.diskon || 0), 0);
 
         setSummaryStats([
           { title: 'Total Penjualan', value: formatCurrency(totalGross), isCurrency: true },
+          { title: 'Total Diskon', value: formatCurrency(totalDiskon), isCurrency: true },
           { title: 'Produk Terjual', value: `${totalSold} Item`, isCurrency: false },
           { title: 'Transaksi Sukses', value: totalTrx.toLocaleString(), isCurrency: false },
-          { title: 'Rata-rata Harian', value: formatCurrency(avgDaily), isCurrency: true },
         ]);
 
       } catch (err) {
@@ -453,14 +454,14 @@ const LaporanPenjualanToko = () => {
       </div>
 
       {/* 3. Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {summaryStats.map((stat, index) => (
           <div
             key={index}
-            className="bg-white p-6 rounded-2xl shadow-sm border border-[#F5F6FA] flex flex-col justify-center min-h-[140px]"
+            className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#F5F6FA] flex flex-col justify-center min-h-[120px] sm:min-h-[140px]"
           >
-            <p className="text-[#565656] text-sm font-medium mb-2">{stat.title}</p>
-            <h3 className="text-2xl sm:text-3xl font-bold text-[#202224]">{stat.value}</h3>
+            <p className="text-[#565656] text-xs sm:text-sm font-medium mb-1 sm:mb-2">{stat.title}</p>
+            <h3 className="text-xl sm:text-3xl font-bold text-[#202224] truncate">{stat.value}</h3>
           </div>
         ))}
       </div>
