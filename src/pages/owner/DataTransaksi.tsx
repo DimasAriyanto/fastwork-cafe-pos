@@ -144,7 +144,8 @@ const DataTransaksi = () => {
       // Normalize: API may return cashierName (from users join) or employeeName (from employees join)
       setSelectedTransaction({
         ...detail,
-        employeeName: detail.employeeName || detail.cashierName || detail.notes || '-',
+        employeeName: detail.employeeName || detail.cashierName || '-',
+        customerName: detail.customerName || detail.notes || 'Pelanggan',
         items: (detail.items || []).map((item: any) => ({
           ...item,
           price: item.finalPrice || item.price || 0,
@@ -369,6 +370,7 @@ const DataTransaksi = () => {
     const dataToExport = filteredTransactions.map(t => ({
       ...t,
       createdAt: formatDate(t.createdAt),
+      customerName: t.customerName || 'Pelanggan',
       totalPrice: Number(t.totalPrice),
       subtotal: Number(t.subtotal),
       taxAmount: Number(t.taxAmount),
@@ -587,7 +589,7 @@ const DataTransaksi = () => {
                             <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4 font-bold text-[#202224]">#{transaction.id}</td>
                                 <td className="px-6 py-4 text-gray-600 text-sm">{formatDate(transaction.createdAt)}</td>
-                                <td className="px-6 py-4 font-medium text-gray-700 truncate max-w-[150px]">{transaction.customerName || "-"}</td>
+                                <td className="px-6 py-4 font-medium text-gray-700 truncate max-w-[150px]">{transaction.customerName || "Pelanggan"}</td>
                                 <td className="px-6 py-4 font-medium text-gray-700">{transaction.employeeName || "-"}</td>
                                 <td className="px-6 py-4">
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
@@ -628,141 +630,118 @@ const DataTransaksi = () => {
       {/* Detail Modal */}
       {isModalOpen && selectedTransaction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
-            <div className="relative bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={closeModal} />
+            <div className="relative bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 {/* Modal Header */}
-                <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-[#FDFDFD]">
-                    <div>
-                        <h2 className="text-base font-bold text-gray-900 leading-tight">Detail Transaksi</h2>
-                        <p className="text-[9px] text-gray-400 mt-0.5 uppercase tracking-widest">ID: #{selectedTransaction.id}</p>
-                    </div>
+                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h2 className="text-base font-bold text-gray-900">Detail Transaksi</h2>
                     <button onClick={closeModal} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
                         <X size={16} className="text-gray-400" />
                     </button>
                 </div>
 
                 {/* Modal Content */}
-                <div className="px-5 py-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                    {/* Cashier Info */}
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-gray-50 rounded-xl p-2.5">
-                            <p className="text-[8px] text-gray-400 uppercase font-black tracking-widest mb-0.5">Pelanggan</p>
-                            <p className="text-[11px] font-bold text-gray-900 truncate">{selectedTransaction.customerName || "-"}</p>
+                <div className="px-6 py-4 max-h-[75vh] overflow-y-auto">
+
+                    {/* Info Grid — like reference screenshot */}
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-5 text-sm">
+                        <div>
+                            <p className="text-gray-400 text-xs">Tanggal & Jam</p>
+                            <p className="font-semibold text-gray-800">{formatDate(selectedTransaction.createdAt)}</p>
                         </div>
-                        <div className="bg-gray-50 rounded-xl p-2.5">
-                            <p className="text-[8px] text-gray-400 uppercase font-black tracking-widest mb-0.5">Kasir</p>
-                            <p className="text-[11px] font-bold text-gray-900 truncate">{selectedTransaction.employeeName || "-"}</p>
+                        <div>
+                            <p className="text-gray-400 text-xs">Order ID</p>
+                            <p className="font-semibold text-gray-800">#{selectedTransaction.id}</p>
                         </div>
-                        <div className="bg-gray-50 rounded-xl p-2.5">
-                            <p className="text-[8px] text-gray-400 uppercase font-black tracking-widest mb-0.5">Tipe Pesanan</p>
-                            <p className={`text-[11px] font-bold ${
-                                selectedTransaction.orderType === 'take_away' ? 'text-orange-600' : 'text-green-600'
-                            }`}>
-                                {selectedTransaction.orderType === 'take_away' ? 'Bawa Pulang' : 'Makan Ditempat'}
+                        <div>
+                            <p className="text-gray-400 text-xs">Kasir</p>
+                            <p className="font-semibold text-gray-800">{selectedTransaction.employeeName || '-'}</p>
+                        </div>
+                        <div>
+                            <p className="text-gray-400 text-xs">Jenis Layanan</p>
+                            <p className="font-semibold text-gray-800">
+                                {selectedTransaction.orderType === 'take_away' ? 'Bawa Pulang' : 'Makan Di Tempat'}
                             </p>
                         </div>
-                    </div>
-
-                    {/* Order Details */}
-                    <div className="space-y-3 mb-4">
-                        <h3 className="text-[9px] font-black text-gray-900 uppercase tracking-[2px] border-l-3 border-[#FE4E10] pl-2">Order Items</h3>
-                        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-                            <table className="w-full text-sm">
-                                <thead className="bg-[#F9F9FB]">
-                                    <tr>
-                                        <th className="px-3 py-2 text-left font-bold text-gray-500 uppercase tracking-wider text-[9px]">Item</th>
-                                        <th className="px-3 py-2 text-center font-bold text-gray-500 uppercase tracking-wider text-[9px]">Qty</th>
-                                        <th className="px-3 py-2 text-right font-bold text-gray-500 uppercase tracking-wider text-[9px]">Price</th>
-                                        <th className="px-3 py-2 text-right font-bold text-gray-500 uppercase tracking-wider text-[9px]">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {(selectedTransaction.items || []).map((item, idx) => (
-                                        <tr key={idx} className="hover:bg-gray-50/50">
-                                            <td className="px-3 py-2.5">
-                                                <div className="font-bold text-gray-900 text-[11px] leading-tight">{item.name}</div>
-                                                {item.variant && <div className="text-[8px] text-gray-400 mt-0.5">{item.variant}</div>}
-                                            </td>
-                                            <td className="px-3 py-2.5 text-center font-medium text-gray-700 text-[10px]">{item.qty}x</td>
-                                            <td className="px-3 py-2.5 text-right text-gray-600 text-[10px]">{(item.price || 0).toLocaleString("id-ID")}</td>
-                                            <td className="px-3 py-2.5 text-right font-bold text-gray-900 text-[10px] font-mono">{(item.subTotal || 0).toLocaleString("id-ID")}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div>
+                            <p className="text-gray-400 text-xs">Pelanggan</p>
+                            <p className="font-semibold text-gray-800">{selectedTransaction.customerName || 'Pelanggan'}</p>
+                        </div>
+                        <div>
+                            <p className="text-gray-400 text-xs">Pembayaran</p>
+                            <p className="font-semibold text-gray-800 capitalize">{selectedTransaction.paymentMethod || '-'}</p>
                         </div>
                     </div>
 
-                    {/* Payment Summary */}
-                    <div className="bg-[#1A1C1E] rounded-xl p-4 text-white shadow-xl shadow-gray-200">
-                        <div className="space-y-2 pb-3 border-b border-white/10">
-                            <div className="flex justify-between text-[10px]">
-                                <span className="text-gray-400">Subtotal</span>
-                                <span className="font-mono">{(selectedTransaction.subtotal || 0).toLocaleString("id-ID")}</span>
-                            </div>
-                            {selectedTransaction.manualDiscountType ? (
-                                <div className="flex justify-between text-[10px] text-orange-400">
-                                    <span>
-                                        Diskon ({selectedTransaction.manualDiscountType === 'percentage'
-                                            ? `${selectedTransaction.manualDiscountValue || 0}%`
-                                            : `Rp${(selectedTransaction.manualDiscountValue || 0).toLocaleString('id-ID')}`})
-                                    </span>
-                                    <span className="font-mono">- {(selectedTransaction.discountAmount || 0).toLocaleString("id-ID")}</span>
-                                </div>
-                            ) : (selectedTransaction.discountAmount || 0) > 0 ? (
-                                <div className="flex justify-between text-[10px] text-orange-400">
-                                    <span>Diskon</span>
-                                    <span className="font-mono">- {(selectedTransaction.discountAmount || 0).toLocaleString("id-ID")}</span>
-                                </div>
-                            ) : null}
-                            {selectedTransaction.taxDetails && selectedTransaction.taxDetails.length > 0 ? (
-                                selectedTransaction.taxDetails.map((td, idx) => (
-                                    <div key={idx} className="flex justify-between text-[10px]">
-                                        <span className="text-gray-400">{td.name} ({td.percentage || 0}%)</span>
-                                        <span className="font-mono">{(td.amount || 0).toLocaleString("id-ID")}</span>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="flex justify-between text-[10px]">
-                                    <span className="text-gray-400">Pajak</span>
-                                    <span className="font-mono">{(selectedTransaction.taxAmount || 0).toLocaleString("id-ID")}</span>
-                                </div>
-                            )}
+                    {/* Items Table */}
+                    <table className="w-full text-sm mb-4 border-collapse">
+                        <thead>
+                            <tr className="border-b border-gray-200">
+                                <th className="text-left text-gray-400 font-semibold text-xs py-2 w-6">No</th>
+                                <th className="text-left text-gray-400 font-semibold text-xs py-2">Menu</th>
+                                <th className="text-center text-gray-400 font-semibold text-xs py-2">Jumlah</th>
+                                <th className="text-right text-gray-400 font-semibold text-xs py-2">Harga</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(selectedTransaction.items || []).map((item, idx) => (
+                                <tr key={idx} className="border-b border-gray-50">
+                                    <td className="py-2 text-xs text-gray-500">{idx + 1}</td>
+                                    <td className="py-2 text-xs font-medium text-gray-800">
+                                        {item.name}
+                                        {item.variant && <span className="text-gray-400 ml-1">({item.variant})</span>}
+                                    </td>
+                                    <td className="py-2 text-xs text-center text-gray-700">{item.qty}</td>
+                                    <td className="py-2 text-xs text-right font-medium text-gray-800">Rp{(item.subTotal || 0).toLocaleString('id-ID')}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    {/* Totals */}
+                    <div className="space-y-1.5 text-sm border-t border-gray-100 pt-3">
+                        <div className="flex justify-between text-gray-500">
+                            <span>Subtotal</span>
+                            <span>Rp{(selectedTransaction.subtotal || 0).toLocaleString('id-ID')}</span>
                         </div>
-                        <div className="pt-3 space-y-2.5">
-                            <div className="flex justify-between items-center bg-white/5 py-1 px-3 rounded-lg -mx-1">
-                                <span className="text-xs font-bold text-gray-300">Total</span>
-                                <span className="text-lg font-black text-[#FE4E10] font-mono">{(selectedTransaction.totalPrice || 0).toLocaleString("id-ID")}</span>
+                        {(selectedTransaction.discountAmount || 0) > 0 && (
+                            <div className="flex justify-between text-orange-500">
+                                <span>Diskon</span>
+                                <span>- Rp{(selectedTransaction.discountAmount || 0).toLocaleString('id-ID')}</span>
                             </div>
-                            <div className="flex justify-between text-[10px] text-gray-400 pt-1">
-                                <span>Metode</span>
-                                <span className="font-bold text-white uppercase">{selectedTransaction.paymentMethod || '-'}</span>
-                            </div>
-                            <div className="flex justify-between text-[10px] text-gray-400">
-                                <span>Diterima</span>
-                                <span className="text-green-400 font-medium font-mono">{(selectedTransaction.paidAmount || 0).toLocaleString("id-ID")}</span>
-                            </div>
-                            <div className="flex justify-between text-[10px] text-gray-400">
-                                <span>Kembalian</span>
-                                <span className="text-orange-400 font-medium font-mono">{(selectedTransaction.changeAmount || 0).toLocaleString("id-ID")}</span>
-                            </div>
+                        )}
+                        <div className="flex justify-between text-gray-500">
+                            <span>Pajak(PPN)</span>
+                            <span>Rp{(selectedTransaction.taxAmount || 0).toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-gray-900 text-base border-t border-gray-200 pt-2 mt-1">
+                            <span>Total:</span>
+                            <span>Rp{(selectedTransaction.totalPrice || 0).toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-500 text-xs pt-1">
+                            <span>Dibayar</span>
+                            <span>Rp{(selectedTransaction.paidAmount || 0).toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-500 text-xs">
+                            <span>Kembalian</span>
+                            <span>Rp{(selectedTransaction.changeAmount || 0).toLocaleString('id-ID')}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Modal Footer */}
-                <div className="p-4 bg-gray-50/50 flex gap-2">
-                    <button 
+                <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+                    <button
                         onClick={handleViewReceipt}
-                        className="flex-1 py-2.5 bg-white border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-gray-900 hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
+                        className="flex-1 py-2.5 bg-[#FE4E10] text-white rounded-xl text-sm font-semibold hover:bg-[#E0450E] transition-all"
                     >
-                        Print Receipt
+                        Lihat Struk
                     </button>
-                    <button 
+                    <button
                         onClick={closeModal}
-                        className="flex-1 py-2.5 bg-[#FE4E10] text-white rounded-xl text-[11px] font-bold hover:bg-[#E0450E] transition-all shadow-lg shadow-[#FE4E10]/20"
+                        className="flex-1 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all"
                     >
-                        Done
+                        Tutup
                     </button>
                 </div>
             </div>

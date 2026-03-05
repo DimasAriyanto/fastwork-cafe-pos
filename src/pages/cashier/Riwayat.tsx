@@ -137,7 +137,9 @@ export default function Riwayat() {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900 text-sm truncate">Order #{tx.id}</h3>
-            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">{tx.cashierName || 'Kasir'}</div>
+            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate">
+              {tx.cashierName || 'Kasir'} • {tx.customerName || 'Pelanggan'}
+            </div>
           </div>
         </div>
         <div className="space-y-1 text-[10px]">
@@ -295,7 +297,10 @@ export default function Riwayat() {
                   `}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-gray-900 text-base sm:text-lg">Order: {tx.id}</h3>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-base sm:text-lg">Order: {tx.id}</h3>
+                      <p className="text-xs text-orange-600 font-bold">{tx.customerName || "Pelanggan"}</p>
+                    </div>
                     <span className="text-gray-500 text-xs sm:text-sm">{formatDate(tx.date)}</span>
                   </div>
                   <div className="flex justify-between items-end gap-2">

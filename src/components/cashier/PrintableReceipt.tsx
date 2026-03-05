@@ -53,6 +53,10 @@ export const PrintableReceipt = React.forwardRef<HTMLDivElement, PrintableReceip
                         <span>Kasir:</span>
                         <span>{transaction.cashierName || "-"}</span>
                     </div>
+                    <div className="flex justify-between">
+                        <span>Pelanggan:</span>
+                        <span>{transaction.customerName || "-"}</span>
+                    </div>
                     <p className="border-b border-dashed border-black my-2"></p>
                 </div>
 

@@ -282,6 +282,7 @@ export class TransactionRepository {
           manualDiscountValue: data.manualDiscountValue || 0,
           totalItems: data.items.reduce((acc, curr) => acc + curr.qty, 0),
           orderType: data.orderType || existing.orderType,
+          customerName: data.customerName || existing.customerName,
           notes: data.notes || existing.notes,
           updatedAt: new Date(),
         })

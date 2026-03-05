@@ -51,6 +51,10 @@ export default function PaymentModal({
     const handleNumPadClick = (value: string) => {
         if (value === "delete") {
             setCashAmount((p) => p.slice(0, -1));
+        } else if (value === "000") {
+            // Don't append 000 if input is empty to avoid '000'
+            if (cashAmount === "") return;
+            setCashAmount((p) => p + "000");
         } else {
             if (cashAmount === "" && value === "0") return;
             setCashAmount((p) => p + value);
@@ -84,7 +88,7 @@ export default function PaymentModal({
 
     if (!isOpen) return null;
 
-    const keypad = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "delete"];
+    const keypad = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "000", "0", "delete"];
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -221,12 +225,14 @@ export default function PaymentModal({
 
                         {/* KEYPAD */}
                         <div className="flex-1 flex items-center">
-                            <div className="w-full grid grid-cols-3 grid-rows-4 gap-4">
+                            <div className="w-full grid grid-cols-3 gap-4">
                                 {keypad.map((k) => (
                                     <button
                                         key={k}
                                         onClick={() => handleNumPadClick(k)}
-                                        className="h-[72px] flex items-center justify-center rounded-xl text-3xl font-medium bg-white border border-gray-50 hover:bg-gray-100 hover:scale-[1.05] hover:shadow-md active:scale-[0.97] transition-all duration-200"
+                                        className={`h-[72px] flex items-center justify-center rounded-xl font-medium bg-white border border-gray-50 hover:bg-gray-100 hover:scale-[1.05] hover:shadow-md active:scale-[0.97] transition-all duration-200 ${
+                                            k === "000" ? "text-2xl text-orange-500 font-bold" : "text-3xl"
+                                        }`}
                                     >
                                         {k === "delete" ? "⌫" : k}
                                     </button>

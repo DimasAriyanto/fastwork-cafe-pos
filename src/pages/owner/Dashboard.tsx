@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, DollarSign, Calendar, TrendingDown, Search, Percent } from 'lucide-react';
+import { TrendingUp, DollarSign, Calendar, TrendingDown, ShoppingBag } from 'lucide-react';
 import { 
   AreaChart, 
   Area, 
@@ -49,21 +49,12 @@ const Dashboard = () => {
               isUp: true 
           },
           { 
-              title: 'Total Diskon', 
-              value: formatCurrency(statsRes.totalDiscount || 0), 
-              icon: Percent, 
-              iconColor: 'text-orange-500', 
-              iconBg: 'bg-orange-50', 
-              trend: 'Potongan', 
-              isUp: true 
-          },
-          { 
-              title: 'Total Pajak (PPN)', 
-              value: formatCurrency(statsRes.totalTax || 0), 
-              icon: Search, 
-              iconColor: 'text-blue-500', 
-              iconBg: 'bg-blue-50', 
-              trend: 'Setoran', 
+              title: 'Total Modal', 
+              value: formatCurrency(statsRes.totalModal || 0), 
+              icon: ShoppingBag, 
+              iconColor: 'text-[#4880FF]', 
+              iconBg: 'bg-[#4880FF]/15', 
+              trend: '40% dari pendapatan', 
               isUp: true 
           },
           { 
@@ -118,7 +109,7 @@ const Dashboard = () => {
     <div className="space-y-8">
       
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (

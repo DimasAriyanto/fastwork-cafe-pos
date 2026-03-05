@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useOutletContext } from "react-router-dom";
-import { Search, Minus, Plus, Trash2, ClipboardList, Check, ShoppingBag } from "lucide-react";
+import { Search, Minus, Plus, Trash2, ClipboardList, ShoppingBag, Check, X, Pencil } from "lucide-react";
 import DateFilter from "../../components/cashier/DateFilter";
 import type { CashierContextType } from "../../layouts/CashierLayout";
 import PaymentModal from "../../components/cashier/modals/PaymentModal";
@@ -27,10 +27,6 @@ export default function UnpaidOrders() {
     const [showAddMenu, setShowAddMenu] = useState(false);
     const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: "", end: "" });
 
-    // Edit Name State
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [tempCustomerName, setTempCustomerName] = useState("");
-
     // Dynamic Menu Data
     const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
     const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -46,6 +42,11 @@ export default function UnpaidOrders() {
     // Manual Discount State for Sidebar
     const [manualDiscountType, setManualDiscountType] = useState<'fixed' | 'percentage'>('fixed');
     const [manualDiscountValue, setManualDiscountValue] = useState("");
+
+    // Inline customer name editing
+    const [editingCustomerName, setEditingCustomerName] = useState(false);
+    const [customerNameInput, setCustomerNameInput] = useState("");
+    const customerNameInputRef = useRef<HTMLInputElement>(null);
 
     // Fetch dynamic menu data
     useEffect(() => {
@@ -197,7 +198,7 @@ export default function UnpaidOrders() {
             const subtotal = current.subtotal || 0;
             const discountAmount = manualDiscount ? (manualDiscount.type === 'percentage' ? Math.round(subtotal * (manualDiscount.value / 100)) : manualDiscount.value) : 0;
             const totalAfterDiscount = subtotal - discountAmount;
-            const taxAmount = (current.taxDetails || []).reduce((sum, t) => sum + Math.round(totalAfterDiscount * (t.percentage / 100)), 0);
+            const taxAmount = (current.taxDetails || []).reduce((sum: number, t: any) => sum + Math.round(totalAfterDiscount * (t.percentage / 100)), 0);
             
             return {
                 ...prev,
@@ -219,7 +220,7 @@ export default function UnpaidOrders() {
             if (!current) return prev;
             
             const subtotal = current.subtotal || 0;
-            const taxAmount = (current.taxDetails || []).reduce((sum, t) => sum + Math.round(subtotal * (t.percentage / 100)), 0);
+            const taxAmount = (current.taxDetails || []).reduce((sum: number, t: any) => sum + Math.round(subtotal * (t.percentage / 100)), 0);
             
             return {
                 ...prev,
@@ -233,11 +234,9 @@ export default function UnpaidOrders() {
         });
     };
 
-    // Reset edit state when selection changes
+    // Reset payment option when selection changes
     useEffect(() => {
-        setIsEditingName(false);
         if (selectedOrder) {
-            setTempCustomerName(selectedOrder.customerName);
             if (selectedOrder.paymentMethod) {
                 setPaymentOption(selectedOrder.paymentMethod);
             }
@@ -273,7 +272,6 @@ export default function UnpaidOrders() {
             };
 
             await apiClient.updateTransaction(Number(selectedOrder.id), payload);
-            setIsEditingName(false);
             // Refresh local state by re-fetching details to ensure consistency
             const freshDetail = await apiClient.getTransactionDetail(Number(selectedOrder.id));
             
@@ -317,6 +315,48 @@ export default function UnpaidOrders() {
         } catch (err: any) {
             alert(err.message || "Gagal menyimpan perubahan");
         }
+    };
+
+    const handleStartEditCustomerName = () => {
+        if (!selectedOrder) return;
+        setCustomerNameInput(selectedOrder.customerName || "");
+        setEditingCustomerName(true);
+        setTimeout(() => customerNameInputRef.current?.focus(), 50);
+    };
+
+    const handleConfirmCustomerName = async () => {
+        if (!selectedOrderId || !selectedOrder) return;
+        const newName = customerNameInput.trim() || "Pelanggan";
+        // Update local state immediately
+        setFetchedDetails(prev => ({
+            ...prev,
+            [selectedOrderId]: { ...prev[selectedOrderId], customerName: newName }
+        }));
+        setEditingCustomerName(false);
+        // Persist silently
+        try {
+            const payload = {
+                customerName: newName,
+                orderType: selectedOrder.serviceType === 'Take Away' ? 'take_away' : 'dine_in',
+                items: selectedOrder.items.map(item => ({
+                    menuId: item.menuId,
+                    variantId: item.variantId,
+                    qty: item.qty,
+                    price: item.basePrice ?? item.price,
+                    toppings: (item.toppings || []).map(t => ({ toppingId: t.toppingId, price: t.price }))
+                })),
+                manualDiscountType: selectedOrder.manualDiscount?.type || undefined,
+                manualDiscountValue: selectedOrder.manualDiscount?.value || 0,
+                discountAmount: selectedOrder.discountAmount || 0
+            };
+            await apiClient.updateTransaction(Number(selectedOrder.id), payload);
+        } catch (err: any) {
+            alert(err.message || "Gagal menyimpan nama pelanggan");
+        }
+    };
+
+    const handleCancelEditCustomerName = () => {
+        setEditingCustomerName(false);
     };
 
     const handleCancelOrder = async () => {
@@ -382,22 +422,6 @@ export default function UnpaidOrders() {
         handlePaymentSuccess(selectedOrder.totalPrice, 0, "QRIS");
     };
 
-    const handleSaveName = () => {
-        if (!selectedOrder || !tempCustomerName.trim()) return;
-
-        const updatedOrder: UnpaidOrder = {
-            ...selectedOrder,
-            customerName: tempCustomerName.trim()
-        };
-
-        updateUnpaidOrder(updatedOrder);
-        setFetchedDetails(prev => ({
-            ...prev,
-            [selectedOrder.id]: updatedOrder
-        }));
-        setIsEditingName(false);
-    };
-
     const handleAddProduct = (product: Product) => {
         if (!selectedOrder) return;
 
@@ -423,7 +447,7 @@ export default function UnpaidOrders() {
             });
         }
 
-        const newSubtotal = updatedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+        const newSubtotal = updatedItems.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0);
         
         // 1. Promo Discount (Percentage)
         const promoDiscountPercent = selectedOrder.discount || 0;
@@ -443,7 +467,7 @@ export default function UnpaidOrders() {
         const updatedOrder: UnpaidOrder = {
             ...selectedOrder,
             items: updatedItems,
-            totalItems: updatedItems.reduce((acc, item) => acc + item.qty, 0),
+            totalItems: updatedItems.reduce((acc: number, item: any) => acc + item.qty, 0),
             subtotal: newSubtotal,
             discountAmount: totalDiscount,
             tax: newTax,
@@ -472,7 +496,7 @@ export default function UnpaidOrders() {
             return item;
         }).filter(item => item.qty > 0);
 
-        const newSubtotal = updatedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+        const newSubtotal = updatedItems.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0);
         
         // 1. Promo Discount (Percentage)
         const promoDiscountPercent = selectedOrder.discount || 0;
@@ -492,7 +516,7 @@ export default function UnpaidOrders() {
         const updatedOrder: UnpaidOrder = {
             ...selectedOrder,
             items: updatedItems,
-            totalItems: updatedItems.reduce((acc, item) => acc + item.qty, 0),
+            totalItems: updatedItems.reduce((acc: number, item: any) => acc + item.qty, 0),
             subtotal: newSubtotal,
             discountAmount: totalDiscount,
             tax: newTax,
@@ -515,7 +539,7 @@ export default function UnpaidOrders() {
             return !(isMenuMatch && isVariantMatch);
         });
 
-        const newSubtotal = updatedItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+        const newSubtotal = updatedItems.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0);
         
         // 1. Promo Discount (Percentage)
         const promoDiscountPercent = selectedOrder.discount || 0;
@@ -535,7 +559,7 @@ export default function UnpaidOrders() {
         const updatedOrder: UnpaidOrder = {
             ...selectedOrder,
             items: updatedItems,
-            totalItems: updatedItems.reduce((acc, item) => acc + item.qty, 0),
+            totalItems: updatedItems.reduce((acc: number, item: any) => acc + item.qty, 0),
             subtotal: newSubtotal,
             discountAmount: totalDiscount,
             tax: newTax,
@@ -608,6 +632,7 @@ export default function UnpaidOrders() {
                                         <div className="flex items-start gap-3 mb-4">
                                             <div>
                                                 <h3 className="font-bold text-gray-800">Order #{order.id}</h3>
+                                                <p className="text-[11px] text-orange-600 font-bold">{order.customerName || "Pelanggan"}</p>
                                             </div>
                                         </div>
                                         <div className="mb-4 text-xs text-gray-500">
@@ -679,6 +704,29 @@ export default function UnpaidOrders() {
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="text-center w-full relative border-b border-gray-100 pb-2">
                                         <h2 className="font-bold text-base text-gray-900 leading-tight">Order #{selectedOrder.id}</h2>
+                                        {editingCustomerName ? (
+                                            <div className="flex items-center justify-center gap-1 mt-1">
+                                                <input
+                                                    ref={customerNameInputRef}
+                                                    value={customerNameInput}
+                                                    onChange={e => setCustomerNameInput(e.target.value)}
+                                                    onKeyDown={e => { if (e.key === 'Enter') handleConfirmCustomerName(); if (e.key === 'Escape') handleCancelEditCustomerName(); }}
+                                                    className="text-xs text-center text-orange-600 font-bold border border-orange-300 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-orange-400 w-36"
+                                                    placeholder="Nama pelanggan"
+                                                />
+                                                <button onClick={handleConfirmCustomerName} className="text-green-500 hover:text-green-600"><Check size={14} /></button>
+                                                <button onClick={handleCancelEditCustomerName} className="text-gray-400 hover:text-gray-600"><X size={14} /></button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={handleStartEditCustomerName}
+                                                className="mt-1 flex items-center justify-center gap-1 mx-auto group"
+                                                title="Ubah nama pelanggan"
+                                            >
+                                                <span className="text-xs text-orange-600 font-bold group-hover:underline">{selectedOrder.customerName || "Pelanggan"}</span>
+                                                <Pencil size={10} className="text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
