@@ -69,6 +69,7 @@ export class TransactionRepository {
         paymentStatus: "paid", // Status transaksi lunas
         totalItems: data.items.reduce((acc, curr) => acc + curr.qty, 0),
         orderType: (data as any).orderType || "dine_in",
+        customerName: data.customerName || 'Guest',
         notes: data.notes,
         createdBy: data.cashierId,
       });
@@ -190,7 +191,8 @@ export class TransactionRepository {
         paymentStatus: 'unpaid',
         totalItems: data.items.reduce((acc, curr) => acc + curr.qty, 0),
         orderType: data.orderType || 'dine_in',
-        notes: data.notes || data.customerName,
+        customerName: data.customerName || 'Guest',
+        notes: data.notes,
         createdBy: data.createdBy,
       });
 
@@ -382,7 +384,7 @@ export class TransactionRepository {
   async getUnpaidOrders(outletId: number, cashierId?: number) {
     const orders = await db.select({
       id: transactions.id,
-      customerName: transactions.notes,
+      customerName: transactions.customerName,
       subtotal: transactions.subtotal,
       taxAmount: transactions.taxAmount,
       totalPrice: transactions.totalPrice,
@@ -450,6 +452,7 @@ export class TransactionRepository {
         paymentStatus: transactions.paymentStatus,
         status: transactions.status,
         createdAt: transactions.createdAt,
+        customerName: transactions.customerName,
         notes: transactions.notes,
         totalItems: transactions.totalItems,
         orderType: transactions.orderType,
@@ -485,6 +488,7 @@ export class TransactionRepository {
         paymentStatus: transactions.paymentStatus,
         totalItems: transactions.totalItems,
         orderType: transactions.orderType,
+        customerName: transactions.customerName,
         notes: transactions.notes,
         createdAt: transactions.createdAt,
         taxDetails: transactions.taxDetails,

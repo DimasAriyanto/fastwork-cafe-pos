@@ -1,15 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import OrderTypeSelector from "./OrderTypeSelector";
 import CartItem from "./CartItem";
 import type { CartItem as CartItemType, PaymentMethod } from "../../types/cashier";
-import { apiClient } from "../../api/client";
-import { Plus, X, UserPlus, Phone } from "lucide-react";
 
 type CartPanelProps = {
     cart: CartItemType[];
     customer: string;
     setCustomer: (name: string) => void;
-    setCustomerId?: (id: number | null) => void;
     dineType: "dinein" | "takeaway";
     setDineType: (type: "dinein" | "takeaway") => void;
     onUpdateQuantity: (index: number, delta: number) => void;
@@ -27,16 +24,10 @@ type CartPanelProps = {
     onSetManualDiscount: (discount: { type: 'fixed' | 'percentage'; value: number } | null) => void;
 };
 
-interface CustomerSuggestion {
-    id: number;
-    name: string;
-}
-
 export default function CartPanel({
     cart,
     customer,
     setCustomer,
-    setCustomerId,
     dineType,
     setDineType,
     onUpdateQuantity,
@@ -57,52 +48,6 @@ export default function CartPanel({
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
     const [manualDiscountType, setManualDiscountType] = useState<'fixed' | 'percentage'>('fixed');
     const [manualDiscountValue, setManualDiscountValue] = useState("");
-    const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([]);
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [newCustomer, setNewCustomer] = useState({ name: "", phoneNumber: "" });
-    const suggestionRef = useRef<HTMLDivElement>(null);
-
-    // Click outside listener
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
-                // setShowSuggestions(false); // Removed
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    // Fetch customer suggestions when typing
-    useEffect(() => {
-        const fetchSuggestions = async () => {
-            if (customer.length < 2) {
-                setSuggestions([]);
-                return;
-            }
-            try {
-                const data = await apiClient.getCustomers(customer);
-                setSuggestions(data);
-                // setShowSuggestions(true); // Removed
-            } catch (err) {
-                console.error("Failed to fetch customer suggestions", err);
-            }
-        };
-
-        const timeoutId = setTimeout(fetchSuggestions, 300);
-        return () => clearTimeout(timeoutId);
-    }, [customer]);
-
-    const handleCustomerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        setCustomer(val);
-        
-        // Find if the typed value matches a suggestion to set ID
-        if (setCustomerId) {
-            const match = suggestions.find(s => s.name === val);
-            setCustomerId(match ? match.id : null);
-        }
-    };
 
     const handleApplyManualDiscount = () => {
         const val = parseFloat(manualDiscountValue);
@@ -118,7 +63,6 @@ export default function CartPanel({
         onSetManualDiscount(null);
     };
 
-
     const handleCheckout = () => {
         if (cart.length === 0) {
             alert("Keranjang kosong!");
@@ -131,63 +75,21 @@ export default function CartPanel({
         onCheckout(payType, paymentMethod || undefined);
     };
 
-    const handleQuickAdd = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newCustomer.name.trim()) return;
-
-        try {
-            const created = await apiClient.createCustomer(newCustomer);
-            setCustomer(created.name);
-            if (setCustomerId) setCustomerId(created.id);
-            setIsAddModalOpen(false);
-            setNewCustomer({ name: "", phoneNumber: "" });
-        } catch (err: any) {
-            alert(err.message || "Gagal menambah pelanggan");
-        }
-    };
-
     return (
         <div className="w-full bg-white flex flex-col h-full">
             <div className="flex-1 overflow-y-auto hide-scrollbar">
                 <div className="p-6">
 
                     {/* Customer Info */}
-                    <div className="mb-6 relative" ref={suggestionRef}>
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="text-sm font-semibold text-gray-700">Pelanggan</label>
-                            <button 
-                                onClick={() => setIsAddModalOpen(true)}
-                                className="text-xs text-orange-500 font-bold hover:underline flex items-center gap-1"
-                            >
-                                <Plus size={14} /> Tambah Baru
-                            </button>
-                        </div>
+                    <div className="mb-6">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Pelanggan</label>
                         <input
                             type="text"
                             value={customer}
-                            onChange={handleCustomerChange}
+                            onChange={(e) => setCustomer(e.target.value)}
                             placeholder="Nama pelanggan..."
                             className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-all font-medium"
                         />
-                        
-                        {/* Suggestions Dropdown */}
-                        {suggestions.length > 0 && customer.length >= 2 && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-2 max-h-48 overflow-y-auto">
-                                {suggestions.map(s => (
-                                    <button
-                                        key={s.id}
-                                        onClick={() => {
-                                            setCustomer(s.name);
-                                            if (setCustomerId) setCustomerId(s.id);
-                                            setSuggestions([]);
-                                        }}
-                                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm font-medium"
-                                    >
-                                        {s.name}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
                     </div>
 
                     <OrderTypeSelector orderType={dineType} setOrderType={setDineType} />
@@ -397,15 +299,12 @@ export default function CartPanel({
                                         </div>
                                     </div>
                                 </div>
-
                             )}
 
                             {/* Order Button */}
                             <button
                                 onClick={handleCheckout}
-                                className="w-full h-14 bg-[#FE4E10] text-white rounded-2xl
-font-semibold text-lg flex items-center justify-center
-hover:bg-[#e0440e] transition-all duration-200 active:scale-[0.98] mt-4"
+                                className="w-full h-14 bg-[#FE4E10] text-white rounded-2xl font-semibold text-lg flex items-center justify-center hover:bg-[#e0440e] transition-all duration-200 active:scale-[0.98] mt-4"
                             >
                                 Pesan
                             </button>
@@ -413,80 +312,6 @@ hover:bg-[#e0440e] transition-all duration-200 active:scale-[0.98] mt-4"
                     )}
                 </div>
             </div>
-
-            {/* Quick Add Modal */}
-            {isAddModalOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-white w-full max-w-[440px] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="bg-[#1F2937] p-6 flex items-center justify-between text-white">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-orange-500 p-2 rounded-xl">
-                                    <UserPlus size={20} />
-                                </div>
-                                <h2 className="text-xl font-bold">Tambah Pelanggan</h2>
-                            </div>
-                            <button 
-                                onClick={() => setIsAddModalOpen(false)}
-                                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-                            >
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleQuickAdd} className="p-8 space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-gray-700">Nama Lengkap</label>
-                                <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                                        <Plus size={18} />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        required
-                                        autoFocus
-                                        value={newCustomer.name}
-                                        onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                                        placeholder="Nama pelanggan..."
-                                        className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all font-medium"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-gray-700">Nomor Telepon (Opsional)</label>
-                                <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                                        <Phone size={18} />
-                                    </div>
-                                    <input
-                                        type="tel"
-                                        value={newCustomer.phoneNumber}
-                                        onChange={(e) => setNewCustomer({ ...newCustomer, phoneNumber: e.target.value })}
-                                        placeholder="08xxxxxxxxxx"
-                                        className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all font-medium"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex gap-4 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsAddModalOpen(false)}
-                                    className="flex-1 py-4 text-gray-500 font-bold rounded-2xl hover:bg-gray-100 transition-all"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 py-4 bg-orange-500 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-all active:scale-95"
-                                >
-                                    Simpan
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

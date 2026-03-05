@@ -34,6 +34,7 @@ export const transactions = mysqlTable('transactions', {
   orderType: varchar('order_type', { length: 50 }).default('dine_in'),
   notes: text('notes'),
   customerId: int('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+  customerName: varchar('customer_name', { length: 255 }),
   createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
   taxDetails: text('tax_details'), // Stores JSON string of tax breakdown
   manualDiscountType: varchar('manual_discount_type', { length: 20 }),

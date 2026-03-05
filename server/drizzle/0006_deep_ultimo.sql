@@ -1,0 +1,1 @@
+ALTER TABLE `transactions` ADD `customer_name` varchar(255);

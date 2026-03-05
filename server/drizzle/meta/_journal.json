@@ -43,6 +43,13 @@
       "when": 1772639942329,
       "tag": "0005_curved_stellaris",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1772720502324,
+      "tag": "0006_deep_ultimo",
+      "breakpoints": true
     }
   ]
 }

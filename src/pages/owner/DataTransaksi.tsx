@@ -573,6 +573,7 @@ const DataTransaksi = () => {
                         <tr>
                             <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">ID</th>
                             <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">Tanggal</th>
+                            <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">Pelanggan</th>
                             <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">Kasir</th>
                             <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">Tipe</th>
                             <th className="px-6 py-4 font-bold text-sm uppercase tracking-wider">Metode</th>
@@ -586,6 +587,7 @@ const DataTransaksi = () => {
                             <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4 font-bold text-[#202224]">#{transaction.id}</td>
                                 <td className="px-6 py-4 text-gray-600 text-sm">{formatDate(transaction.createdAt)}</td>
+                                <td className="px-6 py-4 font-medium text-gray-700 truncate max-w-[150px]">{transaction.customerName || "-"}</td>
                                 <td className="px-6 py-4 font-medium text-gray-700">{transaction.employeeName || "-"}</td>
                                 <td className="px-6 py-4">
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
@@ -643,6 +645,10 @@ const DataTransaksi = () => {
                 <div className="px-5 py-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
                     {/* Cashier Info */}
                     <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="bg-gray-50 rounded-xl p-2.5">
+                            <p className="text-[8px] text-gray-400 uppercase font-black tracking-widest mb-0.5">Pelanggan</p>
+                            <p className="text-[11px] font-bold text-gray-900 truncate">{selectedTransaction.customerName || "-"}</p>
+                        </div>
                         <div className="bg-gray-50 rounded-xl p-2.5">
                             <p className="text-[8px] text-gray-400 uppercase font-black tracking-widest mb-0.5">Kasir</p>
                             <p className="text-[11px] font-bold text-gray-900 truncate">{selectedTransaction.employeeName || "-"}</p>

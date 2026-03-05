@@ -33,7 +33,6 @@ export default function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState("Semua Menu");
   const [isLoading, setIsLoading] = useState(true);
   const [customer, setCustomer] = useState("");
-  const [customerId, setCustomerId] = useState<number | null>(null);
   const [dineType, setDineType] = useState<"dinein" | "takeaway">("dinein");
   const [selectedProductForModal, setSelectedProductForModal] = useState<CartItem | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | undefined>();
@@ -177,7 +176,6 @@ export default function Dashboard() {
         customerName: customer || "Pelanggan",
         orderType: dineType === "dinein" ? "dine_in" : "take_away",
         notes: customer || "Pelanggan",
-        customerId: customerId || undefined,
         items: cart.map(c => ({
           menuId: c.id,
           qty: c.qty,
@@ -236,7 +234,6 @@ export default function Dashboard() {
       removeDiscount();
       setManualDiscount(null);
       setCustomer("");
-      setCustomerId(null);
       closePaymentModal();
       closeQRISModal();
       setIsRightPanelOpen(false);
@@ -256,7 +253,6 @@ export default function Dashboard() {
         customerName: customer || "Pelanggan",
         orderType: dineType === "dinein" ? "dine_in" : "take_away",
         notes: customer || "Pelanggan",
-        customerId: customerId || undefined,
         items: cart.map(c => ({
           menuId: c.id,
           qty: c.qty,
@@ -278,7 +274,6 @@ export default function Dashboard() {
       removeDiscount();
       setManualDiscount(null);
       setCustomer("");
-      setCustomerId(null);
       setIsRightPanelOpen(false);
       refreshData();
     } catch (err: any) {
@@ -319,7 +314,6 @@ export default function Dashboard() {
             cart={cart}
             customer={customer}
             setCustomer={setCustomer}
-            setCustomerId={setCustomerId}
             dineType={dineType}
             setDineType={setDineType}
             onUpdateQuantity={updateQuantity}
