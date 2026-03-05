@@ -177,7 +177,7 @@ export default function Riwayat() {
           {(tx as any).manualDiscount && (
             <div className="flex justify-between text-orange-600 italic font-bold">
               <span className="text-gray-400">
-                Manual ({(tx as any).manualDiscount.type === 'percentage' 
+                Diskon ({(tx as any).manualDiscount.type === 'percentage' 
                   ? `${(tx as any).manualDiscount.value}%` 
                   : `Rp${((tx as any).manualDiscount?.value || 0).toLocaleString('id-ID')}`})
               </span>

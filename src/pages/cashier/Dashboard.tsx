@@ -42,7 +42,7 @@ export default function Dashboard() {
   const {
     cart, addToCart, updateCartItem, removeFromCart, updateQuantity, clearCart,
     subtotal, tax, total, taxRate, setTaxRate, setTaxes, taxDetails,
-    appliedDiscount, applyDiscountCode, removeDiscount, 
+    appliedDiscount, removeDiscount, 
     manualDiscount, setManualDiscount, discountAmount
   } = useCart();
   
@@ -333,7 +333,6 @@ export default function Dashboard() {
             taxDetails={taxDetails}
             total={total}
             appliedDiscount={appliedDiscount}
-            applyDiscountCode={applyDiscountCode}
             removeDiscount={removeDiscount}
             subtotal={subtotal}
             onCheckout={handleCheckout}
@@ -375,8 +374,7 @@ export default function Dashboard() {
         total={total}
         discount={appliedDiscount?.percentage || 0}
         manualDiscount={manualDiscount}
-        discountAmount={discountAmount}
-        onPaymentSuccess={(paid, change) => onPaymentConfirm(paid, change, "CASH")}
+        onPaymentSuccess={(paid, change, method) => { onPaymentConfirm(paid, change, method); }}
       />
 
       <QRISPaymentModal

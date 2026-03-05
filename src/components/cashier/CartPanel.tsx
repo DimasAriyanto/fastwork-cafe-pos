@@ -3,7 +3,7 @@ import OrderTypeSelector from "./OrderTypeSelector";
 import CartItem from "./CartItem";
 import type { CartItem as CartItemType, PaymentMethod } from "../../types/cashier";
 import { apiClient } from "../../api/client";
-import { ChevronDown, Plus, X, UserPlus, Phone } from "lucide-react";
+import { Plus, X, UserPlus, Phone } from "lucide-react";
 
 type CartPanelProps = {
     cart: CartItemType[];
@@ -22,7 +22,6 @@ type CartPanelProps = {
     taxRate?: number;
     taxDetails?: { name: string; amount: number; percentage: number }[];
     appliedDiscount: { code: string; percentage: number; minSpend: number } | null;
-    applyDiscountCode: (code: string) => Promise<{ success: boolean; message: string }>;
     removeDiscount: () => void;
     manualDiscount: { type: 'fixed' | 'percentage'; value: number } | null;
     onSetManualDiscount: (discount: { type: 'fixed' | 'percentage'; value: number } | null) => void;
@@ -49,7 +48,6 @@ export default function CartPanel({
     total,
     taxRate = 0.1,
     appliedDiscount,
-    applyDiscountCode,
     removeDiscount,
     manualDiscount,
     onSetManualDiscount,
@@ -57,12 +55,9 @@ export default function CartPanel({
 }: CartPanelProps) {
     const [payType, setPayType] = useState<"payNow" | "payLater">("payNow");
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
-    const [isDiscountFocused, setIsDiscountFocused] = useState(false);
-    const [discountCode, setDiscountCode] = useState("");
     const [manualDiscountType, setManualDiscountType] = useState<'fixed' | 'percentage'>('fixed');
     const [manualDiscountValue, setManualDiscountValue] = useState("");
     const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newCustomer, setNewCustomer] = useState({ name: "", phoneNumber: "" });
     const suggestionRef = useRef<HTMLDivElement>(null);
@@ -71,7 +66,7 @@ export default function CartPanel({
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
-                setShowSuggestions(false);
+                // setShowSuggestions(false); // Removed
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -88,7 +83,7 @@ export default function CartPanel({
             try {
                 const data = await apiClient.getCustomers(customer);
                 setSuggestions(data);
-                setShowSuggestions(true);
+                // setShowSuggestions(true); // Removed
             } catch (err) {
                 console.error("Failed to fetch customer suggestions", err);
             }
@@ -123,12 +118,6 @@ export default function CartPanel({
         onSetManualDiscount(null);
     };
 
-    const handleApplyDiscount = async () => {
-        const result = await applyDiscountCode(discountCode);
-        if (!result.success) {
-            alert(result.message);
-        }
-    };
 
     const handleCheckout = () => {
         if (cart.length === 0) {
@@ -152,7 +141,6 @@ export default function CartPanel({
             if (setCustomerId) setCustomerId(created.id);
             setIsAddModalOpen(false);
             setNewCustomer({ name: "", phoneNumber: "" });
-            setShowSuggestions(false);
         } catch (err: any) {
             alert(err.message || "Gagal menambah pelanggan");
         }
@@ -162,6 +150,45 @@ export default function CartPanel({
         <div className="w-full bg-white flex flex-col h-full">
             <div className="flex-1 overflow-y-auto hide-scrollbar">
                 <div className="p-6">
+
+                    {/* Customer Info */}
+                    <div className="mb-6 relative" ref={suggestionRef}>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm font-semibold text-gray-700">Pelanggan</label>
+                            <button 
+                                onClick={() => setIsAddModalOpen(true)}
+                                className="text-xs text-orange-500 font-bold hover:underline flex items-center gap-1"
+                            >
+                                <Plus size={14} /> Tambah Baru
+                            </button>
+                        </div>
+                        <input
+                            type="text"
+                            value={customer}
+                            onChange={handleCustomerChange}
+                            placeholder="Nama pelanggan..."
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-all font-medium"
+                        />
+                        
+                        {/* Suggestions Dropdown */}
+                        {suggestions.length > 0 && customer.length >= 2 && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-2 max-h-48 overflow-y-auto">
+                                {suggestions.map(s => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => {
+                                            setCustomer(s.name);
+                                            if (setCustomerId) setCustomerId(s.id);
+                                            setSuggestions([]);
+                                        }}
+                                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm font-medium"
+                                    >
+                                        {s.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     <OrderTypeSelector orderType={dineType} setOrderType={setDineType} />
 
@@ -211,7 +238,7 @@ export default function CartPanel({
                                 {manualDiscount && (
                                     <div className="flex justify-between items-center text-orange-600 italic">
                                         <span className="text-base">
-                                            Diskon Manual ({manualDiscount.type === 'percentage' ? `${manualDiscount.value}%` : `Rp${manualDiscount.value.toLocaleString("id-ID")}`})
+                                            Diskon ({manualDiscount.type === 'percentage' ? `${manualDiscount.value}%` : `Rp${manualDiscount.value.toLocaleString("id-ID")}`})
                                         </span>
                                         <span className="text-base">
                                             - Rp{(manualDiscount.type === 'percentage' 
@@ -267,7 +294,7 @@ export default function CartPanel({
                                 {/* Manual Discount Input */}
                                 <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-100">
                                     <div className="flex items-center justify-between mb-1">
-                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Diskon Manual</span>
+                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Diskon</span>
                                         <div className="flex bg-gray-200 rounded-lg p-0.5">
                                             <button
                                                 onClick={() => setManualDiscountType('fixed')}
@@ -305,44 +332,6 @@ export default function CartPanel({
                                     </div>
                                 </div>
 
-                                <div className="relative mt-2">
-                                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                                        <div className="w-full border-t border-gray-200"></div>
-                                    </div>
-                                    <div className="relative flex justify-center">
-                                        <span className="px-2 bg-white text-xs text-gray-400 uppercase">Atau Gunakan Kode</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2 mt-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Kode Promo"
-                                        value={discountCode}
-                                        onChange={(e) => setDiscountCode(e.target.value)}
-                                        onFocus={() => setIsDiscountFocused(true)}
-                                        onBlur={() => setIsDiscountFocused(false)}
-                                        disabled={!!appliedDiscount}
-                                        className={`flex-1 p-3 border rounded-xl focus:outline-none transition-colors duration-200 ${isDiscountFocused || appliedDiscount ? "border-orange-500" : "border-gray-300"
-                                            } bg-white text-gray-700 h-[48px]`}
-                                    />
-                                    <button 
-                                        onClick={handleApplyDiscount}
-                                        disabled={!!appliedDiscount || !discountCode}
-                                        className={`h-[48px] px-4 rounded-xl font-bold transition-all ${
-                                            !!appliedDiscount || !discountCode 
-                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
-                                            : "bg-orange-500 text-white hover:bg-orange-600"
-                                        }`}
-                                    >
-                                        Pakai
-                                    </button>
-                                </div>
-                                {appliedDiscount && subtotal < appliedDiscount.minSpend && (
-                                    <p className="text-xs text-red-500 italic mt-1">
-                                        * Minimal belanja Rp{appliedDiscount.minSpend.toLocaleString("id-ID")} untuk kode ini
-                                    </p>
-                                )}
                             </div>
 
                             {/* Payment Options */}

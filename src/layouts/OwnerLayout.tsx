@@ -79,7 +79,6 @@ const OwnerLayout = () => {
       children: [
         { path: '/owner/laporan-keuangan', label: 'Keuangan Toko' },
         { path: '/owner/laporan-penjualan', label: 'Penjualan Toko' },
-        { path: '/owner/diskon', label: 'Diskon' },
       ]
     },
     { path: '/owner/pegawai', label: 'Pegawai', icon: Users },

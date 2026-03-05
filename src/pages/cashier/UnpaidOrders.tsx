@@ -754,7 +754,7 @@ export default function UnpaidOrders() {
                                     </div>
                                     {selectedOrder.manualDiscount && (
                                         <div className="flex justify-between text-[11px] mb-1.5 text-orange-600 italic font-bold">
-                                            <span>Manual ({selectedOrder.manualDiscount?.type === 'percentage' ? `${selectedOrder.manualDiscount?.value || 0}%` : `Rp${(selectedOrder.manualDiscount?.value || 0).toLocaleString("id-ID")}`})</span>
+                                            <span>Diskon ({selectedOrder.manualDiscount?.type === 'percentage' ? `${selectedOrder.manualDiscount?.value || 0}%` : `Rp${(selectedOrder.manualDiscount?.value || 0).toLocaleString("id-ID")}`})</span>
                                             <span>- Rp{(selectedOrder.manualDiscount.type === 'percentage' 
                                                 ? Math.round((selectedOrder.subtotal || 0) * (selectedOrder.manualDiscount.value / 100)) 
                                                 : selectedOrder.manualDiscount.value
@@ -788,7 +788,7 @@ export default function UnpaidOrders() {
                                     {/* Manual Discount Input Section */}
                                     <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
                                         <div className="flex items-center justify-between mb-2 px-0.5">
-                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Diskon Manual</span>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Diskon</span>
                                             {selectedOrder.manualDiscount && (
                                                 <button 
                                                     onClick={handleRemoveManualDiscount}

@@ -697,7 +697,7 @@ const DataTransaksi = () => {
                             {selectedTransaction.manualDiscountType ? (
                                 <div className="flex justify-between text-[10px] text-orange-400">
                                     <span>
-                                        Manual ({selectedTransaction.manualDiscountType === 'percentage'
+                                        Diskon ({selectedTransaction.manualDiscountType === 'percentage'
                                             ? `${selectedTransaction.manualDiscountValue || 0}%`
                                             : `Rp${(selectedTransaction.manualDiscountValue || 0).toLocaleString('id-ID')}`})
                                     </span>

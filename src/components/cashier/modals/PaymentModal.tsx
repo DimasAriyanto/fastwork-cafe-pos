@@ -158,7 +158,7 @@ export default function PaymentModal({
                                 {manualDiscount && (
                                     <div className="flex justify-between text-lg text-orange-600 italic font-medium">
                                         <span className="text-gray-500">
-                                            Diskon Manual ({manualDiscount.type === 'percentage' ? `${manualDiscount.value}%` : `Rp${manualDiscount.value.toLocaleString("id-ID")}`})
+                                            Diskon ({manualDiscount.type === 'percentage' ? `${manualDiscount.value}%` : `Rp${manualDiscount.value.toLocaleString("id-ID")}`})
                                         </span>
                                         <span>
                                             - Rp.{ (manualDiscount.type === 'percentage' 
