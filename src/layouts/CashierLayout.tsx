@@ -379,7 +379,7 @@ export default function CashierLayout() {
           /* Desktop: Fixed Sidebar */
           <div
             id="cashier-right-panel-slot"
-            className="w-[25%] min-w-[300px] max-w-[380px] border-l border-gray-200 bg-white h-full relative z-20 shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] shrink-0"
+            className="w-[32%] min-w-[340px] max-w-[480px] border-l border-gray-200 bg-white h-full relative z-20 shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] shrink-0"
           />
         ) : (
           /* Tablet & Mobile: Responsive Drawer Overlay */
