@@ -69,6 +69,7 @@ const OwnerLayout = () => {
         { path: '/owner/menu', label: 'Menu Makanan' },
         { path: '/owner/kategori', label: 'Kategori' },
         { path: '/owner/tambahan-menu', label: 'Tambahan Menu' },
+        { path: '/owner/diskon', label: 'Diskon' },
       ]
     },
     { path: '/owner/data-transaksi', label: 'Data Transaksi', icon: ShoppingCart },
@@ -140,7 +141,7 @@ const OwnerLayout = () => {
           </button>
         </div>
         
-        <nav className="flex-1 py-4 px-4 space-y-2 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 py-4 px-4 space-y-2 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {navItems.map((item) => {
             const Icon = item.icon;
             

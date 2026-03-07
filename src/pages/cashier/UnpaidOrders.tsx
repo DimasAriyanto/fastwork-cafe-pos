@@ -9,6 +9,16 @@ import QRISPaymentModal from "../../components/cashier/modals/QRISPaymentModal";
 import PaymentSuccessModal from "../../components/cashier/modals/PaymentSuccessModal";
 import AddMenuModal from "../../components/cashier/modals/AddMenuModal";
 import type { Product, PaymentMethod, Transaction, UnpaidOrder } from "../../types/cashier";
+
+type DiscountOption = {
+    id: number;
+    name: string;
+    percentage: number;
+    minSpend: number;
+    isActive: boolean;
+    startDate?: string | null;
+    endDate?: string | null;
+};
 import { apiClient } from "../../api/client";
 
 // Hooks
@@ -30,6 +40,8 @@ export default function UnpaidOrders() {
     // Dynamic Menu Data
     const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
     const [allProducts, setAllProducts] = useState<Product[]>([]);
+    const [discounts, setDiscounts] = useState<DiscountOption[]>([]);
+    const [appliedDiscount, setAppliedDiscount] = useState<{ id: number; name: string; percentage: number; minSpend: number } | null>(null);
 
     // Modal states using shared hook
     const {
@@ -38,10 +50,6 @@ export default function UnpaidOrders() {
         isSuccessModalOpen, openSuccessModal, closeSuccessModal,
         lastTransaction
     } = usePayment();
-
-    // Manual Discount State for Sidebar
-    const [manualDiscountType, setManualDiscountType] = useState<'fixed' | 'percentage'>('fixed');
-    const [manualDiscountValue, setManualDiscountValue] = useState("");
 
     // Inline customer name editing
     const [editingCustomerName, setEditingCustomerName] = useState(false);
@@ -52,9 +60,10 @@ export default function UnpaidOrders() {
     useEffect(() => {
         const fetchMenuData = async () => {
             try {
-                const [productsDataArr, categoriesDataArr] = await Promise.all([
+                const [productsDataArr, categoriesDataArr, discountsDataArr] = await Promise.all([
                     apiClient.getMenus({ limit: 100 }),
-                    apiClient.getCategories()
+                    apiClient.getCategories(),
+                    apiClient.getDiscounts()
                 ]);
 
                 const productsData = productsDataArr.map((m: any) => ({
@@ -76,6 +85,15 @@ export default function UnpaidOrders() {
                 setCategories(categoriesDataArr.map((c: any) => ({
                     name: c.name,
                     icon: c.name.includes("Minuman") ? "🥤" : c.name.includes("Kopi") ? "☕" : "🍽️",
+                })));
+                setDiscounts((discountsDataArr.data || discountsDataArr).map((d: any) => ({
+                    id: d.id,
+                    name: d.name,
+                    percentage: Number(d.percentage),
+                    minSpend: Number(d.minSpend || d.min_spend || 0),
+                    isActive: d.isActive ?? d.is_active ?? true,
+                    startDate: d.startDate || d.start_date || null,
+                    endDate: d.endDate || d.end_date || null,
                 })));
             } catch (error) {
                 console.error("Failed to fetch menu data:", error);
@@ -128,6 +146,7 @@ export default function UnpaidOrders() {
     // Selection handler for responsiveness
     const handleOrderSelect = async (id: string) => {
         setSelectedOrderId(id);
+        setAppliedDiscount(null);
         if (!isDesktop) {
             setIsRightPanelOpen(true);
         }
@@ -135,12 +154,7 @@ export default function UnpaidOrders() {
         if (!fetchedDetails[id]) {
             try {
                 const detail = await apiClient.getTransactionDetail(Number(id));
-                
-                // Calculate manual discount object if exists in detail
-                const manualDiscount = detail.manualDiscountType 
-                    ? { type: detail.manualDiscountType as 'fixed' | 'percentage', value: detail.manualDiscountValue || 0 }
-                    : null;
-                
+
                 setFetchedDetails(prev => ({
                     ...prev,
                     [id]: {
@@ -150,15 +164,14 @@ export default function UnpaidOrders() {
                         tax: detail.taxAmount,
                         customerName: detail.customerName || detail.notes || "Pelanggan",
                         status: "unpaid",
-                        manualDiscount: manualDiscount,
                         discountAmount: detail.discountAmount || 0,
                         items: (detail.items || []).map((item: any) => ({
                             menuId: item.menuId,
                             variantId: item.variantId,
-                            name: item.name, 
+                            name: item.name,
                             qty: item.qty,
-                            price: Number(item.finalPrice || item.price || item.unitPrice || 0),            
-                            basePrice: Number(item.originalPrice || item.basePrice || item.price || 0), 
+                            price: Number(item.finalPrice || item.price || item.unitPrice || 0),
+                            basePrice: Number(item.originalPrice || item.basePrice || item.price || 0),
                             variant: item.variantName || item.variant,
                             toppings: (item.toppings || []).map((t: any) => ({
                                 name: t.name,
@@ -170,13 +183,10 @@ export default function UnpaidOrders() {
                     } as UnpaidOrder
                 }));
 
-                // Initialize sidebar input state from fetched detail
-                if (detail.manualDiscountType) {
-                    setManualDiscountType(detail.manualDiscountType as 'fixed' | 'percentage');
-                    setManualDiscountValue(String(detail.manualDiscountValue || ""));
-                } else {
-                    setManualDiscountType('fixed');
-                    setManualDiscountValue("");
+                // Pre-select discount matching stored percentage
+                if (detail.discount) {
+                    const matched = discounts.find(d => d.percentage === Number(detail.discount));
+                    if (matched) setAppliedDiscount({ id: matched.id, name: matched.name, percentage: matched.percentage, minSpend: matched.minSpend });
                 }
             } catch (err) {
                 console.error("Gagal memuat detail pesanan:", id, err);
@@ -184,51 +194,28 @@ export default function UnpaidOrders() {
         }
     };
 
-    const handleApplyManualDiscount = () => {
+    const handleApplyDiscount = (discount: { id: number; name: string; percentage: number; minSpend: number } | null) => {
+        setAppliedDiscount(discount);
         if (!selectedOrderId) return;
-        const val = parseFloat(manualDiscountValue);
-        
+
         setFetchedDetails(prev => {
             const current = prev[selectedOrderId];
             if (!current) return prev;
-            
-            const manualDiscount = (isNaN(val) || val <= 0) ? null : { type: manualDiscountType, value: val };
-            
-            // Recalculate totalPrice
+
             const subtotal = current.subtotal || 0;
-            const discountAmount = manualDiscount ? (manualDiscount.type === 'percentage' ? Math.round(subtotal * (manualDiscount.value / 100)) : manualDiscount.value) : 0;
+            const discountAmount = discount && subtotal >= discount.minSpend
+                ? Math.round(subtotal * (discount.percentage / 100))
+                : 0;
             const totalAfterDiscount = subtotal - discountAmount;
             const taxAmount = (current.taxDetails || []).reduce((sum: number, t: any) => sum + Math.round(totalAfterDiscount * (t.percentage / 100)), 0);
-            
+
             return {
                 ...prev,
                 [selectedOrderId]: {
                     ...current,
-                    manualDiscount,
+                    discount: discount?.percentage || 0,
                     discountAmount,
                     totalPrice: totalAfterDiscount + taxAmount
-                }
-            };
-        });
-    };
-
-    const handleRemoveManualDiscount = () => {
-        if (!selectedOrderId) return;
-        setManualDiscountValue("");
-        setFetchedDetails(prev => {
-            const current = prev[selectedOrderId];
-            if (!current) return prev;
-            
-            const subtotal = current.subtotal || 0;
-            const taxAmount = (current.taxDetails || []).reduce((sum: number, t: any) => sum + Math.round(subtotal * (t.percentage / 100)), 0);
-            
-            return {
-                ...prev,
-                [selectedOrderId]: {
-                    ...current,
-                    manualDiscount: null,
-                    discountAmount: 0,
-                    totalPrice: subtotal + taxAmount
                 }
             };
         });
@@ -251,6 +238,10 @@ export default function UnpaidOrders() {
         if (!selectedOrder) return;
         
         try {
+            const subtotal = selectedOrder.subtotal || 0;
+            const discountAmount = appliedDiscount && subtotal >= appliedDiscount.minSpend
+                ? Math.round(subtotal * (appliedDiscount.percentage / 100))
+                : 0;
             const payload = {
                 customerName: selectedOrder.customerName,
                 orderType: selectedOrder.serviceType === 'Take Away' ? 'take_away' : 'dine_in',
@@ -258,28 +249,19 @@ export default function UnpaidOrders() {
                     menuId: item.menuId,
                     variantId: item.variantId,
                     qty: item.qty,
-                    // Use basePrice as the price to send to backend (base only).
-                    // Backend will add topping prices from the toppings array.
                     price: item.basePrice ?? item.price,
                     toppings: (item.toppings || []).map(t => ({
                         toppingId: t.toppingId,
                         price: t.price
                     }))
                 })),
-                manualDiscountType: selectedOrder.manualDiscount?.type || undefined,
-                manualDiscountValue: selectedOrder.manualDiscount?.value || 0,
-                discountAmount: selectedOrder.discountAmount || 0
+                discountAmount
             };
 
             await apiClient.updateTransaction(Number(selectedOrder.id), payload);
             // Refresh local state by re-fetching details to ensure consistency
             const freshDetail = await apiClient.getTransactionDetail(Number(selectedOrder.id));
-            
-            // Calculate manual discount object if exists in detail
-            const manualDiscount = freshDetail.manualDiscountType 
-                ? { type: freshDetail.manualDiscountType as 'fixed' | 'percentage', value: freshDetail.manualDiscountValue || 0 }
-                : null;
-                
+
             setFetchedDetails(prev => ({
                 ...prev,
                 [selectedOrder.id]: {
@@ -289,7 +271,6 @@ export default function UnpaidOrders() {
                     tax: freshDetail.taxAmount,
                     customerName: freshDetail.customerName || freshDetail.notes || "Pelanggan",
                     status: "unpaid",
-                    manualDiscount: manualDiscount,
                     discountAmount: freshDetail.discountAmount || 0,
                     items: (freshDetail.items || []).map((i: any) => ({
                         menuId: i.menuId,
@@ -345,8 +326,6 @@ export default function UnpaidOrders() {
                     price: item.basePrice ?? item.price,
                     toppings: (item.toppings || []).map(t => ({ toppingId: t.toppingId, price: t.price }))
                 })),
-                manualDiscountType: selectedOrder.manualDiscount?.type || undefined,
-                manualDiscountValue: selectedOrder.manualDiscount?.value || 0,
                 discountAmount: selectedOrder.discountAmount || 0
             };
             await apiClient.updateTransaction(Number(selectedOrder.id), payload);
@@ -448,19 +427,10 @@ export default function UnpaidOrders() {
         }
 
         const newSubtotal = updatedItems.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0);
-        
-        // 1. Promo Discount (Percentage)
-        const promoDiscountPercent = selectedOrder.discount || 0;
-        const promoDiscountAmount = newSubtotal * (promoDiscountPercent / 100);
-        
-        // 2. Manual Discount
-        const manualDiscount = selectedOrder.manualDiscount;
-        const manualDiscountAmount = manualDiscount 
-            ? (manualDiscount.type === 'percentage' ? Math.round(newSubtotal * (manualDiscount.value / 100)) : manualDiscount.value) 
+        const discountAmount = appliedDiscount && newSubtotal >= appliedDiscount.minSpend
+            ? Math.round(newSubtotal * (appliedDiscount.percentage / 100))
             : 0;
-            
-        const totalDiscount = Math.min(newSubtotal, promoDiscountAmount + manualDiscountAmount);
-        const totalAfterDiscount = newSubtotal - totalDiscount;
+        const totalAfterDiscount = newSubtotal - discountAmount;
         const newTax = totalAfterDiscount * 0.10;
         const newTotal = totalAfterDiscount + newTax;
 
@@ -469,7 +439,7 @@ export default function UnpaidOrders() {
             items: updatedItems,
             totalItems: updatedItems.reduce((acc: number, item: any) => acc + item.qty, 0),
             subtotal: newSubtotal,
-            discountAmount: totalDiscount,
+            discountAmount,
             tax: newTax,
             totalPrice: newTotal
         };
@@ -497,19 +467,10 @@ export default function UnpaidOrders() {
         }).filter(item => item.qty > 0);
 
         const newSubtotal = updatedItems.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0);
-        
-        // 1. Promo Discount (Percentage)
-        const promoDiscountPercent = selectedOrder.discount || 0;
-        const promoDiscountAmount = newSubtotal * (promoDiscountPercent / 100);
-        
-        // 2. Manual Discount
-        const manualDiscount = selectedOrder.manualDiscount;
-        const manualDiscountAmount = manualDiscount 
-            ? (manualDiscount.type === 'percentage' ? Math.round(newSubtotal * (manualDiscount.value / 100)) : manualDiscount.value) 
+        const discountAmount = appliedDiscount && newSubtotal >= appliedDiscount.minSpend
+            ? Math.round(newSubtotal * (appliedDiscount.percentage / 100))
             : 0;
-            
-        const totalDiscount = Math.min(newSubtotal, promoDiscountAmount + manualDiscountAmount);
-        const totalAfterDiscount = newSubtotal - totalDiscount;
+        const totalAfterDiscount = newSubtotal - discountAmount;
         const newTax = totalAfterDiscount * 0.10;
         const newTotal = totalAfterDiscount + newTax;
 
@@ -518,7 +479,7 @@ export default function UnpaidOrders() {
             items: updatedItems,
             totalItems: updatedItems.reduce((acc: number, item: any) => acc + item.qty, 0),
             subtotal: newSubtotal,
-            discountAmount: totalDiscount,
+            discountAmount,
             tax: newTax,
             totalPrice: newTotal
         };
@@ -540,19 +501,10 @@ export default function UnpaidOrders() {
         });
 
         const newSubtotal = updatedItems.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0);
-        
-        // 1. Promo Discount (Percentage)
-        const promoDiscountPercent = selectedOrder.discount || 0;
-        const promoDiscountAmount = newSubtotal * (promoDiscountPercent / 100);
-        
-        // 2. Manual Discount
-        const manualDiscount = selectedOrder.manualDiscount;
-        const manualDiscountAmount = manualDiscount 
-            ? (manualDiscount.type === 'percentage' ? Math.round(newSubtotal * (manualDiscount.value / 100)) : manualDiscount.value) 
+        const discountAmount = appliedDiscount && newSubtotal >= appliedDiscount.minSpend
+            ? Math.round(newSubtotal * (appliedDiscount.percentage / 100))
             : 0;
-            
-        const totalDiscount = Math.min(newSubtotal, promoDiscountAmount + manualDiscountAmount);
-        const totalAfterDiscount = newSubtotal - totalDiscount;
+        const totalAfterDiscount = newSubtotal - discountAmount;
         const newTax = totalAfterDiscount * 0.10;
         const newTotal = totalAfterDiscount + newTax;
 
@@ -561,7 +513,7 @@ export default function UnpaidOrders() {
             items: updatedItems,
             totalItems: updatedItems.reduce((acc: number, item: any) => acc + item.qty, 0),
             subtotal: newSubtotal,
-            discountAmount: totalDiscount,
+            discountAmount,
             tax: newTax,
             totalPrice: newTotal
         };
@@ -573,6 +525,17 @@ export default function UnpaidOrders() {
         }));
     };
 
+
+    // Valid discounts (active + within date range)
+    const validDiscounts = useMemo(() => {
+        const now = new Date();
+        return discounts.filter(d => {
+            if (!d.isActive) return false;
+            if (d.startDate && new Date(d.startDate) > now) return false;
+            if (d.endDate && new Date(d.endDate) < now) return false;
+            return true;
+        });
+    }, [discounts]);
 
     // Portal Target
     const rightPanelTarget = usePortalTarget("cashier-right-panel-slot");
@@ -800,18 +763,9 @@ export default function UnpaidOrders() {
                                         <span>Sub Total</span>
                                         <span className="text-gray-900 font-bold">Rp{(selectedOrder.subtotal || 0).toLocaleString('id-ID')}</span>
                                     </div>
-                                    {selectedOrder.manualDiscount && (
-                                        <div className="flex justify-between text-[11px] mb-1.5 text-orange-600 italic font-bold">
-                                            <span>Diskon ({selectedOrder.manualDiscount?.type === 'percentage' ? `${selectedOrder.manualDiscount?.value || 0}%` : `Rp${(selectedOrder.manualDiscount?.value || 0).toLocaleString("id-ID")}`})</span>
-                                            <span>- Rp{(selectedOrder.manualDiscount.type === 'percentage' 
-                                                ? Math.round((selectedOrder.subtotal || 0) * (selectedOrder.manualDiscount.value / 100)) 
-                                                : selectedOrder.manualDiscount.value
-                                            ).toLocaleString("id-ID")}</span>
-                                        </div>
-                                    )}
-                                    {(selectedOrder.discount || 0) > 0 && (
+                                        {(selectedOrder.discount || 0) > 0 && (
                                         <div className="flex justify-between text-[11px] mb-1.5 text-orange-500 italic font-medium">
-                                            <span>Promo ({selectedOrder.discount}%)</span>
+                                            <span>Diskon ({selectedOrder.discount}%)</span>
                                             <span className="font-bold">- Rp{((selectedOrder.subtotal || 0) * (selectedOrder.discount || 0) / 100).toLocaleString('id-ID')}</span>
                                         </div>
                                     )}
@@ -833,58 +787,22 @@ export default function UnpaidOrders() {
                                         <span className="text-[#FE4E10]">Rp{(selectedOrder.totalPrice || 0).toLocaleString('id-ID')}</span>
                                     </div>
 
-                                    {/* Manual Discount Input Section */}
+                                    {/* Discount Selector */}
                                     <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
-                                        <div className="flex items-center justify-between mb-2 px-0.5">
-                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Diskon</span>
-                                            {selectedOrder.manualDiscount && (
-                                                <button 
-                                                    onClick={handleRemoveManualDiscount}
-                                                    className="text-[10px] text-red-500 hover:underline font-bold"
-                                                >
-                                                    HAPUS
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-col gap-3 p-3 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipe</span>
-                                                <div className="flex bg-gray-100 rounded-lg p-0.5">
-                                                    <button
-                                                        onClick={() => setManualDiscountType('fixed')}
-                                                        className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${manualDiscountType === 'fixed' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-400'}`}
-                                                    >
-                                                        Rp
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setManualDiscountType('percentage')}
-                                                        className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${manualDiscountType === 'percentage' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-400'}`}
-                                                    >
-                                                        %
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="relative flex-1">
-                                                    <input
-                                                        type="number"
-                                                        placeholder="0"
-                                                        value={manualDiscountValue}
-                                                        onChange={(e) => setManualDiscountValue(e.target.value)}
-                                                        className="w-full p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 bg-gray-50 text-gray-700 h-[38px] text-xs pr-8"
-                                                    />
-                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-[10px]">
-                                                        {manualDiscountType === 'fixed' ? 'Rp' : '%'}
-                                                    </span>
-                                                </div>
-                                                <button 
-                                                    onClick={handleApplyManualDiscount}
-                                                    className="h-[38px] px-4 bg-orange-500 text-white rounded-xl font-bold text-xs hover:bg-orange-600 transition-all active:scale-95 shadow-sm"
-                                                >
-                                                    OK
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Diskon</span>
+                                        <select
+                                            value={appliedDiscount?.id?.toString() || ""}
+                                            onChange={(e) => {
+                                                const disc = validDiscounts.find(d => d.id === Number(e.target.value));
+                                                handleApplyDiscount(disc ? { id: disc.id, name: disc.name, percentage: disc.percentage, minSpend: disc.minSpend } : null);
+                                            }}
+                                            className="w-full p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 bg-gray-50 text-gray-700 text-xs"
+                                        >
+                                            <option value="">-- Tidak Ada Diskon --</option>
+                                            {validDiscounts.map(d => (
+                                                <option key={d.id} value={d.id}>{d.name} ({d.percentage}%)</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
 
@@ -971,7 +889,6 @@ export default function UnpaidOrders() {
                 tax={selectedOrder?.tax || 0}
                 total={selectedOrder?.totalPrice || 0}
                 discount={selectedOrder?.discount || 0}
-                manualDiscount={selectedOrder?.manualDiscount || null}
                 taxDetails={selectedOrder?.taxDetails}
                 onPaymentSuccess={handlePaymentSuccess}
             />

@@ -53,9 +53,6 @@ export default function CashierLayout() {
     change: Number(t.changeAmount || 0),
     cashierName: t.cashierName || t.employeeName || '',
     serviceType: t.orderType === 'take_away' ? 'Take Away' : 'Dine In',
-    manualDiscount: t.manualDiscountType
-      ? { type: t.manualDiscountType as 'fixed' | 'percentage', value: Number(t.manualDiscountValue || 0) }
-      : null,
   });
 
   // Normalize API order → frontend UnpaidOrder shape

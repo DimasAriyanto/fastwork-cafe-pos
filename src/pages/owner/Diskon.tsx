@@ -11,7 +11,6 @@ const OwnerDiskon = () => {
   const [isOpenTambahDiskonModal, setIsOpenTambahDiskonModal] = useState(false);
   const [formDiskon, setFormDiskon] = useState({
     name: '',
-    code: '',
     percentage: '',
     minSpend: '0',
     startDate: '',
@@ -24,7 +23,6 @@ const OwnerDiskon = () => {
   const [selectedDiskon, setSelectedDiskon] = useState<any>(null);
   const [editFormDiskon, setEditFormDiskon] = useState({
     name: '',
-    code: '',
     percentage: '',
     minSpend: '0',
     startDate: '',
@@ -106,7 +104,6 @@ const OwnerDiskon = () => {
       setIsOpenTambahDiskonModal(false);
       setFormDiskon({
         name: '',
-        code: '',
         percentage: '',
         minSpend: '0',
         startDate: '',
@@ -123,7 +120,6 @@ const OwnerDiskon = () => {
     setSelectedDiskon(item);
     setEditFormDiskon({
       name: item.name,
-      code: item.code || '',
       percentage: item.percentage.toString(),
       minSpend: (item.minSpend || 0).toString(),
       startDate: item.startDate ? item.startDate.split('T')[0] : '',
@@ -274,7 +270,6 @@ const OwnerDiskon = () => {
                 <tr>
                     <th className="px-6 py-5 font-bold text-sm w-24">Id</th>
                     <th className="px-6 py-5 font-bold text-sm">Nama/Judul</th>
-                    <th className="px-6 py-5 font-bold text-sm">Kode</th>
                     <th className="px-6 py-5 font-bold text-sm text-center">Diskon</th>
                     <th className="px-6 py-5 font-bold text-sm text-center">Min. Belanja</th>
                     <th className="px-6 py-5 font-bold text-sm">Status</th>
@@ -291,7 +286,6 @@ const OwnerDiskon = () => {
                             {item.startDate ? new Date(item.startDate).toLocaleDateString('id-ID') : '-'} s/d {item.endDate ? new Date(item.endDate).toLocaleDateString('id-ID') : '-'}
                         </div>
                     </td>
-                    <td className="px-6 py-4 text-[#202224] font-bold text-sm tracking-wider uppercase">{item.code || '-'}</td>
                     <td className="px-6 py-4 text-[#202224] font-bold text-center text-orange-600">{item.percentage}%</td>
                     <td className="px-6 py-4 text-[#202224] font-medium text-center">Rp{(item.minSpend || 0).toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4">
@@ -366,33 +360,18 @@ const OwnerDiskon = () => {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            {/* Kode Diskon */}
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-[#202224]">Kode Diskon</label>
-                                <input 
-                                    type="text" 
-                                    name="code"
-                                    required
-                                    value={formDiskon.code}
-                                    onChange={handleInputChange}
-                                    className="w-full px-4 py-2.5 bg-white border border-[#E0E0E0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FE4E10]/20 focus:border-[#FE4E10] transition-all text-[#202224] font-bold tracking-wider uppercase"
-                                    placeholder="Contoh: PROMO2024"
-                                />
-                            </div>
-                            {/* Persentase Diskon */}
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-[#202224]">Persentase (%)</label>
-                                <input 
-                                    type="number"
-                                    name="percentage"
-                                    required
-                                    value={formDiskon.percentage}
-                                    onChange={handleInputChange}
-                                    className="w-full px-4 py-2.5 bg-white border border-[#E0E0E0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FE4E10]/20 focus:border-[#FE4E10] transition-all text-[#202224]"
-                                    placeholder="10"
-                                />
-                            </div>
+                        {/* Persentase Diskon */}
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-[#202224]">Persentase (%)</label>
+                            <input
+                                type="number"
+                                name="percentage"
+                                required
+                                value={formDiskon.percentage}
+                                onChange={handleInputChange}
+                                className="w-full px-4 py-2.5 bg-white border border-[#E0E0E0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FE4E10]/20 focus:border-[#FE4E10] transition-all text-[#202224]"
+                                placeholder="10"
+                            />
                         </div>
 
                         {/* Minimal Belanja */}
@@ -502,31 +481,17 @@ const OwnerDiskon = () => {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            {/* Kode Diskon */}
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-[#202224]">Kode Diskon</label>
-                                <input 
-                                    type="text" 
-                                    name="code"
-                                    required
-                                    value={editFormDiskon.code}
-                                    onChange={handleEditInputChange}
-                                    className="w-full px-4 py-2.5 bg-white border border-[#E0E0E0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FE4E10]/20 focus:border-[#FE4E10] transition-all text-[#202224] font-bold tracking-wider uppercase"
-                                />
-                            </div>
-                            {/* Persentase Diskon */}
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-[#202224]">Persentase (%)</label>
-                                <input 
-                                    type="number"
-                                    name="percentage"
-                                    required
-                                    value={editFormDiskon.percentage}
-                                    onChange={handleEditInputChange}
-                                    className="w-full px-4 py-2.5 bg-white border border-[#E0E0E0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FE4E10]/20 focus:border-[#FE4E10] transition-all text-[#202224]"
-                                />
-                            </div>
+                        {/* Persentase Diskon */}
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-[#202224]">Persentase (%)</label>
+                            <input
+                                type="number"
+                                name="percentage"
+                                required
+                                value={editFormDiskon.percentage}
+                                onChange={handleEditInputChange}
+                                className="w-full px-4 py-2.5 bg-white border border-[#E0E0E0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FE4E10]/20 focus:border-[#FE4E10] transition-all text-[#202224]"
+                            />
                         </div>
 
                         {/* Minimal Belanja */}

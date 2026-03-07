@@ -11,7 +11,6 @@ type PaymentModalProps = {
     taxRate?: number;
     taxDetails?: { name: string; amount: number; percentage: number }[];
     discount?: number;
-    manualDiscount?: { type: 'fixed' | 'percentage'; value: number } | null;
     onPaymentSuccess: (
         paidAmount: number,
         change: number,
@@ -30,7 +29,6 @@ export default function PaymentModal({
     taxRate = 0.1,
     taxDetails,
     discount,
-    manualDiscount,
     onPaymentSuccess,
 }: PaymentModalProps) {
     const [cashAmount, setCashAmount] = useState("");
@@ -152,23 +150,9 @@ export default function PaymentModal({
 
                                 {discount !== undefined && discount > 0 && (
                                     <div className="flex justify-between text-lg text-orange-500 italic font-medium">
-                                        <span className="text-gray-500">Promo ({discount}%)</span>
+                                        <span className="text-gray-500">Diskon ({discount}%)</span>
                                         <span>
                                             - Rp.{((subtotal || 0) * (discount || 0) / 100).toLocaleString("id-ID")},00
-                                        </span>
-                                    </div>
-                                )}
-
-                                {manualDiscount && (
-                                    <div className="flex justify-between text-lg text-orange-600 italic font-medium">
-                                        <span className="text-gray-500">
-                                            Diskon ({manualDiscount.type === 'percentage' ? `${manualDiscount.value}%` : `Rp${manualDiscount.value.toLocaleString("id-ID")}`})
-                                        </span>
-                                        <span>
-                                            - Rp.{ (manualDiscount.type === 'percentage' 
-                                                ? Math.round((subtotal || 0) * (manualDiscount.value / 100)) 
-                                                : manualDiscount.value
-                                            ).toLocaleString("id-ID") },00
                                         </span>
                                     </div>
                                 )}

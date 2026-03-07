@@ -733,21 +733,6 @@ class ApiClient {
 
 
   /**
-   * Verify discount code
-   */
-  async verifyDiscount(code: string) {
-    const response = await this.request<ApiResponse>(`/discounts/verify/${code}`, {
-      method: 'GET',
-    });
-
-    if (response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.error || 'Invalid discount code');
-  }
-
-  /**
    * Get image URL
    */
   getImageUrl(path: string) {

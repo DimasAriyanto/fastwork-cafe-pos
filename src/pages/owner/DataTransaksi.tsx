@@ -770,9 +770,6 @@ const DataTransaksi = () => {
                     taxAmount: selectedTransaction.taxAmount,
                     taxDetails: selectedTransaction.taxDetails,
                     discountAmount: selectedTransaction.discountAmount || 0,
-                    manualDiscount: selectedTransaction.manualDiscountType
-                        ? { type: selectedTransaction.manualDiscountType as 'fixed' | 'percentage', value: selectedTransaction.manualDiscountValue || 0 }
-                        : null,
                     totalPrice: selectedTransaction.totalPrice,
                     paidAmount: selectedTransaction.paidAmount,
                     change: selectedTransaction.changeAmount,

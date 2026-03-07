@@ -73,11 +73,6 @@ export default function Riwayat() {
       try {
         const detail = await apiClient.getTransactionDetail(Number(id));
         
-        // Build manualDiscount object from flat fields
-        const manualDiscount = detail.manualDiscountType
-          ? { type: detail.manualDiscountType as 'fixed' | 'percentage', value: detail.manualDiscountValue || 0 }
-          : null;
-
         setFetchedDetails(prev => ({
           ...prev,
           [id]: {
@@ -87,7 +82,6 @@ export default function Riwayat() {
             tax: detail.taxAmount,
             change: detail.changeAmount,
             customerName: detail.customerName || detail.notes || "Pelanggan",
-            manualDiscount: manualDiscount,
             discountAmount: detail.discountAmount || 0,
             items: (detail.items || []).map((item: any) => ({
               name: item.name,
@@ -170,24 +164,10 @@ export default function Riwayat() {
             <span className="text-gray-500">Sub Total</span>
             <span className="font-medium text-gray-900">{formatCurrency(tx.subtotal)}</span>
           </div>
-          {(tx.discount || 0) > 0 && (
+          {(tx.discountAmount || 0) > 0 && (
             <div className="flex justify-between text-orange-500 italic font-medium">
-              <span className="text-gray-400">Promo ({tx.discount}%)</span>
-              <span className="font-bold">- {formatCurrency((tx.subtotal || 0) * (tx.discount || 0) / 100)}</span>
-            </div>
-          )}
-          {(tx as any).manualDiscount && (
-            <div className="flex justify-between text-orange-600 italic font-bold">
-              <span className="text-gray-400">
-                Diskon ({(tx as any).manualDiscount.type === 'percentage' 
-                  ? `${(tx as any).manualDiscount.value}%` 
-                  : `Rp${((tx as any).manualDiscount?.value || 0).toLocaleString('id-ID')}`})
-              </span>
-              <span>- {formatCurrency(
-                (tx as any).manualDiscount.type === 'percentage'
-                  ? Math.round((tx.subtotal || 0) * ((tx as any).manualDiscount.value / 100))
-                  : (tx as any).manualDiscount.value
-              )}</span>
+              <span className="text-gray-400">Diskon{(tx.discount || 0) > 0 ? ` (${tx.discount}%)` : ''}</span>
+              <span className="font-bold">- {formatCurrency(tx.discountAmount || 0)}</span>
             </div>
           )}
           {tx.taxDetails && tx.taxDetails.length > 0 ? (

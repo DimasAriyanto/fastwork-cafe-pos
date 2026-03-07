@@ -110,20 +110,10 @@ export default function PaymentSuccessModal({
                             <span className="text-gray-400">Sub Total</span>
                             <span className="font-bold text-gray-700">Rp {(transaction.subtotal || 0).toLocaleString('id-ID')}</span>
                         </div>
-                        {(transaction.discount || 0) > 0 && (
+                        {(transaction.discountAmount || 0) > 0 && (
                             <div className="flex justify-between text-orange-600 italic font-bold">
-                                <span>Promo ({transaction.discount}%)</span>
-                                <span>- Rp {((transaction.subtotal || 0) * (transaction.discount || 0) / 100).toLocaleString('id-ID')}</span>
-                            </div>
-                        )}
-                        {transaction.manualDiscount && (
-                            <div className="flex justify-between text-orange-600 italic font-bold">
-                                <span>Manual ({transaction.manualDiscount.type === 'percentage' ? `${transaction.manualDiscount.value}%` : `Rp${transaction.manualDiscount.value.toLocaleString("id-ID")}`})</span>
-                                <span>- Rp {(
-                                    transaction.manualDiscount.type === 'percentage' 
-                                        ? Math.round((transaction.subtotal || 0) * (transaction.manualDiscount.value / 100)) 
-                                        : transaction.manualDiscount.value
-                                ).toLocaleString('id-ID')}</span>
+                                <span>Diskon{(transaction.discount || 0) > 0 ? ` (${transaction.discount}%)` : ''}</span>
+                                <span>- Rp {(transaction.discountAmount || 0).toLocaleString('id-ID')}</span>
                             </div>
                         )}
                         {transaction.taxDetails && transaction.taxDetails.length > 0 ? (

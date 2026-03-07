@@ -1,16 +1,11 @@
 import { db } from '../db/index.ts';
 import { discounts } from '../db/schemas/index.ts';
-import { eq, and, desc, asc, or, like } from 'drizzle-orm';
+import { eq, and, desc, asc, like } from 'drizzle-orm';
 import type { PaginationOptions } from '../types/index.ts';
 
 export class DiscountRepository {
   async findById(id: number) {
     const [discount] = await db.select().from(discounts).where(eq(discounts.id, id)).limit(1);
-    return discount;
-  }
-
-  async findByCode(code: string) {
-    const [discount] = await db.select().from(discounts).where(eq(discounts.code, code)).limit(1);
     return discount;
   }
 
@@ -56,18 +51,12 @@ export class DiscountRepository {
 
     if (search) {
       const pattern = `%${search}%`;
-      conditions.push(
-        or(
-          like(discounts.name, pattern),
-          like(discounts.code, pattern)
-        )
-      );
+      conditions.push(like(discounts.name, pattern));
     }
 
     const sortableColumns = {
       id: discounts.id,
       name: discounts.name,
-      code: discounts.code,
       percentage: discounts.percentage,
       status: discounts.isActive,
       createdAt: discounts.createdAt,

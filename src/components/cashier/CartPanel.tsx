@@ -3,6 +3,23 @@ import OrderTypeSelector from "./OrderTypeSelector";
 import CartItem from "./CartItem";
 import type { CartItem as CartItemType, PaymentMethod } from "../../types/cashier";
 
+type DiscountOption = {
+    id: number;
+    name: string;
+    percentage: number;
+    minSpend: number;
+    isActive: boolean;
+    startDate: string | null;
+    endDate: string | null;
+};
+
+type AppliedDiscount = {
+    id: number;
+    name: string;
+    percentage: number;
+    minSpend: number;
+};
+
 type CartPanelProps = {
     cart: CartItemType[];
     customer: string;
@@ -18,10 +35,11 @@ type CartPanelProps = {
     total: number;
     taxRate?: number;
     taxDetails?: { name: string; amount: number; percentage: number }[];
-    appliedDiscount: { code: string; percentage: number; minSpend: number } | null;
+    discounts: DiscountOption[];
+    appliedDiscount: AppliedDiscount | null;
+    onApplyDiscount: (discount: AppliedDiscount | null) => void;
     removeDiscount: () => void;
-    manualDiscount: { type: 'fixed' | 'percentage'; value: number } | null;
-    onSetManualDiscount: (discount: { type: 'fixed' | 'percentage'; value: number } | null) => void;
+    discountAmount: number;
 };
 
 export default function CartPanel({
@@ -38,30 +56,15 @@ export default function CartPanel({
     taxDetails,
     total,
     taxRate = 0.1,
+    discounts,
     appliedDiscount,
+    onApplyDiscount,
     removeDiscount,
-    manualDiscount,
-    onSetManualDiscount,
+    discountAmount,
     onCheckout,
 }: CartPanelProps) {
     const [payType, setPayType] = useState<"payNow" | "payLater">("payNow");
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
-    const [manualDiscountType, setManualDiscountType] = useState<'fixed' | 'percentage'>('fixed');
-    const [manualDiscountValue, setManualDiscountValue] = useState("");
-
-    const handleApplyManualDiscount = () => {
-        const val = parseFloat(manualDiscountValue);
-        if (isNaN(val) || val <= 0) {
-            onSetManualDiscount(null);
-            return;
-        }
-        onSetManualDiscount({ type: manualDiscountType, value: val });
-    };
-
-    const handleRemoveManualDiscount = () => {
-        setManualDiscountValue("");
-        onSetManualDiscount(null);
-    };
 
     const handleCheckout = () => {
         if (cart.length === 0) {
@@ -129,24 +132,13 @@ export default function CartPanel({
                                         Rp{subtotal.toLocaleString("id-ID")}
                                     </span>
                                 </div>
-                                {appliedDiscount && appliedDiscount.percentage > 0 && subtotal >= appliedDiscount.minSpend && (
+                                {discountAmount > 0 && (
                                     <div className="flex justify-between items-center text-orange-500 italic">
-                                        <span className="text-base">Potongan ({appliedDiscount.percentage}%)</span>
                                         <span className="text-base">
-                                            - Rp{((subtotal * appliedDiscount.percentage) / 100).toLocaleString("id-ID")}
-                                        </span>
-                                    </div>
-                                )}
-                                {manualDiscount && (
-                                    <div className="flex justify-between items-center text-orange-600 italic">
-                                        <span className="text-base">
-                                            Diskon ({manualDiscount.type === 'percentage' ? `${manualDiscount.value}%` : `Rp${manualDiscount.value.toLocaleString("id-ID")}`})
+                                            Diskon{appliedDiscount ? ` (${appliedDiscount.percentage}%)` : ''}
                                         </span>
                                         <span className="text-base">
-                                            - Rp{(manualDiscount.type === 'percentage' 
-                                                ? Math.round(subtotal * (manualDiscount.value / 100)) 
-                                                : manualDiscount.value
-                                            ).toLocaleString("id-ID")}
+                                            - Rp{discountAmount.toLocaleString("id-ID")}
                                         </span>
                                     </div>
                                 )}
@@ -180,60 +172,47 @@ export default function CartPanel({
                             <div className="flex flex-col gap-2 mb-8">
                                 <div className="flex items-center justify-between">
                                     <span className="text-lg font-bold text-gray-800">Diskon</span>
-                                    {(appliedDiscount || manualDiscount) && (
-                                        <button 
-                                            onClick={() => {
-                                                removeDiscount();
-                                                handleRemoveManualDiscount();
-                                            }}
+                                    {appliedDiscount && (
+                                        <button
+                                            onClick={removeDiscount}
                                             className="text-sm text-red-500 hover:underline"
                                         >
-                                            Hapus Semua
+                                            Hapus
                                         </button>
                                     )}
                                 </div>
 
-                                {/* Manual Discount Input */}
                                 <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-100">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Diskon</span>
-                                        <div className="flex bg-gray-200 rounded-lg p-0.5">
-                                            <button
-                                                onClick={() => setManualDiscountType('fixed')}
-                                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${manualDiscountType === 'fixed' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'}`}
-                                            >
-                                                Rp
-                                            </button>
-                                            <button
-                                                onClick={() => setManualDiscountType('percentage')}
-                                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${manualDiscountType === 'percentage' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'}`}
-                                            >
-                                                %
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="relative flex-1">
-                                            <input
-                                                type="number"
-                                                placeholder={manualDiscountType === 'fixed' ? "0" : "0"}
-                                                value={manualDiscountValue}
-                                                onChange={(e) => setManualDiscountValue(e.target.value)}
-                                                className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-orange-500 bg-white text-gray-700 h-[48px] pr-10"
-                                            />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">
-                                                {manualDiscountType === 'fixed' ? 'Rp' : '%'}
-                                            </span>
-                                        </div>
-                                        <button 
-                                            onClick={handleApplyManualDiscount}
-                                            className="h-[48px] px-4 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 transition-all active:scale-95"
-                                        >
-                                            Ok
-                                        </button>
-                                    </div>
+                                    <select
+                                        value={appliedDiscount ? appliedDiscount.id : ''}
+                                        onChange={(e) => {
+                                            const found = discounts.find(d => d.id === Number(e.target.value));
+                                            onApplyDiscount(found
+                                                ? { id: found.id, name: found.name, percentage: found.percentage, minSpend: found.minSpend }
+                                                : null
+                                            );
+                                        }}
+                                        className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-orange-500 bg-white text-gray-700 appearance-none cursor-pointer"
+                                    >
+                                        <option value="">-- Tanpa Diskon --</option>
+                                        {discounts.filter(d => {
+                                            if (!d.isActive) return false;
+                                            const now = new Date();
+                                            if (d.startDate && new Date(d.startDate) > now) return false;
+                                            if (d.endDate && new Date(d.endDate) < now) return false;
+                                            return true;
+                                        }).map(d => (
+                                            <option key={d.id} value={d.id}>
+                                                {d.name} ({d.percentage}%)
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {appliedDiscount && subtotal < appliedDiscount.minSpend && (
+                                        <p className="text-xs text-orange-500 font-medium">
+                                            Min. belanja Rp{appliedDiscount.minSpend.toLocaleString('id-ID')} untuk diskon ini.
+                                        </p>
+                                    )}
                                 </div>
-
                             </div>
 
                             {/* Payment Options */}

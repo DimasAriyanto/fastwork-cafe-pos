@@ -38,13 +38,9 @@ export const useCart = () => {
 
     const clearCart = () => setCart([]);
 
-    const [manualDiscount, setManualDiscount] = useState<{
-        type: 'fixed' | 'percentage';
-        value: number;
-    } | null>(null);
-
     const [appliedDiscount, setAppliedDiscount] = useState<{
-        code: string;
+        id: number;
+        name: string;
         percentage: number;
         minSpend: number;
     } | null>(null);
@@ -63,24 +59,11 @@ export const useCart = () => {
     }, [cart]);
 
     const discountAmount = useMemo(() => {
-        let totalDiscount = 0;
-        
-        // 1. Applied Coupon/Code Discount
         if (appliedDiscount && subtotal >= appliedDiscount.minSpend) {
-            totalDiscount += subtotal * (appliedDiscount.percentage / 100);
+            return Math.min(subtotal * (appliedDiscount.percentage / 100), subtotal);
         }
-
-        // 2. Manual Discount
-        if (manualDiscount) {
-            if (manualDiscount.type === 'percentage') {
-                totalDiscount += subtotal * (manualDiscount.value / 100);
-            } else {
-                totalDiscount += manualDiscount.value;
-            }
-        }
-
-        return Math.min(totalDiscount, subtotal); // Cannot discount more than subtotal
-    }, [subtotal, appliedDiscount, manualDiscount]);
+        return 0;
+    }, [subtotal, appliedDiscount]);
 
     const totalAfterDiscount = subtotal - discountAmount;
     
@@ -96,28 +79,11 @@ export const useCart = () => {
     const tax = taxDetails.reduce((sum, t) => sum + t.amount, 0);
     const total = totalAfterDiscount + tax;
 
-    // Real discount validation using API
-    const applyDiscountCode = async (code: string) => {
-        try {
-            const { apiClient } = await import("../api/client");
-            const discount = await apiClient.verifyDiscount(code);
-            
-            if (discount && discount.isActive) {
-                setAppliedDiscount({
-                    code: discount.code,
-                    percentage: parseFloat(discount.percentage),
-                    minSpend: discount.minSpend
-                });
-                return { success: true, message: "Diskon berhasil digunakan!" };
-            }
-            return { success: false, message: "Diskon tidak aktif atau tidak ditemukan." };
-        } catch (error: any) {
-            return { success: false, message: error.message || "Kode diskon tidak valid." };
-        }
+    const applyDiscount = (discount: { id: number; name: string; percentage: number; minSpend: number } | null) => {
+        setAppliedDiscount(discount);
     };
 
     const removeDiscount = () => setAppliedDiscount(null);
-    const removeManualDiscount = () => setManualDiscount(null);
 
     return {
         cart,
@@ -135,11 +101,8 @@ export const useCart = () => {
         setTaxes,
         taxDetails,
         appliedDiscount,
-        applyDiscountCode,
+        applyDiscount,
         removeDiscount,
-        manualDiscount,
-        setManualDiscount,
-        removeManualDiscount,
         discountAmount,
         totalAfterDiscount
     };

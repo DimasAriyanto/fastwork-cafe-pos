@@ -38,11 +38,12 @@ export default function Dashboard() {
   const [editingIndex, setEditingIndex] = useState<number | undefined>();
 
   // Hooks
+  const [discounts, setDiscounts] = useState<{ id: number; name: string; percentage: number; minSpend: number; isActive: boolean; startDate: string | null; endDate: string | null }[]>([]);
+
   const {
     cart, addToCart, updateCartItem, removeFromCart, updateQuantity, clearCart,
     subtotal, tax, total, taxRate, setTaxRate, setTaxes, taxDetails,
-    appliedDiscount, removeDiscount, 
-    manualDiscount, setManualDiscount, discountAmount
+    appliedDiscount, applyDiscount, removeDiscount, discountAmount
   } = useCart();
   
   const {
@@ -58,9 +59,10 @@ export default function Dashboard() {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const [productsDataArr, categoriesDataArr] = await Promise.all([
+            const [productsDataArr, categoriesDataArr, discountsDataArr] = await Promise.all([
                 apiClient.getMenus({ limit: 100 }),
-                apiClient.getCategories()
+                apiClient.getCategories(),
+                apiClient.getDiscounts()
             ]);
 
             const productsData = productsDataArr.map((m: any) => ({
@@ -79,6 +81,15 @@ export default function Dashboard() {
             }));
 
             setAllProducts(productsData);
+            setDiscounts((discountsDataArr || []).map((d: any) => ({
+                id: d.id,
+                name: d.name,
+                percentage: parseFloat(d.percentage),
+                minSpend: d.minSpend || 0,
+                isActive: d.isActive !== false,
+                startDate: d.startDate ?? null,
+                endDate: d.endDate ?? null,
+            })));
 
             // Fetch Tax Rate
             const taxResponse = await apiClient.getTaxes();
@@ -186,8 +197,6 @@ export default function Dashboard() {
               return t ? { toppingId: t.id, price: t.price } : null;
           }).filter(Boolean)
         })),
-        manualDiscountType: manualDiscount?.type || undefined,
-        manualDiscountValue: manualDiscount?.value || 0,
         discountAmount: discountAmount
       };
 
@@ -214,7 +223,6 @@ export default function Dashboard() {
         taxRate: taxRate,
         taxDetails: taxDetails,
         discount: appliedDiscount?.percentage || 0,
-        manualDiscount: manualDiscount,
         discountAmount: discountAmount,
         cashierName: user?.name || user?.username || "Kasir",
         items: cart.map(c => ({ 
@@ -232,7 +240,6 @@ export default function Dashboard() {
 
       clearCart();
       removeDiscount();
-      setManualDiscount(null);
       setCustomer("");
       closePaymentModal();
       closeQRISModal();
@@ -263,8 +270,6 @@ export default function Dashboard() {
               return t ? { toppingId: t.id, price: t.price } : null;
           }).filter(Boolean)
         })),
-        manualDiscountType: manualDiscount?.type || undefined,
-        manualDiscountValue: manualDiscount?.value || 0,
         discountAmount: discountAmount
       };
 
@@ -272,7 +277,6 @@ export default function Dashboard() {
       alert(`Pesanan ${customer || "tanpa nama"} disimpan sebagai Bayar Nanti!`);
       clearCart();
       removeDiscount();
-      setManualDiscount(null);
       setCustomer("");
       setIsRightPanelOpen(false);
       refreshData();
@@ -326,12 +330,13 @@ export default function Dashboard() {
             taxRate={taxRate}
             taxDetails={taxDetails}
             total={total}
+            discounts={discounts}
             appliedDiscount={appliedDiscount}
+            onApplyDiscount={applyDiscount}
             removeDiscount={removeDiscount}
+            discountAmount={discountAmount}
             subtotal={subtotal}
             onCheckout={handleCheckout}
-            manualDiscount={manualDiscount}
-            onSetManualDiscount={setManualDiscount}
           />
         </div>,
         rightPanelTarget
@@ -367,7 +372,6 @@ export default function Dashboard() {
         taxDetails={taxDetails}
         total={total}
         discount={appliedDiscount?.percentage || 0}
-        manualDiscount={manualDiscount}
         onPaymentSuccess={(paid, change, method) => { onPaymentConfirm(paid, change, method); }}
       />
 
